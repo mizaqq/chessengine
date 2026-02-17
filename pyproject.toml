@@ -1,0 +1,15 @@
+[project]
+name = "chessengine"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ipykernel>=7.2.0",
+    "matplotlib>=3.10.8",
+    "open-spiel>=1.6.11",
+    "pettingzoo[classic]>=1.25.0",
+    "python-chess>=1.999",
+    "torch>=2.10.0",
+    "tqdm>=4.67.3",
+]
