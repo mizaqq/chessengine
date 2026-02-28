@@ -10,6 +10,7 @@ dependencies = [
     "open-spiel>=1.6.11",
     "pettingzoo[classic]>=1.25.0",
     "python-chess>=1.999",
+    "pyyaml>=6.0",
     "torch>=2.10.0",
     "tqdm>=4.67.3",
 ]
