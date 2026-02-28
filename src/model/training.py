@@ -4,6 +4,12 @@ import random
 import numpy as np
 from tqdm import tqdm
 from torch.distributions import Categorical
+from src.training.metrics import MetricsAggregator
+from src.training.rollout_collector import RolloutCollector
+from src.losses.policy_gradient import compute_policy_gradient_loss
+from src.losses.value_mse import compute_value_loss
+from src.losses.entropy_regularization import compute_entropy_bonus
+from src.losses.composed_loss import ComposedLoss
 
 
 def model_acc(model, envs):
@@ -35,18 +41,31 @@ def model_acc(model, envs):
 
 
 def backpropagate(model, R, optimizer, rewards, log_probs, values, entropies):
-    actor_loss, critic_loss = 0, 0
+    returns = []
+    advantages = []
     for i in reversed(range(len(rewards))):
         R = rewards[i].unsqueeze(1) + 0.99 * R
-        advantage = R - values[i]
-        actor_loss -= log_probs[i] * advantage.detach()
-        critic_loss += mse_loss(values[i], R.detach())
-    loss = actor_loss.mean() + critic_loss.mean() - 0.01 * torch.stack(entropies).mean()
+        returns.insert(0, R)
+        advantages.insert(0, R - values[i])
+    
+    policy_loss = compute_policy_gradient_loss(log_probs, advantages)
+    value_loss = compute_value_loss(values, returns)
+    entropy_bonus = compute_entropy_bonus(entropies)
+    
+    loss_composer = ComposedLoss()
+    loss_dict = loss_composer.compute(
+        policy_loss=policy_loss,
+        value_loss=value_loss,
+        entropy_bonus=entropy_bonus,
+        entropy_coef=0.01
+    )
+    
+    total_loss = loss_dict["total_loss"]
     optimizer.zero_grad()
-    loss.backward()
+    total_loss.backward()
     torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=1.0)
     optimizer.step()
-    return loss
+    return total_loss
 
 
 def update_rewards(envs, rewards_white, rewards_black):

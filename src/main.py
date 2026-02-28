@@ -1,35 +1,36 @@
-from src.environment.environment import EnvSpawner
-from src.model.chess_model import ChessPolicyProbs
-from src.model.training import run_chess_training
 import torch
 import matplotlib.pyplot as plt
 from datetime import datetime
 import json
+from src.entrypoints.train import run_training_from_config
 
 if __name__ == "__main__":
-    episodes = 30000
-    envs = EnvSpawner(12)
-    white_model = ChessPolicyProbs()
-    black_model = ChessPolicyProbs()
-    optimizer_white = torch.optim.Adam(white_model.parameters(), lr=1e-4)
-    optimizer_black = torch.optim.Adam(black_model.parameters(), lr=1e-4)
-    logs, losses, white_model, black_model = run_chess_training(
-        envs,
-        white_model,
-        black_model,
-        optimizer_white,
-        optimizer_black,
-        steps=15,
-        episodes=episodes,
-        lr_decay_interval=10001,
-    )
+    config = {
+        "num_envs": 12,
+        "max_updates": 30000,
+        "steps_per_update": 15,
+        "learning_rate": 1e-4,
+        "seed": 42,
+        "lr_decay_interval": 10001,
+    }
+    
+    result = run_training_from_config(config)
+    
+    logs = result["logs"]
+    losses = result["losses"]
+    white_model = result["white_model"]
+    black_model = result["black_model"]
+    
     plt.plot(losses)
     plt.xlabel("update step")
     plt.ylabel("loss")
     plt.savefig("losses.png")
     plt.close()
+    
     with open("logs.json", "w") as f:
         json.dump(logs, f, indent=4)
+    
+    episodes = config["max_updates"]
     torch.save(
         white_model.state_dict(),
         f"white_model_{datetime.now().strftime('%Y%m%d%H%M%S')}_episodes_{episodes}.pth",
