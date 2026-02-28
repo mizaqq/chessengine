@@ -4,6 +4,8 @@ import random
 import numpy as np
 from tqdm import tqdm
 from torch.distributions import Categorical
+from src.training.metrics import MetricsAggregator
+from src.training.rollout_collector import RolloutCollector
 
 
 def model_acc(model, envs):
