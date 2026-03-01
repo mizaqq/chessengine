@@ -18,6 +18,22 @@ def worker(remote, parent_remote):
                 env.reset()
                 legal = env.get_legal_actions().numpy()
                 remote.send((env.state(), legal))
+            elif cmd == 'step':
+                action = data
+                env.step([action])
+
+                obs = env.state()
+                done = env.is_done()
+                reward = 0.0
+
+                info = {}
+                if done:
+                    info["terminal_observation"] = obs.copy()
+                    env.reset()
+                    obs = env.state()
+
+                legal = env.get_legal_actions().numpy()
+                remote.send((obs, reward, done, info, legal))
     except Exception as e:
         print(f"Worker error: {e}")
     finally:
@@ -45,7 +61,22 @@ class AsyncVectorEnv(VectorEnv):
         return torch.tensor(np.stack(obs)).float(), torch.tensor(np.stack(legal_actions)).float()
 
     def step(self, actions):
-        pass
+        if isinstance(actions, torch.Tensor):
+            actions = actions.tolist()
+
+        for remote, action in zip(self.remotes, actions):
+            remote.send(('step', action))
+
+        results = [remote.recv() for remote in self.remotes]
+        obs, rewards, dones, infos, legal_actions = zip(*results)
+
+        return (
+            torch.tensor(np.stack(obs)).float(),
+            torch.tensor(rewards).float().unsqueeze(1),
+            torch.tensor(dones).bool().unsqueeze(1),
+            list(infos),
+            torch.tensor(np.stack(legal_actions)).float(),
+        )
 
     def close(self):
         for remote in self.remotes:
