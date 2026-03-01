@@ -6,9 +6,21 @@ from src.core.interfaces import VectorEnv
 from src.envs.open_spiel_env import OpenSpielEnv
 
 
+PIECE_VALUES = np.array([0, 9, 5, 3, 3, 1], dtype=np.float32)
+
+
+def _piece_difference_np(state: np.ndarray) -> float:
+    """Compute white_score - black_score from a (20, 8, 8) observation using numpy."""
+    piece_counts = state[:12].sum(axis=(1, 2))
+    white_scores = (piece_counts[0::2] * PIECE_VALUES).sum()
+    black_scores = (piece_counts[1::2] * PIECE_VALUES).sum()
+    return float(white_scores - black_scores)
+
+
 def worker(remote, parent_remote):
     parent_remote.close()
     env = OpenSpielEnv()
+    previous_state = None
     try:
         while True:
             cmd, data = remote.recv()
@@ -16,15 +28,18 @@ def worker(remote, parent_remote):
                 break
             elif cmd == 'reset':
                 env.reset()
+                obs = env.state()
+                previous_state = obs
                 legal = env.get_legal_actions().numpy()
-                remote.send((env.state(), legal))
+                remote.send((obs, legal))
             elif cmd == 'step':
                 action = data
                 env.step([action])
 
                 obs = env.state()
                 done = env.is_done()
-                reward = 0.0
+
+                reward = _piece_difference_np(obs) - _piece_difference_np(previous_state)
 
                 info = {}
                 if done:
@@ -32,6 +47,7 @@ def worker(remote, parent_remote):
                     env.reset()
                     obs = env.state()
 
+                previous_state = obs
                 legal = env.get_legal_actions().numpy()
                 remote.send((obs, reward, done, info, legal))
     except Exception as e:
