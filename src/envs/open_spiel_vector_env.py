@@ -57,6 +57,7 @@ class OpenSpielVectorEnv:
             )
 
             if env.is_done():
+                done[i] = True
                 terminal_observations[i] = current_state.copy()
                 game_results[i] = env.game_result()
                 env.reset()
