@@ -7,7 +7,7 @@ from src.entrypoints.train import run_training_from_config
 if __name__ == "__main__":
     config = {
         "num_envs": 12,
-        "max_updates": 30000,
+        "max_updates": 500,
         "steps_per_update": 15,
         "learning_rate": 1e-4,
         "seed": 42,

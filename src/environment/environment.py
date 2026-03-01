@@ -1,16 +1,8 @@
 import torch
 import numpy as np
-import pyspiel
-import chess
-from open_spiel.python import rl_environment
-
+import random
 from src.utils.utils import piece_difference_from_tensor
 from src.envs.open_spiel_env import OpenSpielEnv
-import random
-
-
-class WrappedEnv(OpenSpielEnv):
-    pass
 
 
 class VectorBuffer:
@@ -63,7 +55,7 @@ class EnvSpawner:
         self.envs = []
         self.buffers = []
         for _ in range(num_envs):
-            env = WrappedEnv()
+            env = OpenSpielEnv()
             self.envs.append(env)
             self.buffers.append(VectorBuffer(100000))
             self.previous_actions = None
