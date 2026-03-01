@@ -22,6 +22,8 @@ class OpenSpielEnv:
         return self.env.reset()
 
     def step(self, action):
+        if not isinstance(action, list):
+            action = [action]
         return self.env.step(action)
 
     def get_current_player(self):
