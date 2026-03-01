@@ -29,6 +29,38 @@ def test_async_env_step():
     env.close()
 
 
+def test_async_env_reset_returns_current_player():
+    env = OpenSpielAsyncVectorEnv(num_envs=2)
+    try:
+        step = env.reset()
+        assert step.current_player.shape == (2,)
+        # OpenSpiel chess: player 1 = white moves first after reset
+        assert (step.current_player == 1).all(), (
+            "After reset all envs should be white-to-move (player 1)"
+        )
+    finally:
+        env.close()
+
+
+def test_async_env_step_returns_current_player():
+    env = OpenSpielAsyncVectorEnv(num_envs=2)
+    try:
+        step = env.reset()
+        legal = step.legal_actions_mask
+        actions = []
+        for i in range(2):
+            legal_indices = (legal[i] == 1).nonzero(as_tuple=True)[0]
+            actions.append(legal_indices[0].item())
+        step = env.step(torch.tensor(actions))
+        assert step.current_player.shape == (2,)
+        # After white (player 1) moves, current_player should be 0 (black)
+        assert (step.current_player == 0).all(), (
+            "After white moves, should be black-to-move (player 0)"
+        )
+    finally:
+        env.close()
+
+
 def test_async_env_auto_reset_with_game_result():
     env = OpenSpielAsyncVectorEnv(num_envs=1)
     step = env.reset()

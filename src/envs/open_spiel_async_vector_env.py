@@ -28,7 +28,8 @@ def worker(remote, parent_remote):
                 obs = env.state()
                 previous_state = obs
                 legal = env.get_legal_actions().numpy()
-                remote.send((obs, legal))
+                cp = env.get_current_player()
+                remote.send((obs, legal, cp))
             elif cmd == "step":
                 action = data
                 env.step([action])
@@ -47,7 +48,8 @@ def worker(remote, parent_remote):
 
                 previous_state = obs
                 legal = env.get_legal_actions().numpy()
-                remote.send((obs, reward, done, terminal_obs, game_result, legal))
+                cp = env.get_current_player()
+                remote.send((obs, reward, done, terminal_obs, game_result, legal, cp))
     except Exception as e:
         print(f"Worker error: {e}")
     finally:
@@ -75,12 +77,13 @@ class OpenSpielAsyncVectorEnv:
         for remote in self.remotes:
             remote.send(("reset", None))
         results = [remote.recv() for remote in self.remotes]
-        obs, legal_actions = zip(*results)
+        obs, legal_actions, current_players = zip(*results)
         return EnvStep(
             obs=torch.tensor(np.stack(obs)).float(),
             legal_actions_mask=torch.tensor(np.stack(legal_actions)).float(),
             reward=torch.zeros(self.num_envs),
             done=torch.zeros(self.num_envs, dtype=torch.bool),
+            current_player=torch.tensor(current_players, dtype=torch.long),
             info={},
         )
 
@@ -91,7 +94,7 @@ class OpenSpielAsyncVectorEnv:
             remote.send(("step", action))
 
         results = [remote.recv() for remote in self.remotes]
-        obs_list, rewards, dones, terminal_obs_list, game_result_list, legal_list = (
+        obs_list, rewards, dones, terminal_obs_list, game_result_list, legal_list, cp_list = (
             zip(*results)
         )
 
@@ -113,6 +116,7 @@ class OpenSpielAsyncVectorEnv:
             legal_actions_mask=torch.tensor(np.stack(legal_list)).float(),
             reward=torch.tensor(rewards).float(),
             done=torch.tensor(dones).bool(),
+            current_player=torch.tensor(cp_list, dtype=torch.long),
             info=info,
         )
 
