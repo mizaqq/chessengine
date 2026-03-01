@@ -56,8 +56,8 @@ class OpenSpielEnv:
         if not self.is_done():
             return None
         rewards = self.env.get_time_step().rewards
-        if rewards[0] > 0:
+        if rewards[1] > 0:
             return "white_win"
-        elif rewards[1] > 0:
+        elif rewards[0] > 0:
             return "black_win"
         return "draw"

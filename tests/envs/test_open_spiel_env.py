@@ -11,6 +11,36 @@ def test_game_result_returns_none_when_not_done():
     assert env.game_result() is None
 
 
+def test_game_result_fools_mate_is_black_win():
+    """Fool's mate: 1. f3 e5 2. g4 Qh4# — black wins."""
+    import pyspiel
+    from src.envs.open_spiel_env import OpenSpielEnv
+
+    game = pyspiel.load_game("chess")
+    state = game.new_initial_state()
+
+    env = OpenSpielEnv()
+    env.reset()
+
+    moves_san = ["f3", "e5", "g4", "Qh4"]
+    for move_san in moves_san:
+        legal = state.legal_actions()
+        action_map = {state.action_to_string(state.current_player(), a): a for a in legal}
+        action = action_map.get(move_san)
+        if action is None:
+            for k, v in action_map.items():
+                if move_san in k:
+                    action = v
+                    break
+        env.step([action])
+        state.apply_action(action)
+
+    assert env.is_done()
+    assert env.game_result() == "black_win", (
+        f"Fool's mate should be black_win, got {env.game_result()}"
+    )
+
+
 def test_game_result_returns_string_when_done():
     env = OpenSpielEnv()
     env.reset()
