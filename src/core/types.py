@@ -11,6 +11,7 @@ class EnvStep:
     legal_actions_mask: Tensor
     reward: Tensor
     done: Tensor
+    current_player: Tensor  # [num_envs], 0=white, 1=black
     info: Dict[str, Any]
 
 
