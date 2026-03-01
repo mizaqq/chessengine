@@ -14,6 +14,10 @@ def worker(remote, parent_remote):
             cmd, data = remote.recv()
             if cmd == 'close':
                 break
+            elif cmd == 'reset':
+                env.reset()
+                legal = env.get_legal_actions().numpy()
+                remote.send((env.state(), legal))
     except Exception as e:
         print(f"Worker error: {e}")
     finally:
@@ -23,7 +27,7 @@ def worker(remote, parent_remote):
 class AsyncVectorEnv(VectorEnv):
     def __init__(self, num_envs: int):
         self.num_envs = num_envs
-        self.ctx = mp.get_context('spawn')
+        self.ctx = mp.get_context('fork')
         self.remotes, self.work_remotes = zip(*[self.ctx.Pipe() for _ in range(num_envs)])
         self.processes = []
         for work_remote, remote in zip(self.work_remotes, self.remotes):
@@ -34,7 +38,11 @@ class AsyncVectorEnv(VectorEnv):
             work_remote.close()
 
     def reset(self):
-        pass
+        for remote in self.remotes:
+            remote.send(('reset', None))
+        results = [remote.recv() for remote in self.remotes]
+        obs, legal_actions = zip(*results)
+        return torch.tensor(np.stack(obs)).float(), torch.tensor(np.stack(legal_actions)).float()
 
     def step(self, actions):
         pass
