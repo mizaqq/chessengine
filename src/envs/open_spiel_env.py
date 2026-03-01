@@ -48,3 +48,14 @@ class OpenSpielEnv:
 
     def is_done(self):
         return self.env.get_time_step().last()
+
+    def game_result(self):
+        """Return game result string or None if game is not over."""
+        if not self.is_done():
+            return None
+        rewards = self.env.get_time_step().rewards
+        if rewards[0] > 0:
+            return "white_win"
+        elif rewards[1] > 0:
+            return "black_win"
+        return "draw"
