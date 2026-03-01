@@ -32,12 +32,16 @@ class OpenSpielVectorEnv:
         legal_actions_mask = torch.stack([env.get_legal_actions() for env in self.envs])
         reward = torch.zeros(self.num_envs)
         done = torch.tensor([False] * self.num_envs, dtype=torch.bool)
+        current_player = torch.tensor(
+            [env.get_current_player() for env in self.envs], dtype=torch.long
+        )
 
         return EnvStep(
             obs=obs,
             legal_actions_mask=legal_actions_mask,
             reward=reward,
             done=done,
+            current_player=current_player,
             info={},
         )
 
@@ -68,6 +72,9 @@ class OpenSpielVectorEnv:
         states = [env.state() for env in self.envs]
         obs = torch.tensor(np.array(states, dtype=np.float32))
         legal_actions_mask = torch.stack([env.get_legal_actions() for env in self.envs])
+        current_player = torch.tensor(
+            [env.get_current_player() for env in self.envs], dtype=torch.long
+        )
 
         info: dict = {}
         if terminal_observations:
@@ -79,5 +86,6 @@ class OpenSpielVectorEnv:
             legal_actions_mask=legal_actions_mask,
             reward=rewards,
             done=done,
+            current_player=current_player,
             info=info,
         )

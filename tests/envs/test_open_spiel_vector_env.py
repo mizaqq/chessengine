@@ -4,6 +4,28 @@ import pytest
 from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 
 
+def test_vector_env_reset_returns_current_player():
+    env = OpenSpielVectorEnv(num_envs=2)
+    step = env.reset()
+    assert step.current_player.shape == (2,)
+    # OpenSpiel chess 1.6.x has player 1 (black) to move first after reset
+    assert (step.current_player == 1).all(), "After reset all envs should have same current_player"
+
+
+def test_vector_env_step_returns_current_player():
+    env = OpenSpielVectorEnv(num_envs=2)
+    step = env.reset()
+    legal = step.legal_actions_mask
+    actions = []
+    for i in range(2):
+        legal_indices = (legal[i] == 1).nonzero(as_tuple=True)[0]
+        actions.append(legal_indices[0].item())
+    step = env.step(torch.tensor(actions))
+    assert step.current_player.shape == (2,)
+    # After first move (by player 1), current_player alternates to 0
+    assert (step.current_player == 0).all(), "After first move current_player should alternate"
+
+
 def test_vector_env_reset_returns_valid_shapes():
     env = OpenSpielVectorEnv(num_envs=2)
     step = env.reset()
