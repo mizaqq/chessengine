@@ -56,6 +56,18 @@ A concrete implementation of `VectorEnv` using `torch.multiprocessing`.
 *   **Pros:** Immediate speedup, reuses existing logic, robust.
 *   **Cons:** IPC overhead (pickling), CPU bottleneck compared to GPU-native.
 
-## Future Work
-*   Implement `JaxVectorEnv` adhering to the same `VectorEnv` interface for massive parallelism on GPU.
-*   Profile IPC overhead and consider shared memory if needed.
+## TODOs
+
+### Integration with Training Loop
+- [ ] **Add `info["game_result"]` to worker** — when `done=True`, worker should include the game outcome (`white_win`, `black_win`, `draw`) in `info`. Training loop needs this because it can no longer access `env.env.get_time_step().rewards` directly (env lives in another process).
+- [ ] **Adapt `training.py` to use `AsyncVectorEnv`** — replace `EnvSpawner` with `AsyncVectorEnv`. The training loop currently calls `envs.get_current_states()`, `envs.get_current_actions()`, `envs.get_done()` etc. — these need to be replaced with the `step()`/`reset()` API. Terminal reward logic (+2/-2/-0.5) stays in the training loop but reads from `info["game_result"]`.
+- [ ] **Handle white/black alternation** — current `EnvSpawner.one_iteration()` handles white move + random black move in one call. `AsyncVectorEnv.step()` advances one player per call. Training loop needs to be adapted for this.
+
+### Performance
+- [ ] **Profile IPC overhead** — measure time spent in `Pipe.send()`/`recv()` vs actual `env.step()`. If IPC > 30% of total step time, consider shared memory approach.
+- [ ] **Benchmark straggler effect** — measure variance of per-worker step times. If high, consider double-buffering.
+- [ ] **Consider shared memory** — if profiling shows IPC is the bottleneck, replace Pipe with `multiprocessing.shared_memory` for observations (5KB per env is small, but at 64+ envs it adds up).
+
+### Future Architecture
+- [ ] **Implement `JaxVectorEnv`** — adhering to the same `VectorEnv` interface for massive parallelism on GPU (100-1000x speedup). Investigate Pgx library.
+- [ ] **True async collection** — current `step()` is synchronous (waits for all workers). For large worker counts, implement double-buffering or IMPALA-style async to eliminate straggler problem.
