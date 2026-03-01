@@ -16,7 +16,7 @@ An abstract base class defining the contract for all vectorized environments.
 ```python
 class VectorEnv(ABC):
     @abstractmethod
-    def reset(self) -> torch.Tensor: ...
+    def reset(self) -> Tuple[torch.Tensor, Any]: ...
     @abstractmethod
     def step(self, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, Any]: ...
     @abstractmethod
@@ -41,8 +41,9 @@ A concrete implementation of `VectorEnv` using `torch.multiprocessing`.
 1.  **Agent** generates a batch of actions `[A1, A2, ..., An]`.
 2.  **AsyncVectorEnv** splits actions and sends `Ai` to Worker `i`.
 3.  **Workers** execute `env.step(Ai)` in parallel.
-4.  **Workers** return `(State_i, Reward_i, Done_i)`.
-5.  **AsyncVectorEnv** aggregates results into `BatchState`, `BatchReward`, `BatchDone`.
+4.  **Workers** return `(State_i, Reward_i, Done_i, Info_i)`.
+    *   If `Done_i` is True, `State_i` is the *reset* state ($S_0$), and `Info_i` contains the terminal state ($S_T$).
+5.  **AsyncVectorEnv** aggregates results into `BatchState`, `BatchReward`, `BatchDone`, `BatchInfo`.
 6.  **Agent** uses `BatchState` for the next inference.
 
 ## Key Components
@@ -57,3 +58,4 @@ A concrete implementation of `VectorEnv` using `torch.multiprocessing`.
 
 ## Future Work
 *   Implement `JaxVectorEnv` adhering to the same `VectorEnv` interface for massive parallelism on GPU.
+*   Profile IPC overhead and consider shared memory if needed.
