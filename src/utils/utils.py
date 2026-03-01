@@ -31,25 +31,3 @@ def board_from_shaped_observation(obs_list, current_player):
 
     board.turn = chess.WHITE if current_player == 0 else chess.BLACK
     return board
-
-
-def piece_difference_from_tensor(states):
-    """
-    states: shape [N, 20, 8, 8] (batch) or [20, 8, 8] (single).
-    Returns tensor of shape [N] with white_score - black_score per board.
-    """
-    import torch
-
-    if states.dim() == 3:
-        states = states.unsqueeze(0)  # [20, 8, 8] → [1, 20, 8, 8]
-
-    values = torch.tensor([0, 9, 5, 3, 3, 1], dtype=states.dtype)
-
-    # Sum each 8x8 plane → [N, 12]
-    piece_counts = states[:, :12].sum(dim=(2, 3))
-
-    # Even planes = white, odd planes = black → each [N, 6]
-    white_scores = (piece_counts[:, 0::2] * values).sum(dim=1)
-    black_scores = (piece_counts[:, 1::2] * values).sum(dim=1)
-
-    return white_scores - black_scores
