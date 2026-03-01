@@ -16,6 +16,18 @@ class EnvStep:
 
 
 @dataclass
+class StepRecord:
+    player: Tensor           # [num_envs], 1=white, 0=black (OpenSpiel convention)
+    value: Tensor            # [num_envs, 1]
+    log_prob: Tensor         # [num_envs, 1]
+    entropy: Tensor          # [num_envs, 1]
+    reward_white: Tensor     # [num_envs], piece-diff from white's perspective
+    done: Tensor             # [num_envs], bool
+    terminal_r_white: Tensor # [num_envs], precomputed terminal reward for white
+    terminal_r_black: Tensor # [num_envs], precomputed terminal reward for black
+
+
+@dataclass
 class RolloutBatch:
     obs: Tensor
     actions: Tensor
