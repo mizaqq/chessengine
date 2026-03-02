@@ -4,9 +4,6 @@ from torch.distributions import Categorical
 from src.core.types import StepRecord
 from src.model.returns import compute_returns_for_model
 from src.training.metrics import MetricsAggregator
-from src.losses.policy_gradient import compute_policy_gradient_loss
-from src.losses.value_mse import compute_value_loss
-from src.losses.entropy_regularization import compute_entropy_bonus
 from src.losses.composed_loss import ComposedLoss
 
 WHITE = 1
@@ -47,9 +44,13 @@ def _collect_rollout(
         white_mask = players == WHITE
         black_mask = players == BLACK
 
-        action_size = env_step.legal_actions_mask.shape[1]
-        probs = torch.zeros(num_envs, action_size)
-        values = torch.zeros(num_envs, 1)
+        actions = torch.zeros(num_envs, dtype=torch.long)
+        val_w = torch.zeros(num_envs, 1)
+        val_b = torch.zeros(num_envs, 1)
+        lp_w = torch.zeros(num_envs)
+        lp_b = torch.zeros(num_envs)
+        ent_w = torch.zeros(num_envs)
+        ent_b = torch.zeros(num_envs)
 
         for model_id, mask in [(WHITE, white_mask), (BLACK, black_mask)]:
             if not mask.any():
@@ -57,13 +58,18 @@ def _collect_rollout(
             p, v = models[model_id](
                 env_step.obs[mask], env_step.legal_actions_mask[mask]
             )
-            probs[mask] = p
-            values[mask] = v
+            dist = Categorical(probs=p)
+            a = dist.sample()
+            actions[mask] = a
 
-        dist = Categorical(probs=probs)
-        actions = dist.sample()
-        log_probs = dist.log_prob(actions).unsqueeze(1)
-        entropies = dist.entropy().unsqueeze(1)
+            if model_id == WHITE:
+                val_w[mask] = v
+                lp_w[mask] = dist.log_prob(a)
+                ent_w[mask] = dist.entropy()
+            else:
+                val_b[mask] = v
+                lp_b[mask] = dist.log_prob(a)
+                ent_b[mask] = dist.entropy()
 
         sampled_is_legal = (
             env_step.legal_actions_mask.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
@@ -90,9 +96,12 @@ def _collect_rollout(
         steps_data.append(
             StepRecord(
                 player=players.clone(),
-                value=values,
-                log_prob=log_probs,
-                entropy=entropies,
+                value_white=val_w,
+                value_black=val_b,
+                log_prob_white=lp_w,
+                log_prob_black=lp_b,
+                entropy_white=ent_w,
+                entropy_black=ent_b,
                 reward_white=env_step.reward.clone(),
                 done=env_step.done.clone(),
                 terminal_r_white=tr_white,
@@ -144,20 +153,29 @@ def _backpropagate_for_model(
         if not is_mine.any():
             continue
         ret = model_returns[i][is_mine]
-        val = step.value.squeeze(-1)[is_mine]
+        val_tensor = step.value_white if model_id == WHITE else step.value_black
+        val = val_tensor.squeeze(-1)[is_mine]
+        lp = (step.log_prob_white if model_id == WHITE else step.log_prob_black)[is_mine]
+        ent = (step.entropy_white if model_id == WHITE else step.entropy_black)[is_mine]
         advantage = (ret - val).detach()
         filtered_advantages.append(advantage)
-        filtered_log_probs.append(step.log_prob.squeeze(-1)[is_mine])
+        filtered_log_probs.append(lp)
         filtered_values.append(val)
         filtered_returns.append(ret.detach())
-        filtered_entropies.append(step.entropy.squeeze(-1)[is_mine])
+        filtered_entropies.append(ent)
 
     if not filtered_log_probs:
         return torch.tensor(0.0)
 
-    policy_loss = compute_policy_gradient_loss(filtered_log_probs, filtered_advantages)
-    value_loss = compute_value_loss(filtered_values, filtered_returns)
-    entropy_bonus = compute_entropy_bonus(filtered_entropies)
+    cat_log_probs = torch.cat(filtered_log_probs)
+    cat_advantages = torch.cat(filtered_advantages)
+    cat_values = torch.cat(filtered_values)
+    cat_returns = torch.cat(filtered_returns)
+    cat_entropies = torch.cat(filtered_entropies)
+
+    policy_loss = -(cat_log_probs * cat_advantages.detach()).mean()
+    value_loss = (cat_values - cat_returns).pow(2).mean()
+    entropy_bonus = cat_entropies.mean()
 
     loss_composer = ComposedLoss()
     loss_dict = loss_composer.compute(

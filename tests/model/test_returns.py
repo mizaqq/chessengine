@@ -10,9 +10,12 @@ BLACK = 0
 def _make_step(player, reward_white, done, terminal_r_w=0.0, terminal_r_b=0.0, n=1):
     return StepRecord(
         player=torch.tensor([player] * n, dtype=torch.long),
-        value=torch.zeros(n, 1),
-        log_prob=torch.zeros(n, 1),
-        entropy=torch.zeros(n, 1),
+        value_white=torch.zeros(n, 1),
+        value_black=torch.zeros(n, 1),
+        log_prob_white=torch.zeros(n),
+        log_prob_black=torch.zeros(n),
+        entropy_white=torch.zeros(n),
+        entropy_black=torch.zeros(n),
         reward_white=torch.tensor([reward_white] * n),
         done=torch.tensor([done] * n),
         terminal_r_white=torch.tensor([terminal_r_w] * n),
@@ -110,9 +113,12 @@ def test_returns_multi_env():
     steps = [
         StepRecord(
             player=torch.tensor([WHITE, BLACK]),
-            value=torch.zeros(2, 1),
-            log_prob=torch.zeros(2, 1),
-            entropy=torch.zeros(2, 1),
+            value_white=torch.zeros(2, 1),
+            value_black=torch.zeros(2, 1),
+            log_prob_white=torch.zeros(2),
+            log_prob_black=torch.zeros(2),
+            entropy_white=torch.zeros(2),
+            entropy_black=torch.zeros(2),
             reward_white=torch.tensor([1.0, -1.0]),
             done=torch.tensor([False, False]),
             terminal_r_white=torch.zeros(2),
