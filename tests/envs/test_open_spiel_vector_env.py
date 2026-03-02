@@ -8,7 +8,7 @@ def test_vector_env_reset_returns_current_player():
     env = OpenSpielVectorEnv(num_envs=2)
     step = env.reset()
     assert step.current_player.shape == (2,)
-    # OpenSpiel chess 1.6.x has player 1 (black) to move first after reset
+    # OpenSpiel chess: player 1 (white) moves first after reset
     assert (step.current_player == 1).all(), "After reset all envs should have same current_player"
 
 

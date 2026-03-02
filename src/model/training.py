@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 from torch.distributions import Categorical
-from src.core.types import EnvStep, StepRecord
+from src.core.types import StepRecord
 from src.model.returns import compute_returns_for_model
 from src.training.metrics import MetricsAggregator
 from src.losses.policy_gradient import compute_policy_gradient_loss
@@ -15,7 +15,7 @@ BLACK = 0
 RESULT_TO_REWARD = {
     "white_win": {"white": "win", "black": "loss"},
     "black_win": {"white": "loss", "black": "win"},
-    "draw":      {"white": "draw", "black": "draw"},
+    "draw": {"white": "draw", "black": "draw"},
 }
 
 
@@ -29,23 +29,34 @@ def _precompute_terminal_rewards(info, num_envs, terminal_rewards):
     return tr_white, tr_black
 
 
-def _collect_rollout(envs, white_model, black_model, env_step, num_steps, num_envs,
-                     terminal_rewards, metrics):
+def _collect_rollout(
+    envs,
+    white_model,
+    black_model,
+    env_step,
+    num_steps,
+    num_envs,
+    terminal_rewards,
+    metrics,
+):
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
 
     for _ in range(num_steps):
         players = env_step.current_player
-        white_mask = (players == WHITE)
-        black_mask = (players == BLACK)
+        white_mask = players == WHITE
+        black_mask = players == BLACK
 
-        probs = torch.zeros(num_envs, 4674)
+        action_size = env_step.legal_actions_mask.shape[1]
+        probs = torch.zeros(num_envs, action_size)
         values = torch.zeros(num_envs, 1)
 
         for model_id, mask in [(WHITE, white_mask), (BLACK, black_mask)]:
             if not mask.any():
                 continue
-            p, v = models[model_id](env_step.obs[mask], env_step.legal_actions_mask[mask])
+            p, v = models[model_id](
+                env_step.obs[mask], env_step.legal_actions_mask[mask]
+            )
             probs[mask] = p
             values[mask] = v
 
@@ -54,14 +65,18 @@ def _collect_rollout(envs, white_model, black_model, env_step, num_steps, num_en
         log_probs = dist.log_prob(actions).unsqueeze(1)
         entropies = dist.entropy().unsqueeze(1)
 
-        sampled_is_legal = env_step.legal_actions_mask.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
+        sampled_is_legal = (
+            env_step.legal_actions_mask.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
+        )
         empty_masks = (env_step.legal_actions_mask.sum(dim=1) == 0).sum().item()
         illegal_samples = (~sampled_is_legal).sum().item()
         metrics.add_step(empty_masks=empty_masks, illegal_samples=illegal_samples)
 
         env_step = envs.step(actions)
 
-        tr_white, tr_black = _precompute_terminal_rewards(env_step.info, num_envs, terminal_rewards)
+        tr_white, tr_black = _precompute_terminal_rewards(
+            env_step.info, num_envs, terminal_rewards
+        )
 
         if "game_results" in env_step.info:
             for env_idx, result in env_step.info["game_results"].items():
@@ -72,16 +87,18 @@ def _collect_rollout(envs, white_model, black_model, env_step, num_steps, num_en
                 else:
                     metrics.add_terminal_result(draw=True)
 
-        steps_data.append(StepRecord(
-            player=players.clone(),
-            value=values.detach(),
-            log_prob=log_probs,
-            entropy=entropies,
-            reward_white=env_step.reward.clone(),
-            done=env_step.done.clone(),
-            terminal_r_white=tr_white,
-            terminal_r_black=tr_black,
-        ))
+        steps_data.append(
+            StepRecord(
+                player=players.clone(),
+                value=values,
+                log_prob=log_probs,
+                entropy=entropies,
+                reward_white=env_step.reward.clone(),
+                done=env_step.done.clone(),
+                terminal_r_white=tr_white,
+                terminal_r_black=tr_black,
+            )
+        )
 
     return steps_data, env_step
 
@@ -93,21 +110,29 @@ def _compute_bootstrap(env_step, white_model, black_model, model_id):
     opponent_id = WHITE if model_id == BLACK else BLACK
 
     with torch.no_grad():
-        same_player = (env_step.current_player == model_id)
-        opponent_player = (env_step.current_player == opponent_id)
+        same_player = env_step.current_player == model_id
+        opponent_player = env_step.current_player == opponent_id
 
         if same_player.any():
-            _, v = models[model_id](env_step.obs[same_player], env_step.legal_actions_mask[same_player])
+            _, v = models[model_id](
+                env_step.obs[same_player], env_step.legal_actions_mask[same_player]
+            )
             bootstrap[same_player] = v.squeeze(-1)
 
         if opponent_player.any():
-            _, v = models[opponent_id](env_step.obs[opponent_player], env_step.legal_actions_mask[opponent_player])
+            _, v = models[opponent_id](
+                env_step.obs[opponent_player],
+                env_step.legal_actions_mask[opponent_player],
+            )
             bootstrap[opponent_player] = -v.squeeze(-1)
 
     return bootstrap
 
 
-def _backpropagate_for_model(model, optimizer, steps_data, model_returns, model_id):
+def _backpropagate_for_model(
+    model, optimizer, steps_data, model_returns, model_id,
+    entropy_coef=0.01, grad_clip=1.0,
+):
     filtered_log_probs = []
     filtered_advantages = []
     filtered_values = []
@@ -115,7 +140,7 @@ def _backpropagate_for_model(model, optimizer, steps_data, model_returns, model_
     filtered_entropies = []
 
     for i, step in enumerate(steps_data):
-        is_mine = (step.player == model_id)
+        is_mine = step.player == model_id
         if not is_mine.any():
             continue
         ret = model_returns[i][is_mine]
@@ -139,13 +164,13 @@ def _backpropagate_for_model(model, optimizer, steps_data, model_returns, model_
         policy_loss=policy_loss,
         value_loss=value_loss,
         entropy_bonus=entropy_bonus,
-        entropy_coef=0.01,
+        entropy_coef=entropy_coef,
     )
 
     total_loss = loss_dict["total_loss"]
     optimizer.zero_grad()
     total_loss.backward()
-    torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=1.0)
+    torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
     optimizer.step()
     return total_loss
 
@@ -161,6 +186,9 @@ def run_chess_training(
     steps=5,
     lr_decay_interval=100,
     terminal_rewards=None,
+    gamma=0.99,
+    entropy_coef=0.01,
+    grad_clip=1.0,
 ):
     if metrics is None:
         metrics = MetricsAggregator()
@@ -171,26 +199,42 @@ def run_chess_training(
     logs = []
     losses = []
     env_step = envs.reset()
-    pbar = tqdm(range(1, episodes))
+    pbar = tqdm(range(1, episodes + 1))
 
     for episode in pbar:
         steps_data, env_step = _collect_rollout(
-            envs, white_model, black_model, env_step, steps, num_envs,
-            terminal_rewards, metrics,
+            envs,
+            white_model,
+            black_model,
+            env_step,
+            steps,
+            num_envs,
+            terminal_rewards,
+            metrics,
         )
 
-        bootstrap_white = _compute_bootstrap(env_step, white_model, black_model, model_id=WHITE)
-        bootstrap_black = _compute_bootstrap(env_step, white_model, black_model, model_id=BLACK)
+        bootstrap_white = _compute_bootstrap(
+            env_step, white_model, black_model, model_id=WHITE
+        )
+        bootstrap_black = _compute_bootstrap(
+            env_step, white_model, black_model, model_id=BLACK
+        )
 
-        returns_white = compute_returns_for_model(steps_data, model_id=WHITE,
-                                                   bootstrap_value=bootstrap_white, gamma=0.99)
-        returns_black = compute_returns_for_model(steps_data, model_id=BLACK,
-                                                   bootstrap_value=bootstrap_black, gamma=0.99)
+        returns_white = compute_returns_for_model(
+            steps_data, model_id=WHITE, bootstrap_value=bootstrap_white, gamma=gamma
+        )
+        returns_black = compute_returns_for_model(
+            steps_data, model_id=BLACK, bootstrap_value=bootstrap_black, gamma=gamma
+        )
 
-        loss_w = _backpropagate_for_model(white_model, optimizer_white,
-                                          steps_data, returns_white, model_id=WHITE)
-        loss_b = _backpropagate_for_model(black_model, optimizer_black,
-                                          steps_data, returns_black, model_id=BLACK)
+        loss_w = _backpropagate_for_model(
+            white_model, optimizer_white, steps_data, returns_white, model_id=WHITE,
+            entropy_coef=entropy_coef, grad_clip=grad_clip,
+        )
+        loss_b = _backpropagate_for_model(
+            black_model, optimizer_black, steps_data, returns_black, model_id=BLACK,
+            entropy_coef=entropy_coef, grad_clip=grad_clip,
+        )
 
         total_loss = loss_w.item() + loss_b.item()
         losses.append(total_loss)
@@ -205,7 +249,7 @@ def run_chess_training(
             summary = metrics.episode_summary()
             logs.append({"episode": episode, "loss": total_loss, **summary})
 
-    if hasattr(envs, 'close'):
+    if hasattr(envs, "close"):
         envs.close()
 
     return logs, losses, white_model, black_model

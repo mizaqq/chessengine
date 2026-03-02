@@ -11,7 +11,7 @@ class EnvStep:
     legal_actions_mask: Tensor
     reward: Tensor
     done: Tensor
-    current_player: Tensor  # [num_envs], 0=white, 1=black
+    current_player: Tensor  # [num_envs], 1=white, 0=black (OpenSpiel convention)
     info: Dict[str, Any]
 
 

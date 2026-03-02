@@ -14,6 +14,9 @@ if __name__ == "__main__":
         "lr_decay_interval": 10001,
         "env_type": "sync",
         "terminal_rewards": {"win": 2.0, "loss": -2.0, "draw": -0.5},
+        "gamma": 0.99,
+        "entropy_coef": 0.01,
+        "grad_clip": 1.0,
     }
 
     result = run_training_from_config(config)

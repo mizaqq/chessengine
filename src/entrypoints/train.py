@@ -32,6 +32,9 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     lr_decay_interval = config.get("lr_decay_interval", 100)
     env_type = config.get("env_type", "sync")
     terminal_rewards = config.get("terminal_rewards", {"win": 2.0, "loss": -2.0, "draw": -0.5})
+    gamma = config.get("gamma", 0.99)
+    entropy_coef = config.get("entropy_coef", 0.01)
+    grad_clip = config.get("grad_clip", 1.0)
 
     set_seed(seed)
 
@@ -47,6 +50,9 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         steps=steps, episodes=max_updates,
         lr_decay_interval=lr_decay_interval,
         terminal_rewards=terminal_rewards,
+        gamma=gamma,
+        entropy_coef=entropy_coef,
+        grad_clip=grad_clip,
     )
 
     return {
