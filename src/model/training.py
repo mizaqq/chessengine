@@ -51,6 +51,8 @@ def _collect_rollout(
         lp_b = torch.zeros(num_envs)
         ent_w = torch.zeros(num_envs)
         ent_b = torch.zeros(num_envs)
+        nl_w = torch.ones(num_envs)
+        nl_b = torch.ones(num_envs)
 
         for model_id, mask in [(WHITE, white_mask), (BLACK, black_mask)]:
             if not mask.any():
@@ -66,10 +68,12 @@ def _collect_rollout(
                 val_w[mask] = v
                 lp_w[mask] = dist.log_prob(a)
                 ent_w[mask] = dist.entropy()
+                nl_w[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
             else:
                 val_b[mask] = v
                 lp_b[mask] = dist.log_prob(a)
                 ent_b[mask] = dist.entropy()
+                nl_b[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
 
         sampled_is_legal = (
             env_step.legal_actions_mask.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
@@ -102,6 +106,8 @@ def _collect_rollout(
                 log_prob_black=lp_b,
                 entropy_white=ent_w,
                 entropy_black=ent_b,
+                num_legal_white=nl_w,
+                num_legal_black=nl_b,
                 reward_white=env_step.reward.clone(),
                 done=env_step.done.clone(),
                 terminal_r_white=tr_white,

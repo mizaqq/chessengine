@@ -24,6 +24,8 @@ class StepRecord:
     log_prob_black: Tensor     # [num_envs], grad-connected for black model only
     entropy_white: Tensor      # [num_envs], grad-connected for white model only
     entropy_black: Tensor      # [num_envs], grad-connected for black model only
+    num_legal_white: Tensor   # [num_envs], count of legal moves for white
+    num_legal_black: Tensor   # [num_envs], count of legal moves for black
     reward_white: Tensor       # [num_envs], piece-diff from white's perspective
     done: Tensor               # [num_envs], bool
     terminal_r_white: Tensor   # [num_envs], precomputed terminal reward for white
