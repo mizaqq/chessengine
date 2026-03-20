@@ -153,6 +153,7 @@ def _backpropagate_for_model(
     filtered_values = []
     filtered_returns = []
     filtered_entropies = []
+    filtered_num_legal = []
 
     for i, step in enumerate(steps_data):
         is_mine = step.player == model_id
@@ -163,12 +164,14 @@ def _backpropagate_for_model(
         val = val_tensor.squeeze(-1)[is_mine]
         lp = (step.log_prob_white if model_id == WHITE else step.log_prob_black)[is_mine]
         ent = (step.entropy_white if model_id == WHITE else step.entropy_black)[is_mine]
+        nl = (step.num_legal_white if model_id == WHITE else step.num_legal_black)[is_mine]
         advantage = (ret - val).detach()
         filtered_advantages.append(advantage)
         filtered_log_probs.append(lp)
         filtered_values.append(val)
         filtered_returns.append(ret.detach())
         filtered_entropies.append(ent)
+        filtered_num_legal.append(nl)
 
     if not filtered_log_probs:
         return torch.tensor(0.0)
@@ -178,10 +181,13 @@ def _backpropagate_for_model(
     cat_values = torch.cat(filtered_values)
     cat_returns = torch.cat(filtered_returns)
     cat_entropies = torch.cat(filtered_entropies)
+    cat_num_legal = torch.cat(filtered_num_legal)
+    log_legal = torch.clamp(torch.log(cat_num_legal), min=1e-8)
+    normalized_entropy = cat_entropies / log_legal
 
     policy_loss = -(cat_log_probs * cat_advantages.detach()).mean()
     value_loss = (cat_values - cat_returns).pow(2).mean()
-    entropy_bonus = cat_entropies.mean()
+    entropy_bonus = normalized_entropy.mean()
 
     loss_composer = ComposedLoss()
     loss_dict = loss_composer.compute(
