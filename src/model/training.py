@@ -275,6 +275,13 @@ def run_chess_training(
         )
 
         total_loss = result_w["total_loss"].item() + result_b["total_loss"].item()
+        metrics.add_entropy(
+            raw=(result_w["entropy_raw"] + result_b["entropy_raw"]) / 2,
+            normalized=(
+                result_w["entropy_normalized"] + result_b["entropy_normalized"]
+            )
+            / 2,
+        )
         losses.append(total_loss)
 
         pbar.set_postfix(loss=total_loss)

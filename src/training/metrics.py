@@ -18,6 +18,9 @@ class MetricsAggregator:
         self.white_wins = 0
         self.black_wins = 0
         self.draws = 0
+        self._entropy_raw_sum = 0.0
+        self._entropy_norm_sum = 0.0
+        self._entropy_count = 0
 
     def add_step(self, empty_masks: int = 0, illegal_samples: int = 0):
         self.episode_empty_masks += empty_masks
@@ -33,6 +36,11 @@ class MetricsAggregator:
         elif draw:
             self.draws += 1
 
+    def add_entropy(self, raw: float, normalized: float):
+        self._entropy_raw_sum += raw
+        self._entropy_norm_sum += normalized
+        self._entropy_count += 1
+
     def episode_summary(self) -> Dict[str, Any]:
         """Return windowed stats and reset counters for the next window."""
         total_games = self.white_wins + self.black_wins + self.draws
@@ -46,6 +54,8 @@ class MetricsAggregator:
             "white_win_rate": self.white_wins / total_games if total_games > 0 else 0.0,
             "black_win_rate": self.black_wins / total_games if total_games > 0 else 0.0,
             "draw_rate": self.draws / total_games if total_games > 0 else 0.0,
+            "mean_entropy_raw": self._entropy_raw_sum / max(self._entropy_count, 1),
+            "mean_entropy_normalized": self._entropy_norm_sum / max(self._entropy_count, 1),
         }
         self._reset_all()
         return summary

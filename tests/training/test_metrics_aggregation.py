@@ -45,3 +45,31 @@ def test_summary_with_no_games_returns_zero_rates():
     result = m.episode_summary()
     assert result["total_games"] == 0
     assert result["white_win_rate"] == 0.0
+
+
+def test_entropy_metrics_accumulate_and_average():
+    m = MetricsAggregator()
+    m.add_entropy(raw=2.0, normalized=0.8)
+    m.add_entropy(raw=1.0, normalized=0.6)
+    result = m.episode_summary()
+    assert result["mean_entropy_raw"] == 1.5
+    assert result["mean_entropy_normalized"] == 0.7
+
+
+def test_entropy_metrics_reset_between_windows():
+    m = MetricsAggregator()
+    m.add_entropy(raw=2.0, normalized=0.8)
+    first = m.episode_summary()
+    assert first["mean_entropy_raw"] == 2.0
+
+    m.add_entropy(raw=1.0, normalized=0.5)
+    second = m.episode_summary()
+    assert second["mean_entropy_raw"] == 1.0
+    assert second["mean_entropy_normalized"] == 0.5
+
+
+def test_entropy_metrics_zero_when_no_data():
+    m = MetricsAggregator()
+    result = m.episode_summary()
+    assert result["mean_entropy_raw"] == 0.0
+    assert result["mean_entropy_normalized"] == 0.0
