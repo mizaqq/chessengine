@@ -2,23 +2,18 @@
 
 **Goal:** Increase environment throughput to speed up data collection.
 
-## 1. Vectorized Environments (Immediate Priority)
+## ~~1. Vectorized Environments~~ DONE
 
-**Current State:**
-`EnvSpawner` iterates through environments sequentially in a Python loop.
+Implemented two vectorized environment wrappers with unified `EnvStep` API:
 
-**Proposal:**
-Implement a vectorized environment wrapper using `torch.multiprocessing` or adapt `gym.vector.AsyncVectorEnv` for OpenSpiel.
+- **`OpenSpielVectorEnv`** (sync) — sequential stepping, simplest implementation
+- **`OpenSpielAsyncVectorEnv`** (async) — `torch.multiprocessing` with Pipes, `fork` context
 
-**Action Plan:**
+Both support auto-reset, `current_player` tracking, piece-difference rewards, and
+terminal game result reporting via `info["game_results"]`. Configurable via `env_type`
+in YAML config. Benchmark: async is **1.14x faster** than sync with 12 envs.
 
-1.  Create a `VectorizedChessEnv` class that manages multiple OpenSpiel instances.
-2.  Use `multiprocessing` to step environments in parallel subprocesses.
-3.  Ensure the main process receives a batch of observations (states) and returns a batch of actions.
-4.  This allows the GPU to process a batch of states while the CPUs are stepping the environments for the next turn.
-
-**Expected Gain:**
-4x - 8x speedup in data collection.
+Legacy `EnvSpawner` removed. `VectorBuffer` moved to standalone module.
 
 ## 2. JAX / GPU-Native Environments (Long-Term)
 

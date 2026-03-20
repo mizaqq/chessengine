@@ -37,18 +37,20 @@ Start training on simplified endgame positions.
 **Expected Gain:**
 Teaches the agent _how to checkmate_ (the ultimate goal) much faster than random exploration from the opening.
 
-## 3. Outcome Modeling
+## ~~3. Outcome Modeling~~ PARTIALLY DONE
 
-**Current State:**
-Draws might be treated as 0 or loss.
+Terminal rewards (win/loss/draw) are now configurable per-player via YAML:
 
-**Proposal:**
-Refine the reward for draws.
+```yaml
+terminal_rewards:
+  win: 2.0
+  loss: -2.0
+  draw: -0.5
+```
 
-**Action Plan:**
+Rewards are precomputed as vectorized tensors (`terminal_r_white`, `terminal_r_black`)
+and injected into the returns computation. Draw is currently -0.5 (small penalty).
 
-1.  Treat "Draw" as a small positive reward (e.g., +0.1) for Black and a small negative for White (or vice versa depending on perspective/rating).
-2.  Alternatively, use a 3-head output for the value network (Win probability, Loss probability, Draw probability).
-
-**Expected Gain:**
-Avoids "suicide to avoid a draw" behavior in lost positions.
+**Remaining:**
+- 3-head value network (Win/Loss/Draw probabilities) — not yet implemented
+- Asymmetric draw rewards (different for white vs black) — not yet implemented

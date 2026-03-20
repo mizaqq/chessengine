@@ -2,6 +2,10 @@
 
 **Goal:** Move from basic A2C to more stable and powerful RL algorithms.
 
+**Current baseline:** Player-agnostic A2C with per-model value heads, cross-player
+done propagation, configurable hyperparams (`gamma`, `entropy_coef`, `grad_clip`),
+and inlined loss computation. See `src/model/training.py`.
+
 ## 1. PPO + GAE (Immediate Priority)
 
 **Current State:**
