@@ -13,14 +13,11 @@ processed once in `_collect_rollout`.
 `MetricsAggregator` now properly accumulates metrics with windowed summaries.
 `episode_summary()` returns stats since last call (including win rates) and auto-resets.
 
-## 3. Log Normalized Entropy
+## ~~3. Log Normalized Entropy~~ DONE
 
-**Issue:**
-The loss function now optimizes _normalized_ entropy (`entropy / log(legal_moves)`), but the logs still track raw entropy (`entropies.mean()`).
-
-**Consequence:**
-The logged entropy metric is misleading and does not reflect what the agent is actually optimizing. A decrease in raw entropy might just mean fewer legal moves available, not necessarily less exploration relative to the available options.
-
-**Action:**
-
-- Update the logging logic (both `pbar` and `logs.json`) to track the normalized entropy value used in the loss calculation.
+Entropy normalization implemented at the point of consumption:
+- `_backpropagate_for_model` normalizes entropy for loss: `raw / clamp(log(num_legal), 1e-8)`
+- `MetricsAggregator` tracks both `mean_entropy_raw` and `mean_entropy_normalized`
+- Forced moves (1 legal action) handled safely via clamping
+- Step-count weighted averaging prevents bias when one model has no data
+- Unused `compute_entropy_bonus()` removed from `src/losses/`
