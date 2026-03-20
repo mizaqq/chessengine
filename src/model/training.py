@@ -174,7 +174,11 @@ def _backpropagate_for_model(
         filtered_num_legal.append(nl)
 
     if not filtered_log_probs:
-        return torch.tensor(0.0)
+        return {
+            "total_loss": torch.tensor(0.0),
+            "entropy_raw": 0.0,
+            "entropy_normalized": 0.0,
+        }
 
     cat_log_probs = torch.cat(filtered_log_probs)
     cat_advantages = torch.cat(filtered_advantages)
@@ -202,7 +206,11 @@ def _backpropagate_for_model(
     total_loss.backward()
     torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
     optimizer.step()
-    return total_loss
+    return {
+        "total_loss": total_loss,
+        "entropy_raw": cat_entropies.mean().item(),
+        "entropy_normalized": normalized_entropy.mean().item(),
+    }
 
 
 def run_chess_training(
@@ -257,16 +265,16 @@ def run_chess_training(
             steps_data, model_id=BLACK, bootstrap_value=bootstrap_black, gamma=gamma
         )
 
-        loss_w = _backpropagate_for_model(
+        result_w = _backpropagate_for_model(
             white_model, optimizer_white, steps_data, returns_white, model_id=WHITE,
             entropy_coef=entropy_coef, grad_clip=grad_clip,
         )
-        loss_b = _backpropagate_for_model(
+        result_b = _backpropagate_for_model(
             black_model, optimizer_black, steps_data, returns_black, model_id=BLACK,
             entropy_coef=entropy_coef, grad_clip=grad_clip,
         )
 
-        total_loss = loss_w.item() + loss_b.item()
+        total_loss = result_w["total_loss"].item() + result_b["total_loss"].item()
         losses.append(total_loss)
 
         pbar.set_postfix(loss=total_loss)
