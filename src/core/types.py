@@ -30,12 +30,3 @@ class StepRecord:
     done: Tensor               # [num_envs], bool
     terminal_r_white: Tensor   # [num_envs], precomputed terminal reward for white
     terminal_r_black: Tensor   # [num_envs], precomputed terminal reward for black
-
-
-@dataclass
-class RolloutBatch:
-    obs: Tensor
-    actions: Tensor
-    rewards: Tensor
-    dones: Tensor
-    legal_actions_mask: Tensor

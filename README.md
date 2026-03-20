@@ -1,29 +1,31 @@
 # Chess RL Engine
 
-A modular reinforcement learning engine for training chess agents using PyTorch and OpenSpiel.
+A reinforcement learning engine for training chess agents via self-play using PyTorch and OpenSpiel.
 
 ## Architecture
 
-The codebase follows a **ports-and-adapters** architecture with clear separation of concerns:
+Two separate `ChessPolicyProbs` models (white and black) train against each other in a **player-agnostic A2C loop**. Each model has its own policy head, value head, and optimizer — no shared parameters.
 
 ```
 src/
-├── core/           # Core interfaces and types
-├── envs/           # Environment adapters (OpenSpiel)
-├── training/       # Training utilities (metrics, rollout collection)
-├── losses/         # Modular loss functions
-├── model/          # Neural network models
-├── entrypoints/    # Training entry points
-└── configs/        # Configuration files
+├── core/           # Data types (EnvStep, StepRecord)
+├── envs/           # Vectorized environment wrappers (sync + async)
+├── model/          # Neural network + training loop + returns
+├── training/       # Metrics aggregation
+├── losses/         # Loss composition
+├── entrypoints/    # CLI entry point
+└── configs/        # YAML configuration
 ```
 
 ### Key Components
 
-- **`core/`**: Abstract interfaces (`VectorEnv`) and data types (`EnvStep`, `RolloutBatch`)
-- **`envs/`**: OpenSpiel environment wrappers implementing the `VectorEnv` interface
-- **`training/`**: `MetricsAggregator` for tracking training metrics, `RolloutCollector` for rollout data
-- **`losses/`**: Modular loss functions (policy gradient, value MSE, entropy regularization)
-- **`entrypoints/`**: Config-driven training entry points
+- **`core/types.py`**: `EnvStep` (env output), `StepRecord` (per-step rollout data with per-model fields)
+- **`envs/`**: `OpenSpielVectorEnv` (sync) and `OpenSpielAsyncVectorEnv` (multiprocessing) — duck-typed, same API
+- **`model/training.py`**: Core training loop — rollout collection, returns computation, backpropagation
+- **`model/chess_model.py`**: `ChessPolicyProbs` — ResNet (10 blocks, 128 filters) with policy + value heads
+- **`model/returns.py`**: Discounted returns with cross-player done propagation
+- **`training/metrics.py`**: `MetricsAggregator` — windowed stats (win rates, entropy, illegal moves)
+- **`losses/composed_loss.py`**: `total = policy + value - entropy_coef * normalized_entropy`
 
 ## Installation
 
@@ -55,15 +57,22 @@ python -m src.entrypoints.train
 
 ### Custom Configuration
 
-Create a YAML config file:
+Create a YAML config file (see `src/configs/train_default.yaml` for all options):
 
 ```yaml
-# my_config.yaml
 num_envs: 12
 max_updates: 30000
 steps_per_update: 15
 learning_rate: 0.0001
 seed: 42
+env_type: sync          # sync | async
+gamma: 0.99
+entropy_coef: 0.01
+grad_clip: 1.0
+terminal_rewards:
+  win: 2.0
+  loss: -2.0
+  draw: -0.5
 ```
 
 Run with custom config:
@@ -75,7 +84,7 @@ python -m src.entrypoints.train --config my_config.yaml
 Override specific parameters:
 
 ```bash
-python -m src.entrypoints.train --max-updates 5000 --seed 123
+python -m src.entrypoints.train --max-updates 5000 --seed 123 --env-type async
 ```
 
 ### Programmatic Usage
@@ -89,21 +98,18 @@ config = {
     "steps_per_update": 15,
     "learning_rate": 1e-4,
     "seed": 42,
+    "env_type": "sync",
+    "gamma": 0.99,
+    "entropy_coef": 0.01,
+    "grad_clip": 1.0,
+    "terminal_rewards": {"win": 2.0, "loss": -2.0, "draw": -0.5},
 }
 
 result = run_training_from_config(config)
-logs = result["logs"]
-losses = result["losses"]
+logs = result["logs"]       # list of dicts with metrics every 10 episodes
+losses = result["losses"]   # per-episode total loss
 white_model = result["white_model"]
 black_model = result["black_model"]
-```
-
-### Legacy Entry Point
-
-The original `src/main.py` still works for backward compatibility:
-
-```bash
-python -m src.main
 ```
 
 ## Testing
@@ -134,44 +140,30 @@ pytest tests/integration/test_training_smoke.py -v
 
 ### Adding a Custom Environment
 
-Implement the `VectorEnv` interface:
+Environments use duck typing — implement `reset()`, `step()`, and `num_envs`:
 
 ```python
-from src.core.interfaces import VectorEnv
 from src.core.types import EnvStep
 import torch
 
-class MyCustomEnv(VectorEnv):
+class MyCustomEnv:
     def __init__(self, num_envs: int):
         self.num_envs = num_envs
-    
+
     def reset(self) -> EnvStep:
-        obs = torch.zeros(self.num_envs, 20, 8, 8)
-        legal_actions_mask = torch.ones(self.num_envs, 4674)
-        reward = torch.zeros(self.num_envs)
-        done = torch.zeros(self.num_envs, dtype=torch.bool)
-        return EnvStep(obs, legal_actions_mask, reward, done, {})
-    
-    def step(self, actions):
-        # Your implementation
+        return EnvStep(
+            obs=torch.zeros(self.num_envs, 20, 8, 8),
+            legal_actions_mask=torch.ones(self.num_envs, 4674),
+            reward=torch.zeros(self.num_envs),
+            done=torch.zeros(self.num_envs, dtype=torch.bool),
+            current_player=torch.ones(self.num_envs, dtype=torch.long),  # 1=white, 0=black
+            info={},
+        )
+
+    def step(self, actions: torch.Tensor) -> EnvStep:
+        # Must return EnvStep with auto-reset on done.
+        # info["game_results"] = {env_idx: "white_win"|"black_win"|"draw"}
         pass
-```
-
-### Adding a Custom Loss
-
-```python
-from src.losses.composed_loss import ComposedLoss
-
-# Use existing loss composer
-loss_composer = ComposedLoss()
-loss_dict = loss_composer.compute(
-    policy_loss=my_policy_loss,
-    value_loss=my_value_loss,
-    entropy_bonus=my_entropy,
-    entropy_coef=0.02
-)
-
-total_loss = loss_dict["total_loss"]
 ```
 
 ### Project Structure
@@ -179,23 +171,27 @@ total_loss = loss_dict["total_loss"]
 ```
 .
 ├── src/
-│   ├── core/               # Core abstractions
-│   ├── envs/               # Environment adapters
-│   ├── training/           # Training utilities
-│   ├── losses/             # Loss functions
-│   ├── model/              # Neural networks
-│   ├── entrypoints/        # Entry points
-│   ├── configs/            # YAML configs
-│   └── utils/              # Utilities
+│   ├── core/types.py              # EnvStep, StepRecord dataclasses
+│   ├── envs/
+│   │   ├── open_spiel_env.py      # Single environment wrapper
+│   │   ├── open_spiel_vector_env.py       # Sync vectorized (sequential)
+│   │   └── open_spiel_async_vector_env.py # Async vectorized (multiprocessing)
+│   ├── model/
+│   │   ├── chess_model.py         # ChessPolicyProbs (ResNet + policy/value heads)
+│   │   ├── training.py            # A2C training loop
+│   │   └── returns.py             # Discounted returns computation
+│   ├── training/metrics.py        # MetricsAggregator (windowed stats)
+│   ├── losses/composed_loss.py    # Loss composition
+│   ├── entrypoints/train.py       # CLI entry point
+│   └── configs/train_default.yaml # Default configuration
 ├── tests/
-│   ├── core/               # Core tests
-│   ├── envs/               # Environment tests
-│   ├── training/           # Training tests
-│   ├── losses/             # Loss tests
-│   └── integration/        # Integration tests
-├── docs/
-│   └── plans/              # Design docs and migration notes
-└── README.md
+│   ├── envs/               # Environment contract tests
+│   ├── model/              # Returns + entropy normalization tests
+│   ├── training/           # Metrics aggregation tests
+│   ├── losses/             # Loss function tests
+│   └── integration/        # Smoke + desync tests
+├── docs/plans/             # Design documents
+└── roadmap/                # Phase-based development roadmap
 ```
 
 ## Configuration Options
@@ -204,21 +200,31 @@ total_loss = loss_dict["total_loss"]
 |-----------|------|---------|-------------|
 | `num_envs` | int | 12 | Number of parallel environments |
 | `max_updates` | int | 30000 | Maximum training updates |
-| `steps_per_update` | int | 15 | Steps per training update |
-| `learning_rate` | float | 1e-4 | Learning rate |
+| `steps_per_update` | int | 15 | Rollout steps per training update |
+| `learning_rate` | float | 1e-4 | Initial learning rate |
 | `gamma` | float | 0.99 | Discount factor |
-| `entropy_coef` | float | 0.01 | Entropy regularization coefficient |
-| `lr_decay_interval` | int | 100 | LR decay interval |
-| `lr_decay_factor` | float | 0.5 | LR decay factor |
-| `min_lr` | float | 3e-4 | Minimum learning rate |
+| `entropy_coef` | float | 0.01 | Normalized entropy bonus coefficient |
+| `grad_clip` | float | 1.0 | Gradient clipping max norm |
+| `env_type` | str | sync | Environment type: `sync` or `async` |
+| `terminal_rewards.win` | float | 2.0 | Reward for winning |
+| `terminal_rewards.loss` | float | -2.0 | Reward for losing |
+| `terminal_rewards.draw` | float | -0.5 | Reward for drawing |
+| `lr_decay_interval` | int | 100 | LR decay interval (episodes) |
+| `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
+| `min_lr` | float | 3e-4 | Minimum learning rate floor |
 | `seed` | int | 42 | Random seed |
-| `log_interval` | int | 10 | Logging interval |
 
-## Migration from Old Code
+## Training Loop Details
 
-See [Migration Notes](docs/plans/2026-02-28-rl-refactor-migration-notes.md) for detailed migration guide.
+The training loop (`src/model/training.py`) runs a player-agnostic A2C:
 
-**TL;DR**: Old code still works. New code provides better modularity and testability.
+1. **Rollout collection** — steps through vectorized envs, dispatches observations to white/black models based on `current_player`
+2. **Returns computation** — backward pass through steps with cross-player done propagation and terminal rewards
+3. **Backpropagation** — per-model loss: `policy_loss + value_loss - entropy_coef * normalized_entropy`
+
+**Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) are clamped to avoid division by zero.
+
+**Reward signal**: Dense piece-difference reward (from white's perspective) + configurable terminal rewards on game end.
 
 ## License
 
