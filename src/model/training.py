@@ -51,8 +51,8 @@ def _collect_rollout(
         lp_b = torch.zeros(num_envs)
         ent_w = torch.zeros(num_envs)
         ent_b = torch.zeros(num_envs)
-        nl_w = torch.ones(num_envs)
-        nl_b = torch.ones(num_envs)
+        nleg_w = torch.ones(num_envs)
+        nleg_b = torch.ones(num_envs)
 
         for model_id, mask in [(WHITE, white_mask), (BLACK, black_mask)]:
             if not mask.any():
@@ -68,12 +68,12 @@ def _collect_rollout(
                 val_w[mask] = v
                 lp_w[mask] = dist.log_prob(a)
                 ent_w[mask] = dist.entropy()
-                nl_w[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
+                nleg_w[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
             else:
                 val_b[mask] = v
                 lp_b[mask] = dist.log_prob(a)
                 ent_b[mask] = dist.entropy()
-                nl_b[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
+                nleg_b[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
 
         sampled_is_legal = (
             env_step.legal_actions_mask.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
@@ -106,8 +106,8 @@ def _collect_rollout(
                 log_prob_black=lp_b,
                 entropy_white=ent_w,
                 entropy_black=ent_b,
-                num_legal_white=nl_w,
-                num_legal_black=nl_b,
+                num_legal_white=nleg_w,
+                num_legal_black=nleg_b,
                 reward_white=env_step.reward.clone(),
                 done=env_step.done.clone(),
                 terminal_r_white=tr_white,
@@ -178,6 +178,7 @@ def _backpropagate_for_model(
             "total_loss": torch.tensor(0.0),
             "entropy_raw": 0.0,
             "entropy_normalized": 0.0,
+            "step_count": 0,
         }
 
     cat_log_probs = torch.cat(filtered_log_probs)
@@ -210,6 +211,7 @@ def _backpropagate_for_model(
         "total_loss": total_loss,
         "entropy_raw": cat_entropies.mean().item(),
         "entropy_normalized": normalized_entropy.mean().item(),
+        "step_count": len(cat_entropies),
     }
 
 
@@ -275,13 +277,20 @@ def run_chess_training(
         )
 
         total_loss = result_w["total_loss"].item() + result_b["total_loss"].item()
-        metrics.add_entropy(
-            raw=(result_w["entropy_raw"] + result_b["entropy_raw"]) / 2,
-            normalized=(
-                result_w["entropy_normalized"] + result_b["entropy_normalized"]
+        total_steps = result_w["step_count"] + result_b["step_count"]
+        if total_steps > 0:
+            metrics.add_entropy(
+                raw=(
+                    result_w["entropy_raw"] * result_w["step_count"]
+                    + result_b["entropy_raw"] * result_b["step_count"]
+                )
+                / total_steps,
+                normalized=(
+                    result_w["entropy_normalized"] * result_w["step_count"]
+                    + result_b["entropy_normalized"] * result_b["step_count"]
+                )
+                / total_steps,
             )
-            / 2,
-        )
         losses.append(total_loss)
 
         pbar.set_postfix(loss=total_loss)
