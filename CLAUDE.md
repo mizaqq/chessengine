@@ -65,8 +65,11 @@ end product.
   - *Confirm the contract*: before `/opsx:apply`, Claude restates the key
     requirements and scenarios in chat and the owner says whether they match what
     the code should do; gaps are fixed before implementation.
-  A change is not done until the task has been attempted and discussed. Evidence of
-  understanding from these tasks is what goes into `learning/records/`.
+  Always paste the relevant code (the function or the exact lines, not a file
+  reference) in the same message as the question, so the owner can answer without
+  opening files. A change is not done until the task has been attempted and
+  discussed. Evidence of understanding from these tasks is what goes into
+  `learning/records/`.
 
 ## Change workflow: OpenSpec
 
