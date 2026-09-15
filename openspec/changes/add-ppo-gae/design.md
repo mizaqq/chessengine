@@ -1,6 +1,8 @@
 ## Context
 
-See proposal.md for motivation. Facts about the current code that shape the design:
+See proposal.md for motivation. **Depends on `potential-based-shaping`**, which
+replaces the per-step material reward with a shaped reward computed in the returns
+walk; GAE reuses that walk. Facts about the current code that shape the design:
 
 - `_collect_rollout` runs both models with gradients enabled and stores
   graph-connected `value_*`, `log_prob_*`, `entropy_*` tensors in `StepRecord`. The
@@ -66,6 +68,8 @@ for i in reversed(steps):
     next_value = next_value * (1 - done) + terminal_r          # cut chain
     gae        = gae * (1 - done)                              # reset accumulator
     if own step:
+        # reward is the shaped reward from the potential-based-shaping walk
+        # (scale * (gamma * phi_next - phi)); see that change's design D2
         delta = reward + gamma * next_value - old_value
         gae   = delta + gamma * lam * gae
         adv[i] = gae; target[i] = gae + old_value
