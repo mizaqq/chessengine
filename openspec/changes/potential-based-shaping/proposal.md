@@ -79,9 +79,12 @@ config (shaping potential, scale 1.0), seed 42, 500 updates, logs saved to
 
 Owner's prediction (stated in conversation before the run):
 
-> **Value loss vs old run:** _pending_
-> **Draw rate vs old run:** _pending_
-> **Anything else expected to move:** _pending_
+> **Value loss vs old run:** could go either way; the level of loss and return is
+> not the test, model behaviour is.
+> **Draw rate vs old run:** similar, still nearly all draws. The previous runs drew
+> because the model never learned to checkmate, and this change does not by itself
+> teach checkmating.
+> **Anything else expected to move:** nothing specific.
 
 ## What to understand
 
