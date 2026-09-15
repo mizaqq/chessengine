@@ -29,3 +29,6 @@ losses.png
 
 # Git worktrees
 .worktrees/
+
+# Local knowledge base (never commit)
+knowledge/
