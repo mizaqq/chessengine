@@ -17,7 +17,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ipywidgets>=8.1.9",
     "pytest>=9.1.1",
 ]
 
