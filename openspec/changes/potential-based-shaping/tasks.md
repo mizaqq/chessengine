@@ -30,6 +30,13 @@
       `tests/entrypoints/test_config.py`; add both keys with comments to
       `src/configs/train_default.yaml`; verify tests pass.
 
+## 3b. Readable outcome metric
+
+- [ ] 3.2 Add `mean_terminal_return` (unshaped, white view, averaged over games that
+      ended in the window) to `MetricsAggregator` and the log summary, so outcomes
+      can be read next to the shaped loss; test in
+      `tests/training/test_metrics_aggregation.py`; verify pass.
+
 ## 4. Verification and docs
 
 - [ ] 4.1 Run `uv run pytest -q` and confirm green; run
