@@ -42,8 +42,19 @@ def play_game(
     greedy: bool = False,
     max_moves: int = 300,
     seed: Optional[int] = None,
+    greedy_white: Optional[bool] = None,
+    greedy_black: Optional[bool] = None,
 ) -> GameRecord:
-    """Play a single game and return per-move records plus the result."""
+    """Play a single game and return per-move records plus the result.
+
+    `greedy` applies to both sides; `greedy_white` / `greedy_black` override it per
+    side. Greedy means argmax (deterministic, ignores `seed`); otherwise moves are
+    sampled from the policy.
+    """
+    greedy_by_player = {
+        WHITE: greedy if greedy_white is None else greedy_white,
+        BLACK: greedy if greedy_black is None else greedy_black,
+    }
     if seed is not None:
         torch.manual_seed(seed)
     env = OpenSpielEnv()
@@ -63,7 +74,7 @@ def play_game(
         with torch.no_grad():
             probs, value = models[player](obs, mask)
         probs = probs.squeeze(0)
-        action = int(probs.argmax()) if greedy else int(torch.multinomial(probs, 1))
+        action = int(probs.argmax()) if greedy_by_player[player] else int(torch.multinomial(probs, 1))
 
         white_material = _material_np(env.state())
         material = white_material if player == WHITE else -white_material

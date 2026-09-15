@@ -49,3 +49,12 @@ def test_greedy_is_deterministic():
     a = play_game(UniformPolicy(0.0), UniformPolicy(0.0), max_moves=6, greedy=True)
     b = play_game(UniformPolicy(0.0), UniformPolicy(0.0), max_moves=6, greedy=True)
     assert [m.san for m in a.moves] == [m.san for m in b.moves]
+
+
+def test_per_side_greedy_control():
+    """White greedy, black sampled: white's replies to identical positions are fixed,
+    black's first move varies with the seed."""
+    w, b = UniformPolicy(0.0), UniformPolicy(0.0)
+    games = [play_game(w, b, greedy_white=True, greedy_black=False, max_moves=2, seed=s) for s in range(6)]
+    assert len({g.moves[0].san for g in games}) == 1          # white's first move is fixed
+    assert len({g.moves[1].san for g in games}) > 1           # black's varies
