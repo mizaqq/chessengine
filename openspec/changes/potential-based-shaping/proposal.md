@@ -96,6 +96,12 @@ draw value (-0.5) per window. Rerun with the same seed reproduced the numbers
 exactly, so the loop is deterministic. Checkpoints saved under
 `experiments/potential-based-shaping/` (gitignored). Baseline for `add-ppo-gae`.
 
+**Follow-up (scale 0.2, same recipe):** value-vs-material correlation on the seeded
+game flipped from +0.46/+0.39 to -0.28/-0.18 (owner predicted the sign), slope
+-0.02 vs theoretical -0.2; 368 games, W/B/D 34/55/279 (24% decisive vs 13% at
+scale 1); final loss ~1.0 vs ~25. Both seeded games ended in real checkmate.
+Logs in `experiments/potential-based-shaping/scale02/run.json`.
+
 ## What to understand
 
 - Why a reward for the transition between two of my decisions must include the
