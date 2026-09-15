@@ -42,7 +42,10 @@ end product.
 - **Learning log.** End each session that touched RL concepts by asking the owner to
   state what they learned in their own words, and record it in `learning/records/`
   (one short file per insight, numbered `0001-slug.md`). Only record demonstrated
-  understanding or corrected misconceptions, not material merely covered.
+  understanding or corrected misconceptions, not material merely covered. Then
+  fold the insight into the topic reference `learning/NOTES.md` (one section per
+  topic; append or correct, never duplicate) and write a short session summary in
+  `learning/sessions/YYYY-MM-DD.md`.
 - **Paper-driven milestones.** Tie each roadmap item to its primary source (e.g. PPO,
   GAE, AlphaZero, fictitious self-play). Have the owner read the relevant section
   before implementation starts.

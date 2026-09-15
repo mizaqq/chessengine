@@ -1,0 +1,123 @@
+# RL notes, by topic
+
+Cumulative reference of what has been learned in this project, one topic per
+section. Each session that touches a topic appends to it or corrects it. Sources
+are in `RESOURCES.md`; demonstrated understanding is in `records/`.
+
+## Return, value, advantage
+
+- **Return** is what actually happened after a move: discounted sum of later
+  rewards, with a value-head guess (the bootstrap) standing in for whatever lies
+  beyond the rollout window.
+- **Value** is what the model expected at the position where the move was chosen.
+- **Advantage** = return − value. The policy gradient pushes a move up in
+  proportion to its advantage. The absolute return level is irrelevant; only
+  "better or worse than expected" moves the policy.
+- Consequence: any constant offset shared by return and value cancels. The loss
+  level is therefore not a measure of learning progress.
+
+## Two-player games: the opponent is environment
+
+- From one player's seat the opponent is part of the world. A transition runs from
+  my decision to my next decision and includes the opponent's reply
+  (Sutton & Barto, Section 1.5).
+- Rewards that arrive between two of my decisions belong to the earlier one.
+  Dropping them (as the old code did on opponent steps) makes the signal
+  asymmetric: paid for captures, never charged for being captured.
+- Discount once per own decision, not per ply.
+
+## Reward shaping (potential-based)
+
+- Dense hand-made rewards (material) speed up credit assignment but can change what
+  is optimal. Ng, Harada & Russell (1999) prove that the only safe form is
+  `F = gamma * Phi(next) − Phi(now)` for some potential Phi over states.
+- Intuition: a loan. Material gains are paid out during the game and repaid at the
+  terminal state (Phi(terminal) = 0), so shaping sums to zero over any complete
+  game and only the outcome is net reward.
+- If the *only* reward is potential-based, every policy is optimal (Remark 2): the
+  shaping teaches nothing by itself; the outcome reward does all the teaching.
+- In this repo: Phi = material from the mover's view, piece values 9/5/3/3/1,
+  `shaping_scale` multiplies the loan, `shaping: none` is outcome-only.
+- Material only matters while the game continues. A rook lost on the mating move
+  is never charged: the terminal potential is zero and there is no future for the
+  material to stand in for.
+
+## Reading a shaped value head
+
+- Under potential shaping the value head learns `V' = V − Phi` (Corollary 2). At a
+  materially winning position it outputs a *negative* number.
+- Before judging whether the model thinks it is winning, add material back:
+  `value + material`.
+- Empirically (500 updates): at scale 1.0 the head had not learned the offset
+  (value moved *with* material, corr +0.46); at scale 0.2 the sign flipped
+  (−0.28) but the slope was a tenth of theory. The head learns the loan slowly, and
+  a smaller loan is less to learn.
+- Fair comparison of two value heads needs the same fixed positions, not games
+  each model played itself.
+
+## Terminal states and bootstrapping
+
+- On `done`, the future value is replaced by the terminal reward and the running
+  potential is reset to zero, before the current move is processed. Order matters:
+  reversed, material from the *next* game would leak into a checkmate.
+- The bootstrap is the value head's guess for the last observed position. It is
+  arbitrary in a hand trace and must be wiped by any earlier `done`.
+- Quirk kept: the terminal reward enters as `gamma * terminal` at the ending move
+  (1% at gamma 0.99).
+
+## Variance and GAE (introduced, not yet implemented)
+
+- `return − value` is GAE with lambda = 1: unbiased given gamma, high variance,
+  and every move in the window leans on one value-head guess at the horizon.
+- The one-step surprise `r + gamma V(next) − V(now)` is lambda = 0: low variance,
+  biased by every error in V. GAE sums surprises with decay lambda.
+- Lambda adds bias only when V is wrong; gamma adds bias always. So lambda can sit
+  around 0.95 while gamma stays 0.99 (Schulman et al. 2016, Section 3).
+- GAE leans on the value head, so the shaped-head lesson above matters for it.
+
+## Step size and PPO (introduced, not yet implemented)
+
+- Plain policy gradient buys one gradient step per rollout: after the step the
+  policy has changed and the samples are stale.
+- PPO looks at the ratio new/old probability of each taken move and clips the
+  objective once the ratio leaves [1 − eps, 1 + eps] in the helpful direction, so
+  several epochs over the same rollout are safe (Schulman et al. 2017, eq. 7).
+- A2C is the special case: one epoch, one minibatch, no clip; at ratio 1 the
+  gradients are identical.
+- Diagnostics to log: clip fraction, approximate KL.
+
+## Sampling versus greedy play
+
+- A policy trained by sampling is calibrated for sampling. Its argmax is not a
+  faithful summary of it.
+- Greedy self-play with a weak policy loops into threefold repetition; sampled
+  play explores into positions the policy handles well.
+- Evaluation should sample at low temperature, not argmax.
+
+## What the models actually know (Sep 2026)
+
+- They know a few mating pictures with high confidence (queen mates, back-rank
+  rook mates: top-1 with p 0.5–0.99) but miss ~96% of available mates-in-one.
+- The draw rate is therefore a recognition problem, not a randomness problem.
+- Mate-in-one rate adopted as the first evaluation metric (baseline 8/215).
+- Candidate remedy: endgame / mate curriculum (start games near the goal), with
+  supervised puzzle pre-training as the comparison, not the starting point.
+
+## Experiment hygiene
+
+- State the prediction before the run; compare afterwards; record the gap.
+- One variable per experiment; the algorithm switch (A2C ↔ PPO) is only clean if
+  the baseline is otherwise identical.
+- Fixed seeds make runs reproducible (verified: identical numbers on rerun), and
+  also make "rerun" silently replay the same game.
+- Loss level is not the test. Behaviour is: outcomes, mate rate, value-head
+  sanity.
+
+## Business analogues
+
+- Reward attribution gaps: an agent credited for sales but not for churn caused
+  between its decisions.
+- Potential shaping: intermediate KPIs (clicks, engagement) must net to zero
+  against the real outcome or the agent optimises the proxy.
+- Argmax vs sampling: a recommender evaluated only on its top pick can look worse
+  or better than the policy actually deployed.
