@@ -37,6 +37,13 @@ reach for it. Prune anything that turns out shallow or wrong.
   and why rewards between two own moves belong to the earlier one. (Verified via the
   archive.org full text; the incompleteideas.net site had a certificate error.)
 
+- [Paper: "Policy invariance under reward transformations: Theory and application to reward shaping" — Ng, Harada & Russell (ICML 1999)](https://people.eecs.berkeley.edu/~russell/papers/icml99-shaping.pdf)
+  Theorem 1: F(s,a,s') = gamma*Phi(s') - Phi(s) is necessary and sufficient for the
+  shaped MDP to keep the original optimal policies. Corollary 2: Q' = Q - Phi,
+  V' = V - Phi. Remark 1: near-optimal policies preserved. Remark 2: a purely
+  potential-based reward makes every policy optimal. Use for: material shaping
+  design, why shaping nets to zero over a game, reading the shaped value head.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
@@ -46,6 +53,7 @@ reach for it. Prune anything that turns out shallow or wrong.
 Sources still needed, ordered by roadmap priority:
 
 - Engine-based evaluation of learned policies (roadmap/06_evaluation.md §1)
-- Reward decay / shaping in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
+- Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
+- AlphaZero outcome-only reward (Silver et al. 2017/2018) — needed to ground `shaping: none`
 - Fictitious self-play and opponent sampling (roadmap/05_opponent_sampling.md §1)
 - MCTS combined with a learned policy/value network (roadmap/03_algorithm.md §2)
