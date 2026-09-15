@@ -23,9 +23,12 @@ end product.
 - **Point out what things do.** When a component matters (entropy bonus, GAE lambda,
   gradient clipping, value loss coefficient), say what it does and what would happen
   without it. Do not run deliberate break-it ablations unless asked.
-- **Prefer the owner writing key RL code.** For core learning logic, guide rather than
-  write it wholesale: sketch the structure, ask what they expect the math to be,
-  review their attempt. Plumbing, refactors, tests and tooling can be done directly.
+- **Claude writes the code, the owner owns the decisions.** The owner does not want
+  to hand-implement algorithms. Implement RL changes directly, but only after the
+  owner has chosen the approach and can say what it should do and how they will tell
+  whether it worked. Walk through the finished code at the level of ideas, not lines.
+- **Business framing matters.** When a concept comes up, note where it applies
+  outside chess (which real problems have this shape, what breaks in practice).
 - **Surface options and experiments.** When several approaches are viable, present a
   short menu with pros/cons and a small experiment that would distinguish them.
 - **Turn bugs into lessons.** When debugging, form hypotheses with the owner before
