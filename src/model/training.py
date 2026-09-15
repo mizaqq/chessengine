@@ -41,6 +41,7 @@ def _collect_rollout(
 
     for _ in range(num_steps):
         players = env_step.current_player
+        pre_move_material = env_step.material.clone()
         white_mask = players == WHITE
         black_mask = players == BLACK
 
@@ -90,6 +91,7 @@ def _collect_rollout(
 
         if "game_results" in env_step.info:
             for env_idx, result in env_step.info["game_results"].items():
+                metrics.add_terminal_return(tr_white[env_idx].item())
                 if result == "white_win":
                     metrics.add_terminal_result(white_win=True)
                 elif result == "black_win":
@@ -108,7 +110,7 @@ def _collect_rollout(
                 entropy_black=ent_b,
                 num_legal_white=nleg_w,
                 num_legal_black=nleg_b,
-                reward_white=env_step.reward.clone(),
+                potential_white=pre_move_material,
                 done=env_step.done.clone(),
                 terminal_r_white=tr_white,
                 terminal_r_black=tr_black,
@@ -229,6 +231,7 @@ def run_chess_training(
     gamma=0.99,
     entropy_coef=0.01,
     grad_clip=1.0,
+    shaping_scale=1.0,
 ):
     if metrics is None:
         metrics = MetricsAggregator()
@@ -261,10 +264,12 @@ def run_chess_training(
         )
 
         returns_white = compute_returns_for_model(
-            steps_data, model_id=WHITE, bootstrap_value=bootstrap_white, gamma=gamma
+            steps_data, model_id=WHITE, bootstrap_value=bootstrap_white, gamma=gamma,
+            final_material=env_step.material, shaping_scale=shaping_scale,
         )
         returns_black = compute_returns_for_model(
-            steps_data, model_id=BLACK, bootstrap_value=bootstrap_black, gamma=gamma
+            steps_data, model_id=BLACK, bootstrap_value=bootstrap_black, gamma=gamma,
+            final_material=env_step.material, shaping_scale=shaping_scale,
         )
 
         result_w = _backpropagate_for_model(

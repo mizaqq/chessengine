@@ -7,7 +7,8 @@ from src.envs.open_spiel_env import OpenSpielEnv
 PIECE_VALUES = np.array([0, 9, 5, 3, 3, 1], dtype=np.float32)
 
 
-def _piece_difference_np(state: np.ndarray) -> float:
+def _material_np(state: np.ndarray) -> float:
+    """White-view material balance of a position (queen 9, rook 5, bishop 3, knight 3, pawn 1)."""
     piece_counts = state[:12].sum(axis=(1, 2))
     white_scores = (piece_counts[0::2] * PIECE_VALUES).sum()
     black_scores = (piece_counts[1::2] * PIECE_VALUES).sum()
@@ -17,7 +18,6 @@ def _piece_difference_np(state: np.ndarray) -> float:
 def worker(remote, parent_remote):
     parent_remote.close()
     env = OpenSpielEnv()
-    previous_state = None
     try:
         while True:
             cmd, data = remote.recv()
@@ -26,17 +26,15 @@ def worker(remote, parent_remote):
             elif cmd == "reset":
                 env.reset()
                 obs = env.state()
-                previous_state = obs
                 legal = env.get_legal_actions().numpy()
                 cp = env.get_current_player()
-                remote.send((obs, legal, cp))
+                remote.send((obs, _material_np(obs), legal, cp))
             elif cmd == "step":
                 action = data
                 env.step([action])
 
                 obs = env.state()
                 done = env.is_done()
-                reward = _piece_difference_np(obs) - _piece_difference_np(previous_state)
 
                 terminal_obs = None
                 game_result = None
@@ -46,10 +44,9 @@ def worker(remote, parent_remote):
                     env.reset()
                     obs = env.state()
 
-                previous_state = obs
                 legal = env.get_legal_actions().numpy()
                 cp = env.get_current_player()
-                remote.send((obs, reward, done, terminal_obs, game_result, legal, cp))
+                remote.send((obs, _material_np(obs), done, terminal_obs, game_result, legal, cp))
     except Exception as e:
         print(f"Worker error: {e}")
     finally:
@@ -77,11 +74,11 @@ class OpenSpielAsyncVectorEnv:
         for remote in self.remotes:
             remote.send(("reset", None))
         results = [remote.recv() for remote in self.remotes]
-        obs, legal_actions, current_players = zip(*results)
+        obs, materials, legal_actions, current_players = zip(*results)
         return EnvStep(
             obs=torch.tensor(np.stack(obs)).float(),
             legal_actions_mask=torch.tensor(np.stack(legal_actions)).float(),
-            reward=torch.zeros(self.num_envs),
+            material=torch.tensor(materials).float(),
             done=torch.zeros(self.num_envs, dtype=torch.bool),
             current_player=torch.tensor(current_players, dtype=torch.long),
             info={},
@@ -94,7 +91,7 @@ class OpenSpielAsyncVectorEnv:
             remote.send(("step", action))
 
         results = [remote.recv() for remote in self.remotes]
-        obs_list, rewards, dones, terminal_obs_list, game_result_list, legal_list, cp_list = (
+        obs_list, materials, dones, terminal_obs_list, game_result_list, legal_list, cp_list = (
             zip(*results)
         )
 
@@ -114,7 +111,7 @@ class OpenSpielAsyncVectorEnv:
         return EnvStep(
             obs=torch.tensor(np.stack(obs_list)).float(),
             legal_actions_mask=torch.tensor(np.stack(legal_list)).float(),
-            reward=torch.tensor(rewards).float(),
+            material=torch.tensor(materials).float(),
             done=torch.tensor(dones).bool(),
             current_player=torch.tensor(cp_list, dtype=torch.long),
             info=info,

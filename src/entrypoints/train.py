@@ -8,6 +8,27 @@ from src.model.chess_model import ChessPolicyProbs
 from src.model.training import run_chess_training
 
 
+SHAPING_MODES = ("potential", "none")
+
+
+def resolve_shaping(config: Dict[str, Any]) -> float:
+    """Resolve `shaping` and `shaping_scale` into the scale used by the returns walk.
+
+    `potential` (default) applies potential-based material shaping with
+    `shaping_scale` (default 1.0, must be >= 0). `none` disables shaping, which is
+    outcome-only reward, and resolves to a scale of 0.
+    """
+    mode = config.get("shaping", "potential")
+    if mode not in SHAPING_MODES:
+        raise ValueError(
+            f"Unknown shaping {mode!r}; accepted values: {', '.join(SHAPING_MODES)}"
+        )
+    scale = float(config.get("shaping_scale", 1.0))
+    if scale < 0:
+        raise ValueError(f"shaping_scale must be >= 0, got {scale}")
+    return 0.0 if mode == "none" else scale
+
+
 def set_seed(seed: int):
     torch.manual_seed(seed)
     random.seed(seed)
@@ -35,6 +56,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     gamma = config.get("gamma", 0.99)
     entropy_coef = config.get("entropy_coef", 0.01)
     grad_clip = config.get("grad_clip", 1.0)
+    shaping_scale = resolve_shaping(config)
 
     set_seed(seed)
 
@@ -53,6 +75,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         gamma=gamma,
         entropy_coef=entropy_coef,
         grad_clip=grad_clip,
+        shaping_scale=shaping_scale,
     )
 
     return {

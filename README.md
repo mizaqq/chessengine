@@ -23,7 +23,7 @@ src/
 - **`envs/`**: `OpenSpielVectorEnv` (sync) and `OpenSpielAsyncVectorEnv` (multiprocessing) — duck-typed, same API
 - **`model/training.py`**: Core training loop — rollout collection, returns computation, backpropagation
 - **`model/chess_model.py`**: `ChessPolicyProbs` — ResNet (10 blocks, 128 filters) with policy + value heads
-- **`model/returns.py`**: Discounted returns with cross-player done propagation
+- **`model/returns.py`**: Discounted returns with potential-based material shaping and cross-player done propagation
 - **`training/metrics.py`**: `MetricsAggregator` — windowed stats (win rates, entropy, illegal moves)
 - **`losses/composed_loss.py`**: `total = policy + value - entropy_coef * normalized_entropy`
 
@@ -154,7 +154,7 @@ class MyCustomEnv:
         return EnvStep(
             obs=torch.zeros(self.num_envs, 20, 8, 8),
             legal_actions_mask=torch.ones(self.num_envs, 4674),
-            reward=torch.zeros(self.num_envs),
+            material=torch.zeros(self.num_envs),  # white-view material of obs
             done=torch.zeros(self.num_envs, dtype=torch.bool),
             current_player=torch.ones(self.num_envs, dtype=torch.long),  # 1=white, 0=black
             info={},
@@ -209,6 +209,8 @@ class MyCustomEnv:
 | `terminal_rewards.win` | float | 2.0 | Reward for winning |
 | `terminal_rewards.loss` | float | -2.0 | Reward for losing |
 | `terminal_rewards.draw` | float | -0.5 | Reward for drawing |
+| `shaping` | str | potential | `potential` (material shaping) or `none` (outcome only) |
+| `shaping_scale` | float | 1.0 | Multiplier on the shaping term (>= 0) |
 | `lr_decay_interval` | int | 100 | LR decay interval (episodes) |
 | `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
 | `min_lr` | float | 3e-4 | Minimum learning rate floor |
@@ -219,12 +221,12 @@ class MyCustomEnv:
 The training loop (`src/model/training.py`) runs a player-agnostic A2C:
 
 1. **Rollout collection** — steps through vectorized envs, dispatches observations to white/black models based on `current_player`
-2. **Returns computation** — backward pass through steps with cross-player done propagation and terminal rewards
+2. **Returns computation** — backward pass forming the shaped reward per own move, with cross-player done propagation and terminal rewards
 3. **Backpropagation** — per-model loss: `policy_loss + value_loss - entropy_coef * normalized_entropy`
 
 **Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) are clamped to avoid division by zero.
 
-**Reward signal**: Dense piece-difference reward (from white's perspective) + configurable terminal rewards on game end.
+**Reward signal**: configurable terminal rewards on game end, plus potential-based material shaping (Ng, Harada & Russell 1999): each own move receives `shaping_scale * (gamma * material(next own position) - material(this position))` from the mover's perspective, with the terminal position counting as 0. Shaping sums to zero over a complete game, so only the outcome is net reward; `shaping: none` disables it.
 
 ## License
 

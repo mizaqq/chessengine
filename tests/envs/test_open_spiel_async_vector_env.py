@@ -9,7 +9,7 @@ def test_async_env_reset():
     step = env.reset()
     assert step.obs.shape == (2, 20, 8, 8)
     assert step.legal_actions_mask.shape == (2, 4674)
-    assert step.reward.shape == (2,)
+    assert step.material.shape == (2,)
     assert step.done.shape == (2,)
     env.close()
 
@@ -23,7 +23,7 @@ def test_async_env_step():
         actions.append(legal_indices[0].item())
     step = env.step(torch.tensor(actions))
     assert step.obs.shape == (2, 20, 8, 8)
-    assert step.reward.shape == (2,)
+    assert step.material.shape == (2,)
     assert step.done.shape == (2,)
     assert isinstance(step.info, dict)
     env.close()

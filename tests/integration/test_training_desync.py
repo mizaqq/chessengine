@@ -48,7 +48,7 @@ class DesyncVectorEnv:
         legal[:, :20] = 1.0
 
         done_tensor = torch.zeros(self.num_envs, dtype=torch.bool)
-        reward = torch.zeros(self.num_envs)
+        material = torch.zeros(self.num_envs)
 
         info = {}
         if done and reset_idx is not None:
@@ -59,7 +59,7 @@ class DesyncVectorEnv:
         return EnvStep(
             obs=obs,
             legal_actions_mask=legal,
-            reward=reward,
+            material=material,
             done=done_tensor,
             current_player=self._current_player.clone(),
             info=info,
@@ -151,7 +151,7 @@ class AllDoneVectorEnv:
         obs = torch.randn(self.num_envs, 20, 8, 8)
         legal = torch.zeros(self.num_envs, 4674)
         legal[:, :20] = 1.0
-        reward = torch.zeros(self.num_envs)
+        material = torch.zeros(self.num_envs)
 
         done_tensor = torch.zeros(self.num_envs, dtype=torch.bool)
         info = {}
@@ -168,7 +168,7 @@ class AllDoneVectorEnv:
         return EnvStep(
             obs=obs,
             legal_actions_mask=legal,
-            reward=reward,
+            material=material,
             done=done_tensor,
             current_player=self._current_player.clone(),
             info=info,

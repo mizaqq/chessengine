@@ -14,3 +14,12 @@ dependencies = [
     "torch>=2.10.0",
     "tqdm>=4.67.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true

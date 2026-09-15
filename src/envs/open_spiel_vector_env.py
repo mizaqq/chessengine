@@ -6,7 +6,8 @@ from src.envs.open_spiel_env import OpenSpielEnv
 PIECE_VALUES = np.array([0, 9, 5, 3, 3, 1], dtype=np.float32)
 
 
-def _piece_difference_np(state: np.ndarray) -> float:
+def _material_np(state: np.ndarray) -> float:
+    """White-view material balance of a position (queen 9, rook 5, bishop 3, knight 3, pawn 1)."""
     piece_counts = state[:12].sum(axis=(1, 2))
     white_scores = (piece_counts[0::2] * PIECE_VALUES).sum()
     black_scores = (piece_counts[1::2] * PIECE_VALUES).sum()
@@ -14,23 +15,21 @@ def _piece_difference_np(state: np.ndarray) -> float:
 
 
 class OpenSpielVectorEnv:
-    """Vectorized OpenSpiel environment with auto-reset and piece-difference reward."""
+    """Vectorized OpenSpiel environment with auto-reset; reports material of each position."""
 
     def __init__(self, num_envs: int):
         self.num_envs = num_envs
         self.envs = [OpenSpielEnv() for _ in range(num_envs)]
-        self._previous_states: list[np.ndarray] = []
 
     def reset(self) -> EnvStep:
         for env in self.envs:
             env.reset()
 
         states = [env.state() for env in self.envs]
-        self._previous_states = [s.copy() for s in states]
 
         obs = torch.tensor(np.array(states, dtype=np.float32))
         legal_actions_mask = torch.stack([env.get_legal_actions() for env in self.envs])
-        reward = torch.zeros(self.num_envs)
+        material = torch.tensor([_material_np(s) for s in states])
         done = torch.tensor([False] * self.num_envs, dtype=torch.bool)
         current_player = torch.tensor(
             [env.get_current_player() for env in self.envs], dtype=torch.long
@@ -39,14 +38,13 @@ class OpenSpielVectorEnv:
         return EnvStep(
             obs=obs,
             legal_actions_mask=legal_actions_mask,
-            reward=reward,
+            material=material,
             done=done,
             current_player=current_player,
             info={},
         )
 
     def step(self, actions) -> EnvStep:
-        rewards = torch.zeros(self.num_envs)
         done = torch.zeros(self.num_envs, dtype=torch.bool)
         terminal_observations: dict[int, np.ndarray] = {}
         game_results: dict[int, str] = {}
@@ -55,22 +53,15 @@ class OpenSpielVectorEnv:
             if not env.is_done():
                 env.step(int(action))
 
-            current_state = env.state()
-            rewards[i] = _piece_difference_np(current_state) - _piece_difference_np(
-                self._previous_states[i]
-            )
-
             if env.is_done():
                 done[i] = True
-                terminal_observations[i] = current_state.copy()
+                terminal_observations[i] = env.state().copy()
                 game_results[i] = env.game_result()
                 env.reset()
-                current_state = env.state()
-
-            self._previous_states[i] = current_state.copy()
 
         states = [env.state() for env in self.envs]
         obs = torch.tensor(np.array(states, dtype=np.float32))
+        material = torch.tensor([_material_np(s) for s in states])
         legal_actions_mask = torch.stack([env.get_legal_actions() for env in self.envs])
         current_player = torch.tensor(
             [env.get_current_player() for env in self.envs], dtype=torch.long
@@ -84,7 +75,7 @@ class OpenSpielVectorEnv:
         return EnvStep(
             obs=obs,
             legal_actions_mask=legal_actions_mask,
-            reward=rewards,
+            material=material,
             done=done,
             current_player=current_player,
             info=info,

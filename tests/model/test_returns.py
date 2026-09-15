@@ -1,3 +1,10 @@
+"""Discounted returns with potential-based material shaping.
+
+Each own step of a model receives the shaped reward
+    F = scale * (gamma * Phi(next own position) - Phi(this position))
+where Phi is material from that model's perspective and the terminal position has
+Phi = 0 (Ng, Harada & Russell 1999). Terminal outcomes arrive via terminal_r_*.
+"""
 import torch
 from torch.testing import assert_close
 from src.core.types import StepRecord
@@ -7,7 +14,8 @@ WHITE = 1  # OpenSpiel convention
 BLACK = 0
 
 
-def _make_step(player, reward_white, done, terminal_r_w=0.0, terminal_r_b=0.0, n=1):
+def _make_step(player, potential_white, done=False, terminal_r_w=0.0, terminal_r_b=0.0, n=1):
+    """potential_white: white-view material of the position the mover saw (pre-move)."""
     return StepRecord(
         player=torch.tensor([player] * n, dtype=torch.long),
         value_white=torch.zeros(n, 1),
@@ -18,124 +26,159 @@ def _make_step(player, reward_white, done, terminal_r_w=0.0, terminal_r_b=0.0, n
         entropy_black=torch.zeros(n),
         num_legal_white=torch.ones(n) * 20,
         num_legal_black=torch.ones(n) * 20,
-        reward_white=torch.tensor([reward_white] * n),
+        potential_white=torch.tensor([potential_white] * n, dtype=torch.float32),
         done=torch.tensor([done] * n),
         terminal_r_white=torch.tensor([terminal_r_w] * n),
         terminal_r_black=torch.tensor([terminal_r_b] * n),
     )
 
 
-def test_returns_single_player_no_done():
-    """All white steps, no done. Standard discounted returns."""
+def _returns(steps, model_id, bootstrap, final_material, gamma=1.0, scale=1.0):
+    return compute_returns_for_model(
+        steps,
+        model_id=model_id,
+        bootstrap_value=torch.tensor([bootstrap]),
+        gamma=gamma,
+        final_material=torch.tensor([final_material]),
+        shaping_scale=scale,
+    )
+
+
+# --- shaped reward per own move -------------------------------------------------
+
+def test_single_player_potentials_telescope_to_final_minus_first():
+    """All white steps, no done. Shaping telescopes: sum F = gamma^n Phi_T - Phi_0 (gamma=1)."""
+    steps = [_make_step(WHITE, 0.0), _make_step(WHITE, 1.0), _make_step(WHITE, 4.0)]
+    r = _returns(steps, WHITE, bootstrap=10.0, final_material=6.0)
+    # step 2: F = 6 - 4 = 2, R = 2 + 10 = 12
+    # step 1: F = 4 - 1 = 3, R = 3 + 12 = 15
+    # step 0: F = 1 - 0 = 1, R = 1 + 15 = 16   (= (6 - 0) + 10)
+    assert_close(r[2], torch.tensor([12.0]))
+    assert_close(r[1], torch.tensor([15.0]))
+    assert_close(r[0], torch.tensor([16.0]))
+
+
+def test_single_player_discounted_matches_hand_computation():
+    steps = [_make_step(WHITE, 0.0), _make_step(WHITE, 0.0), _make_step(WHITE, 0.0)]
+    r = _returns(steps, WHITE, bootstrap=10.0, final_material=0.0, gamma=0.99)
+    # all potentials 0 -> F = 0 everywhere; pure bootstrap discounting
+    assert_close(r[2], torch.tensor([9.9]))
+    assert_close(r[1], torch.tensor([9.801]))
+    assert_close(r[0], torch.tensor([9.70299]))
+
+
+def test_capture_and_recapture_nets_zero_for_first_mover():
+    """White captures (0 -> 3), black recaptures (3 -> 0), white to move again."""
     steps = [
-        _make_step(player=WHITE, reward_white=1.0, done=False),
-        _make_step(player=WHITE, reward_white=2.0, done=False),
-        _make_step(player=WHITE, reward_white=3.0, done=False),
+        _make_step(WHITE, 0.0),   # white sees 0, captures
+        _make_step(BLACK, 3.0),   # black sees +3 (white view), recaptures
     ]
-    bootstrap = torch.tensor([10.0])
-    returns = compute_returns_for_model(steps, model_id=WHITE, bootstrap_value=bootstrap, gamma=0.99)
-    # R_2 = 3 + 0.99 * 10 = 12.9
-    # R_1 = 2 + 0.99 * 12.9 = 14.771
-    # R_0 = 1 + 0.99 * 14.771 = 15.62329
-    assert_close(returns[2], torch.tensor([12.9]))
-    assert_close(returns[1], torch.tensor([14.771]))
-    assert_close(returns[0], torch.tensor([15.62329]))
+    rw = _returns(steps, WHITE, bootstrap=0.0, final_material=0.0)
+    rb = _returns(steps, BLACK, bootstrap=0.0, final_material=0.0)
+    assert_close(rw[0], torch.tensor([0.0]))    # 0 - 0
+    assert_close(rb[1], torch.tensor([3.0]))    # black view: 0 - (-3)
+    assert_close(rw[1], torch.tensor([0.0]))    # opponent step carries the later R (bootstrap)
 
 
-def test_returns_alternating_no_done():
-    """White and black alternate. White's return skips black's steps."""
+def test_discounted_potential():
+    """White at material 2, next white decision at material 5, gamma 0.9 -> 0.9*5 - 2 = 2.5."""
+    steps = [_make_step(WHITE, 2.0), _make_step(BLACK, 2.0)]
+    r = _returns(steps, WHITE, bootstrap=0.0, final_material=5.0, gamma=0.9)
+    assert_close(r[0], torch.tensor([2.5]))
+
+
+def test_scale_applies_to_shaping_only():
+    steps = [_make_step(WHITE, 2.0, done=True, terminal_r_w=2.0)]
+    r_full = _returns(steps, WHITE, bootstrap=9.0, final_material=5.0, scale=1.0)
+    r_half = _returns(steps, WHITE, bootstrap=9.0, final_material=5.0, scale=0.5)
+    # done: terminal potential 0 -> F = -2*scale; terminal reward 2 unchanged
+    assert_close(r_full[0], torch.tensor([0.0]))
+    assert_close(r_half[0], torch.tensor([1.0]))
+
+
+def test_black_perspective_negates_potential():
+    steps = [_make_step(BLACK, -4.0), _make_step(WHITE, -4.0)]
+    r = _returns(steps, BLACK, bootstrap=0.0, final_material=-1.0)
+    # black view: Phi(s) = 4, Phi(s') = 1 -> F = 1 - 4 = -3 (black lost material)
+    assert_close(r[0], torch.tensor([-3.0]))
+
+
+# --- terminal handling ---------------------------------------------------------
+
+def test_mating_while_ahead_repays_the_loan():
+    """White up a queen mates: F = 0 - 9, plus terminal +2 -> -7; bootstrap ignored."""
+    steps = [_make_step(WHITE, 9.0, done=True, terminal_r_w=2.0, terminal_r_b=-2.0)]
+    r = _returns(steps, WHITE, bootstrap=5.0, final_material=9.0)
+    assert_close(r[0], torch.tensor([-7.0]))
+
+
+def test_opponent_mates_and_new_game_does_not_leak():
+    """White moves at 0; black captures a rook and mates (done); a new game follows."""
     steps = [
-        _make_step(player=WHITE, reward_white=1.0, done=False),
-        _make_step(player=BLACK, reward_white=-2.0, done=False),
-        _make_step(player=WHITE, reward_white=3.0, done=False),
+        _make_step(WHITE, 0.0),
+        _make_step(BLACK, 0.0, done=True, terminal_r_w=-2.0, terminal_r_b=2.0),
+        _make_step(WHITE, 0.0),   # new game
+        _make_step(BLACK, 7.0),   # new game, white already up material
     ]
-    bootstrap = torch.tensor([0.0])
-    returns = compute_returns_for_model(steps, model_id=WHITE, bootstrap_value=bootstrap, gamma=1.0)
-    # gamma=1.0 for simplicity. White reward = reward_white as-is.
-    # Step 2 (white): R = 3 + 1.0 * 0 = 3
-    # Step 1 (black): is_mine=False, R stays 3
-    # Step 0 (white): R = 1 + 1.0 * 3 = 4
-    assert_close(returns[2], torch.tensor([3.0]))
-    assert_close(returns[0], torch.tensor([4.0]))
+    r = _returns(steps, WHITE, bootstrap=5.0, final_material=7.0)
+    assert_close(r[0], torch.tensor([-2.0]))          # (0 - 0) + (-2)
+    assert_close(r[2], torch.tensor([12.0]))          # (7 - 0) + 5, new game only
+    # black's mating move: black view Phi = 0 (white view 0 -> black 0), F = 0, terminal +2
+    rb = _returns(steps, BLACK, bootstrap=5.0, final_material=7.0)
+    assert_close(rb[1], torch.tensor([2.0]))
 
 
-def test_returns_done_on_own_step():
-    """Done on white's step cuts the chain."""
+def test_shaping_sums_to_zero_over_a_complete_game():
+    """Any capture sequence from 0 to terminal: return at move 0 equals terminal reward."""
     steps = [
-        _make_step(player=WHITE, reward_white=1.0, done=False),
-        _make_step(player=WHITE, reward_white=5.0, done=True, terminal_r_w=2.0),
-        _make_step(player=WHITE, reward_white=0.0, done=False),  # new game
+        _make_step(WHITE, 0.0),
+        _make_step(BLACK, 1.0),
+        _make_step(WHITE, -2.0),
+        _make_step(BLACK, 7.0),
+        _make_step(WHITE, 7.0),
+        _make_step(BLACK, 4.0, done=True, terminal_r_w=-0.5, terminal_r_b=-0.5),
     ]
-    bootstrap = torch.tensor([10.0])
-    returns = compute_returns_for_model(steps, model_id=WHITE, bootstrap_value=bootstrap, gamma=1.0)
-    # Step 2 (new game): R = 0 + 1.0 * 10 = 10
-    # Step 1 (done=T):
-    #   A: R = 10 * (1-1) + 2.0 = 2.0  (chain cut, terminal reward injected)
-    #   B: is_mine=True → R = 5 + 1.0 * 2.0 = 7.0
-    # Step 0: R = 1 + 1.0 * 7.0 = 8.0
-    assert_close(returns[2], torch.tensor([10.0]))
-    assert_close(returns[1], torch.tensor([7.0]))
-    assert_close(returns[0], torch.tensor([8.0]))
+    rw = _returns(steps, WHITE, bootstrap=3.0, final_material=0.0)
+    rb = _returns(steps, BLACK, bootstrap=3.0, final_material=0.0)
+    assert_close(rw[0], torch.tensor([-0.5]))
+    assert_close(rb[1], torch.tensor([-0.5 - (-1.0)]))  # black's first move saw Phi_b = -1
 
 
-def test_returns_cross_player_done():
-    """Black checkmates at step 1. White's return at step 0 must NOT include step 2 (new game)."""
+def test_two_consecutive_opponent_steps_desync():
+    """White, black, black, white (desynchronised envs): only own steps get F."""
     steps = [
-        _make_step(player=WHITE, reward_white=0.0, done=False),
-        _make_step(player=BLACK, reward_white=0.0, done=True, terminal_r_w=-2.0, terminal_r_b=2.0),
-        _make_step(player=WHITE, reward_white=0.0, done=False),  # new game after reset
+        _make_step(WHITE, 0.0),
+        _make_step(BLACK, 3.0),
+        _make_step(BLACK, 3.0),
+        _make_step(WHITE, -1.0),
     ]
-    bootstrap = torch.tensor([5.0])
-    returns = compute_returns_for_model(steps, model_id=WHITE, bootstrap_value=bootstrap, gamma=1.0)
-    # Step 2 (white, new game): R = 0 + 1.0 * 5.0 = 5.0
-    # Step 1 (black, done=T):
-    #   A: R = 5.0 * (1-1) + (-2.0) = -2.0  (chain cut!)
-    #   B: is_mine=False → R stays -2.0
-    # Step 0 (white): R = 0 + 1.0 * (-2.0) = -2.0
-    assert_close(returns[2], torch.tensor([5.0]))
-    assert_close(returns[0], torch.tensor([-2.0]))
+    r = _returns(steps, WHITE, bootstrap=0.0, final_material=-1.0)
+    # step 3: F = -1 - (-1) = 0, R = 0
+    # step 0: F = -1 - 0 = -1, R = -1
+    assert_close(r[3], torch.tensor([0.0]))
+    assert_close(r[0], torch.tensor([-1.0]))
+    assert_close(r[1], r[3])   # opponent steps carry the later own step's R
+    assert_close(r[2], r[3])
 
 
-def test_returns_black_model_perspective():
-    """Rewards are flipped for black model."""
+# --- window truncation -----------------------------------------------------------
+
+def test_window_ends_on_opponents_turn_uses_final_material():
+    """White's last move from material 1; window ends black-to-move at -2; bootstrap 4."""
+    steps = [_make_step(WHITE, 1.0)]
+    r = _returns(steps, WHITE, bootstrap=4.0, final_material=-2.0)
+    assert_close(r[0], torch.tensor([1.0]))  # (-2 - 1) + 4
+
+
+# --- shaping off -----------------------------------------------------------------
+
+def test_shaping_none_leaves_only_terminal_and_bootstrap():
     steps = [
-        _make_step(player=WHITE, reward_white=1.0, done=False),
-        _make_step(player=BLACK, reward_white=-3.0, done=False),  # from white persp; black gets +3
+        _make_step(WHITE, 0.0),
+        _make_step(BLACK, 5.0),
+        _make_step(WHITE, -3.0, done=True, terminal_r_w=2.0),
     ]
-    bootstrap = torch.tensor([0.0])
-    returns = compute_returns_for_model(steps, model_id=BLACK, bootstrap_value=bootstrap, gamma=1.0)
-    # For black (model_id=0): reward = -reward_white = -(-3.0) = +3.0
-    # Step 1 (black): R = 3.0 + 0 = 3.0
-    # Step 0 (white): is_mine=False → R stays 3.0
-    assert_close(returns[1], torch.tensor([3.0]))
-
-
-def test_returns_multi_env():
-    """Two envs with different players at the same step."""
-    steps = [
-        StepRecord(
-            player=torch.tensor([WHITE, BLACK]),
-            value_white=torch.zeros(2, 1),
-            value_black=torch.zeros(2, 1),
-            log_prob_white=torch.zeros(2),
-            log_prob_black=torch.zeros(2),
-            entropy_white=torch.zeros(2),
-            entropy_black=torch.zeros(2),
-            num_legal_white=torch.ones(2) * 20,
-            num_legal_black=torch.ones(2) * 20,
-            reward_white=torch.tensor([1.0, -1.0]),
-            done=torch.tensor([False, False]),
-            terminal_r_white=torch.zeros(2),
-            terminal_r_black=torch.zeros(2),
-        ),
-    ]
-    bootstrap = torch.tensor([0.0, 0.0])
-    returns_w = compute_returns_for_model(steps, model_id=WHITE, bootstrap_value=bootstrap, gamma=1.0)
-    # Env 0: white acted, reward_white=1.0 → R = 1 + 0 = 1.0
-    # Env 1: black acted, is_mine=False → R stays 0.0
-    assert_close(returns_w[0], torch.tensor([1.0, 0.0]))
-
-    returns_b = compute_returns_for_model(steps, model_id=BLACK, bootstrap_value=bootstrap, gamma=1.0)
-    # Env 0: white acted, is_mine=False → R stays 0.0
-    # Env 1: black acted, reward_for_black = -(-1.0) = 1.0 → R = 1.0
-    assert_close(returns_b[0], torch.tensor([0.0, 1.0]))
+    r = _returns(steps, WHITE, bootstrap=9.0, final_material=8.0, gamma=0.5, scale=0.0)
+    # existing convention: terminal reward enters as gamma * terminal at the ending step
+    assert_close(r[2], torch.tensor([1.0]))       # 0.5 * 2
+    assert_close(r[0], torch.tensor([0.5]))       # 0.5 * 1.0

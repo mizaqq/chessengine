@@ -44,6 +44,12 @@ reach for it. Prune anything that turns out shallow or wrong.
   potential-based reward makes every policy optimal. Use for: material shaping
   design, why shaping nets to zero over a game, reading the shaped value head.
 
+- [Paper: "Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm" — Silver et al. (2017)](https://arxiv.org/abs/1712.01815)
+  Abstract: superhuman play "given no domain knowledge except the game rules",
+  tabula rasa self-play, no handcrafted evaluation. Grounds `shaping: none` as the
+  outcome-only reference point. The exact reward formulation (game outcome only) is
+  in the paper body; verify there before quoting numbers.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
@@ -54,6 +60,5 @@ Sources still needed, ordered by roadmap priority:
 
 - Engine-based evaluation of learned policies (roadmap/06_evaluation.md §1)
 - Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
-- AlphaZero outcome-only reward (Silver et al. 2017/2018) — needed to ground `shaping: none`
 - Fictitious self-play and opponent sampling (roadmap/05_opponent_sampling.md §1)
 - MCTS combined with a learned policy/value network (roadmap/03_algorithm.md §2)

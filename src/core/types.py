@@ -9,7 +9,7 @@ Tensor = torch.Tensor
 class EnvStep:
     obs: Tensor
     legal_actions_mask: Tensor
-    reward: Tensor
+    material: Tensor        # [num_envs], white-view material balance of `obs`
     done: Tensor
     current_player: Tensor  # [num_envs], 1=white, 0=black (OpenSpiel convention)
     info: Dict[str, Any]
@@ -26,7 +26,7 @@ class StepRecord:
     entropy_black: Tensor      # [num_envs], grad-connected for black model only
     num_legal_white: Tensor   # [num_envs], count of legal moves for white
     num_legal_black: Tensor   # [num_envs], count of legal moves for black
-    reward_white: Tensor       # [num_envs], piece-diff from white's perspective
+    potential_white: Tensor    # [num_envs], white-view material of the position the mover saw
     done: Tensor               # [num_envs], bool
     terminal_r_white: Tensor   # [num_envs], precomputed terminal reward for white
     terminal_r_black: Tensor   # [num_envs], precomputed terminal reward for black

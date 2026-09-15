@@ -9,6 +9,13 @@ gamma: 0.99
 entropy_coef: 0.01
 grad_clip: 1.0
 
+# Reward shaping (Ng, Harada & Russell 1999). `potential`: each own move gets
+# shaping_scale * (gamma * material(next own position) - material(this position)),
+# terminal position counts as 0, so shaping nets to zero over a game and only the
+# terminal outcome is real reward. `none`: outcome-only reward (scale 0).
+shaping: potential
+shaping_scale: 1.0
+
 terminal_rewards:
   win: 2.0
   loss: -2.0

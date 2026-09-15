@@ -1,3 +1,4 @@
+import pytest
 from src.training.metrics import MetricsAggregator
 
 
@@ -73,3 +74,25 @@ def test_entropy_metrics_zero_when_no_data():
     result = m.episode_summary()
     assert result["mean_entropy_raw"] == 0.0
     assert result["mean_entropy_normalized"] == 0.0
+
+
+def test_mean_terminal_return_averages_finished_games():
+    m = MetricsAggregator()
+    m.add_terminal_return(2.0)
+    m.add_terminal_return(-2.0)
+    m.add_terminal_return(-0.5)
+    result = m.episode_summary()
+    assert result["mean_terminal_return"] == pytest.approx(-0.5 / 3)
+
+
+def test_mean_terminal_return_is_none_without_finished_games():
+    m = MetricsAggregator()
+    result = m.episode_summary()
+    assert result["mean_terminal_return"] is None
+
+
+def test_mean_terminal_return_resets_between_windows():
+    m = MetricsAggregator()
+    m.add_terminal_return(2.0)
+    m.episode_summary()
+    assert m.episode_summary()["mean_terminal_return"] is None
