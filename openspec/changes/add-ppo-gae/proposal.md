@@ -80,7 +80,7 @@ Experiment: three arms, same seed, same env count and budget (proposed 12 envs,
 
 | Arm | algorithm | gae_lambda | Purpose |
 |-----|-----------|------------|---------|
-| A | a2c | 1.0 | baseline, identical to today |
+| A | a2c | 1.0 | baseline, identical to today (potential shaping, scale 0.2) |
 | B | a2c | 0.95 | effect of GAE alone |
 | C | ppo | 0.95 | effect of clipping + epochs on top of GAE |
 
@@ -90,6 +90,7 @@ Metrics to watch, per arm, from the logs:
 - white/black/draw rates in the windowed summary
 - PPO only: clip fraction and approx KL per update
 - wall-clock per update
+- mate-in-one rate on 40 sampled games from the final checkpoints (roadmap/06 §0)
 
 Owner's prediction (fill in before the first run):
 

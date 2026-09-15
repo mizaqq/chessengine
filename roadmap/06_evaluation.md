@@ -2,6 +2,15 @@
 
 **Goal:** Accurately measure playing strength, as Loss is not a good proxy for ELO.
 
+## 0. Mate-in-One Rate (Adopted 2026-09-15)
+
+**Metric:** over N sampled self-play games, share of positions with a mate-in-one
+available where the mover played a mate. Baseline (scale-0.2 checkpoints, 40 games):
+8 / 215 = 3.7%. Cheap, needs no engine, directly measures the weakness behind the
+draw rate. Add to the metrics watched in every algorithm/curriculum change.
+Evaluation must sample (low temperature), not argmax: greedy play loops into
+threefold repetition.
+
 ## 1. Stockfish Evaluation Script (Immediate Priority)
 
 **Current State:**

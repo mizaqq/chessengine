@@ -19,7 +19,7 @@ Linearly decay the material reward coefficient over time.
 **Expected Gain:**
 Prevents the agent from becoming a "materialist" that refuses to sacrifice pieces for checkmate.
 
-## 2. Endgame Curriculum (Mid-Term)
+## 2. Endgame Curriculum (Mid-Term) — evidence 2026-09-15: models miss 96% of mates-in-one; see roadmap/06 §0
 
 **Current State:**
 Training starts from the standard initial chess position.
