@@ -53,20 +53,20 @@
 
 - [x] 5.1 Owner states the prediction in conversation; record it in proposal.md;
       verify the `_pending_` markers are gone.
-- [ ] 5.2 Run the default config (potential, scale 1.0), seed 42, 500 updates; save
+- [x] 5.2 Run the default config (potential, scale 1.0), seed 42, 500 updates; save
       logs to `experiments/potential-based-shaping/baseline.json`; verify the file
       exists.
-- [ ] 5.3 Compare with the sync arm of `benchmark_results.json`; discuss against the
+- [x] 5.3 Compare with the sync arm of `benchmark_results.json`; discuss against the
       prediction in conversation; write an "Outcome" paragraph in proposal.md.
 
 ## 6. Comprehension check with owner
 
-- [ ] 6.1 *Trace by hand* (CLAUDE.md): owner walks the "mating while ahead" and
+- [x] 6.1 *Trace by hand* (CLAUDE.md): owner walks the "mating while ahead" and
       "opponent mates" scenarios through the D2 pseudocode, stating `R` and
       `phi_next` after each line.
-- [ ] 6.2 *Explain back*: owner explains why a winning move can carry a negative
+- [x] 6.2 *Explain back*: owner explains why a winning move can carry a negative
       shaped return and what the value head learns to compensate.
-- [ ] 6.3 *Review the diff*: owner answers what breaks if `phi_next` were zeroed
+- [x] 6.3 *Review the diff*: owner answers what breaks if `phi_next` were zeroed
       after the own step instead of before it.
-- [ ] 6.4 Record demonstrated understanding in `learning/records/`; verify a file
+- [x] 6.4 Record demonstrated understanding in `learning/records/`; verify a file
       exists.

@@ -86,6 +86,16 @@ Owner's prediction (stated in conversation before the run):
 > teach checkmating.
 > **Anything else expected to move:** nothing specific.
 
+**Outcome (2026-09-15, 500 updates, seed 42, sync, 12 envs):** loss level moved
+(first-50 mean 14.8 -> 19.1, last-50 21.5 -> 25.1) as the owner predicted was
+possible and irrelevant; draw share essentially unchanged (86% -> 87%, 246/287 ->
+291/336 games), matching the prediction that nothing here teaches checkmating.
+Games ended somewhat more often (287 -> 336) which is consistent with both sides
+now being charged for material losses. `mean_terminal_return` hovers around the
+draw value (-0.5) per window. Rerun with the same seed reproduced the numbers
+exactly, so the loop is deterministic. Checkpoints saved under
+`experiments/potential-based-shaping/` (gitignored). Baseline for `add-ppo-gae`.
+
 ## What to understand
 
 - Why a reward for the transition between two of my decisions must include the
