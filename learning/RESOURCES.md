@@ -29,6 +29,14 @@ reach for it. Prune anything that turns out shallow or wrong.
   invalid-action masking via -inf logits. Use for: implementation checklist and
   what to log.
 
+- [Book: *Reinforcement Learning: An Introduction* — Sutton & Barto, Section 1.5 tic-tac-toe example](http://incompleteideas.net/book/the-book-2nd.html)
+  The learning player has "no model of its opponent of any kind"; the opponent's
+  reply is simply part of how the board changes between the player's own moves, and
+  the TD backup V(s) <- V(s) + a[V(s') - V(s)] runs between states where the player
+  is to move. Use for: why opponent moves are environment from one player's view,
+  and why rewards between two own moves belong to the earlier one. (Verified via the
+  archive.org full text; the incompleteideas.net site had a certificate error.)
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
