@@ -13,6 +13,11 @@ context: |
   Conventions: conventional commits; tests for behaviour changes; RL design
   decisions must cite a primary source listed in learning/RESOURCES.md.
 
+  Workflow constraint: the owner does not read planning artifacts. Options,
+  sources, decisions and the owner's prediction are settled in conversation
+  before any artifact is written; artifacts record those decisions. Do not
+  present artifacts for review; summarise them in a few lines.
+
 rules:
   proposal:
     - Include an "Alternatives considered" section with at least one cited primary source per alternative

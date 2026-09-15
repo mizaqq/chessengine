@@ -62,8 +62,9 @@ end product.
     responsible and what to inspect first, before Claude looks.
   - *Explain back*: describe what a function does and why it exists, in own words,
     without reading comments or docstrings.
-  - *Review the spec delta*: before `/opsx:apply`, read the change's spec scenarios
-    and say whether they match what the code should do; flag anything missing.
+  - *Confirm the contract*: before `/opsx:apply`, Claude restates the key
+    requirements and scenarios in chat and the owner says whether they match what
+    the code should do; gaps are fixed before implementation.
   A change is not done until the task has been attempted and discussed. Evidence of
   understanding from these tasks is what goes into `learning/records/`.
 
@@ -74,14 +75,22 @@ commands under `/opsx:`). This supersedes the superpowers `writing-plans` and
 `executing-plans` steps in this repository; `brainstorming` still applies before a
 proposal. Older design/plan documents in `docs/plans/` are history only.
 
-1. `/opsx:explore` (optional) — think through the problem with the owner.
-2. `/opsx:propose <name>` — Claude writes proposal, spec deltas, design, tasks under
-   `openspec/changes/<name>/`. Rules for these artifacts live in `openspec/config.yaml`.
-3. **Owner reviews the proposal and specs.** This is the decision gate required by
-   "the owner owns the decisions". The owner fills in the prediction placeholder.
-   Nothing is implemented until the owner says so.
+**The owner does not read planning documents. Everything relevant is worked out in
+the conversation first; files are written afterwards as the record of what was
+decided.** Never write a proposal, spec or design and then ask the owner to read it.
+
+1. **Explore in conversation** (`/opsx:explore` or plain chat). Frame the real
+   question, present the viable options with trade-offs and cited sources, give a
+   recommendation, and let the owner choose. Check understanding with a short
+   concrete question. Fetch sources during this step, not after.
+2. **Decide in conversation.** The owner picks the approach and the key parameters.
+   The owner states their prediction for the experiment here, in chat.
+3. `/opsx:propose <name>` — only now. Claude writes proposal, spec deltas, design and
+   tasks under `openspec/changes/<name>/` as a faithful record of steps 1 and 2,
+   including the owner's prediction. Rules live in `openspec/config.yaml`. Summarise
+   what was written in a few lines; do not ask the owner to review the files.
 4. `/opsx:apply <name>` — Claude implements the tasks; the last task is always a
-   comprehension check.
+   comprehension check, done in conversation.
 5. `/opsx:archive <name>` — merge spec deltas into `openspec/specs/`, record what
    was learned in `learning/records/`.
 
