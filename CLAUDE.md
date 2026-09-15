@@ -48,6 +48,22 @@ end product.
   before implementation starts.
 - **Spaced review.** At the start of a session, ask one concrete question about a
   concept from an earlier learning record before starting new work.
+- **Comprehension tasks.** The owner does not write code but must understand it.
+  Every RL change is accompanied by at least one task that requires reading the
+  actual code, chosen from:
+  - *Trace by hand*: given a concrete small input (e.g. a 3-step episode with given
+    rewards and values), work out what a function returns, then run it and compare.
+  - *Map paper to code*: given an equation or algorithm box from the cited source,
+    point at the lines that implement each term, and name anything that deviates.
+  - *Review the diff*: before a change is merged, answer targeted questions about
+    it: what a parameter controls, what happens at an edge case (episode boundary,
+    no legal moves, desynced envs), where a bug would most likely hide.
+  - *Diagnose from symptoms*: given a log or curve from a run, name the code region
+    responsible and what to inspect first, before Claude looks.
+  - *Explain back*: describe what a function does and why it exists, in own words,
+    without reading comments or docstrings.
+  A change is not done until the task has been attempted and discussed. Evidence of
+  understanding from these tasks is what goes into `learning/records/`.
 
 Pure chores (dependency bumps, lockfiles, git hygiene, formatting) do not need the
 learning treatment — just do them.
