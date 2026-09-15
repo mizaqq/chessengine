@@ -211,6 +211,8 @@ class MyCustomEnv:
 | `terminal_rewards.draw` | float | -0.5 | Reward for drawing |
 | `shaping` | str | potential | `potential` (material shaping) or `none` (outcome only) |
 | `shaping_scale` | float | 1.0 | Multiplier on the shaping term (>= 0) |
+
+CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed S] [--env-type sync|async] [--save-dir DIR]`. With `--save-dir`, both models are written as `<color>_model_<timestamp>_episodes_<N>.pth`.
 | `lr_decay_interval` | int | 100 | LR decay interval (episodes) |
 | `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
 | `min_lr` | float | 3e-4 | Minimum learning rate floor |

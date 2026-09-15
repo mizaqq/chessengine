@@ -1,6 +1,8 @@
 import torch
 import random
 import numpy as np
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, Any
 from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
@@ -27,6 +29,19 @@ def resolve_shaping(config: Dict[str, Any]) -> float:
     if scale < 0:
         raise ValueError(f"shaping_scale must be >= 0, got {scale}")
     return 0.0 if mode == "none" else scale
+
+
+def save_models(white_model, black_model, save_dir, updates: int, timestamp: str = None):
+    """Save both state dicts as <color>_model_<timestamp>_episodes_<updates>.pth."""
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = timestamp or datetime.now().strftime("%Y%m%d%H%M%S")
+    paths = []
+    for name, model in (("white", white_model), ("black", black_model)):
+        path = save_dir / f"{name}_model_{timestamp}_episodes_{updates}.pth"
+        torch.save(model.state_dict(), path)
+        paths.append(path)
+    return paths
 
 
 def set_seed(seed: int):
@@ -95,6 +110,8 @@ def main():
     parser.add_argument("--max-updates", type=int)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--env-type", type=str, choices=["sync", "async"])
+    parser.add_argument("--save-dir", type=str, default=None,
+                        help="Directory to write white/black checkpoints after training")
 
     args = parser.parse_args()
 
@@ -110,6 +127,11 @@ def main():
 
     result = run_training_from_config(config)
     print(f"Training complete. Processed {len(result['logs'])} log entries.")
+    if args.save_dir:
+        paths = save_models(
+            result["white_model"], result["black_model"], args.save_dir, config["max_updates"]
+        )
+        print("Saved:", ", ".join(str(p) for p in paths))
     return result
 
 

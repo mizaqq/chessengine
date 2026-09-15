@@ -25,3 +25,18 @@ def test_negative_scale_rejected():
     with pytest.raises(ValueError) as exc:
         resolve_shaping({"shaping_scale": -1.0})
     assert "shaping_scale" in str(exc.value)
+
+
+def test_save_models_writes_two_checkpoints(tmp_path):
+    import torch
+    from src.entrypoints.train import save_models
+    from src.model.chess_model import ChessPolicyProbs
+
+    w, b = ChessPolicyProbs(num_filters=8), ChessPolicyProbs(num_filters=8)
+    paths = save_models(w, b, tmp_path, updates=7, timestamp="20260915120000")
+    assert sorted(p.name for p in paths) == [
+        "black_model_20260915120000_episodes_7.pth",
+        "white_model_20260915120000_episodes_7.pth",
+    ]
+    loaded = torch.load(paths[0], map_location="cpu")
+    assert set(loaded.keys()) == set(w.state_dict().keys())
