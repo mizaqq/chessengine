@@ -75,7 +75,7 @@ last own move, and the value bootstrap SHALL apply as before.
 
 ### Requirement: Shaping is configurable
 The system SHALL read `shaping` (`potential` default, or `none`) and `shaping_scale`
-(default 1.0, must be >= 0) from the training config and SHALL reject other
+(default 0.2, must be >= 0) from the training config and SHALL reject other
 `shaping` values with an error listing the accepted ones.
 
 #### Scenario: outcome only

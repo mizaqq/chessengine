@@ -2,8 +2,8 @@ import pytest
 from src.entrypoints.train import resolve_shaping
 
 
-def test_default_is_potential_with_scale_one():
-    assert resolve_shaping({}) == 1.0
+def test_default_is_potential_with_scale_point_two():
+    assert resolve_shaping({}) == 0.2
 
 
 def test_explicit_potential_and_scale():

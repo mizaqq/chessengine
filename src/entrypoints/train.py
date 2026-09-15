@@ -17,7 +17,7 @@ def resolve_shaping(config: Dict[str, Any]) -> float:
     """Resolve `shaping` and `shaping_scale` into the scale used by the returns walk.
 
     `potential` (default) applies potential-based material shaping with
-    `shaping_scale` (default 1.0, must be >= 0). `none` disables shaping, which is
+    `shaping_scale` (default 0.2, must be >= 0). `none` disables shaping, which is
     outcome-only reward, and resolves to a scale of 0.
     """
     mode = config.get("shaping", "potential")
@@ -25,7 +25,7 @@ def resolve_shaping(config: Dict[str, Any]) -> float:
         raise ValueError(
             f"Unknown shaping {mode!r}; accepted values: {', '.join(SHAPING_MODES)}"
         )
-    scale = float(config.get("shaping_scale", 1.0))
+    scale = float(config.get("shaping_scale", 0.2))
     if scale < 0:
         raise ValueError(f"shaping_scale must be >= 0, got {scale}")
     return 0.0 if mode == "none" else scale

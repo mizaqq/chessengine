@@ -14,7 +14,10 @@ grad_clip: 1.0
 # terminal position counts as 0, so shaping nets to zero over a game and only the
 # terminal outcome is real reward. `none`: outcome-only reward (scale 0).
 shaping: potential
-shaping_scale: 1.0
+# 0.2 chosen 2026-09-15 from a single-seed 500-update comparison against 1.0:
+# value head started to absorb the material offset (corr flipped negative) and
+# decisive games rose 13% -> 24%. Revisit with more seeds.
+shaping_scale: 0.2
 
 terminal_rewards:
   win: 2.0
