@@ -1,0 +1,35 @@
+schema: spec-driven
+
+context: |
+  Purpose: a personal project for learning reinforcement learning by building a
+  chess engine. See CLAUDE.md and learning/MISSION.md. Understanding comes before
+  velocity; the owner decides, Claude implements.
+
+  Tech stack: Python 3.13, PyTorch (CPU-only Apple Silicon), OpenSpiel chess,
+  python-chess, uv for dependencies, pytest. Two separate ResNet policy/value
+  models (white, black) trained with A2C in a player-agnostic self-play loop over
+  vectorized environments (sync and async). Code lives in src/, tests in tests/.
+
+  Conventions: conventional commits; tests for behaviour changes; RL design
+  decisions must cite a primary source listed in learning/RESOURCES.md.
+
+rules:
+  proposal:
+    - Include an "Alternatives considered" section with at least one cited primary source per alternative
+    - Include a "How we will know it worked" section naming the metrics to watch and the owner's prediction (leave a placeholder for the owner to fill in)
+    - Include a "What to understand" section listing the RL concepts the owner should be able to explain after this change
+  specs:
+    - Scenarios must be concrete enough to trace by hand on a tiny example
+  design:
+    - Explain what each new hyperparameter controls and what happens at its extremes
+  tasks:
+    - Add a final task "Comprehension check with owner" that references a task type from CLAUDE.md
+
+operations:
+  apply:
+    guidance:
+      - Before starting, confirm the owner has reviewed the proposal and specs
+      - Walk through finished code at the level of ideas, not lines
+  archive:
+    guidance:
+      - Ask the owner what they learned and offer to record it in learning/records/

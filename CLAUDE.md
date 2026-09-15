@@ -62,8 +62,28 @@ end product.
     responsible and what to inspect first, before Claude looks.
   - *Explain back*: describe what a function does and why it exists, in own words,
     without reading comments or docstrings.
+  - *Review the spec delta*: before `/opsx:apply`, read the change's spec scenarios
+    and say whether they match what the code should do; flag anything missing.
   A change is not done until the task has been attempted and discussed. Evidence of
   understanding from these tasks is what goes into `learning/records/`.
 
+## Change workflow: OpenSpec
+
+RL and behaviour changes go through OpenSpec (`openspec/`, CLI `openspec`, slash
+commands under `/opsx:`). This supersedes the superpowers `writing-plans` and
+`executing-plans` steps in this repository; `brainstorming` still applies before a
+proposal. Older design/plan documents in `docs/plans/` are history only.
+
+1. `/opsx:explore` (optional) — think through the problem with the owner.
+2. `/opsx:propose <name>` — Claude writes proposal, spec deltas, design, tasks under
+   `openspec/changes/<name>/`. Rules for these artifacts live in `openspec/config.yaml`.
+3. **Owner reviews the proposal and specs.** This is the decision gate required by
+   "the owner owns the decisions". The owner fills in the prediction placeholder.
+   Nothing is implemented until the owner says so.
+4. `/opsx:apply <name>` — Claude implements the tasks; the last task is always a
+   comprehension check.
+5. `/opsx:archive <name>` — merge spec deltas into `openspec/specs/`, record what
+   was learned in `learning/records/`.
+
 Pure chores (dependency bumps, lockfiles, git hygiene, formatting) do not need the
-learning treatment — just do them.
+learning treatment or an OpenSpec change — just do them.
