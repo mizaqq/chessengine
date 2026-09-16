@@ -57,6 +57,11 @@ Owner (while the data built): "no need to run 4 arms". Only BOTH runs; the
 baseline is `experiments/ppo-gae/C2_ppo_lr1e-4` (same config, mate-in-one only, no
 cap) read at updates 120 and 150.
 
+Then: "we just stay with mates in 2 ... run with mate-in-2 and ply limit with a
+longer run that will go for more episodes". The cap-only arm was cancelled; LONG
+continues from BOTH's checkpoint for 480 more updates (600 total, 38,400 plies
+per board), read against C2 at 250 (16,000 plies) and BOTH at 120.
+
 Read: `lichess_top1`, `lichess_m2_top1`, `puzzle_solved_rate_m1/_m2`, games
 finished per update, draw rate, opening entropy, and 40-game evaluation (mate
 rate, mean plies). Expect CAP to raise finished games per update and shorten
