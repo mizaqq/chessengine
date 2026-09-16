@@ -10,6 +10,7 @@ import torch
 
 from src.envs.open_spiel_env import OpenSpielEnv
 from src.envs.open_spiel_vector_env import _material_np
+from src.model.orientation import orient_black
 
 WHITE = 1
 BLACK = 0
@@ -44,6 +45,7 @@ def play_game(
     seed: Optional[int] = None,
     greedy_white: Optional[bool] = None,
     greedy_black: Optional[bool] = None,
+    oriented: bool = False,
 ) -> GameRecord:
     """Play a single game and return per-move records plus the result.
 
@@ -69,6 +71,8 @@ def play_game(
         player = env.get_current_player()
         fen_before = state.to_string()
         obs = torch.tensor(env.state(), dtype=torch.float32).unsqueeze(0)
+        if oriented and player == BLACK:
+            obs = orient_black(obs)
         mask = env.get_legal_actions().unsqueeze(0)
 
         with torch.no_grad():

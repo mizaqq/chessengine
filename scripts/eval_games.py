@@ -12,7 +12,7 @@ from pathlib import Path
 import chess
 import torch
 
-from scripts.eval_checkpoint_puzzles import load_pair
+from src.model.checkpoints import load_models
 from scripts.prepare_puzzles import mating_moves
 from src.viz.play import play_game
 
@@ -24,7 +24,7 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args()
-    white, black, wpath, bpath = load_pair(args.ckpt_dir)
+    white, black, oriented, paths = load_models(args.ckpt_dir)
 
     results = Counter()
     opportunities = 0
@@ -32,7 +32,7 @@ def main():
     lengths = []
     torch.manual_seed(args.seed)
     for _ in range(args.games):
-        game = play_game(white, black, greedy=False)
+        game = play_game(white, black, greedy=False, oriented=oriented)
         results[game.result] += 1
         lengths.append(len(game.moves))
         for move in game.moves:
@@ -55,8 +55,8 @@ def main():
         "mate_in_one_found": found,
         "mate_in_one_rate": found / opportunities if opportunities else None,
         "mean_plies": sum(lengths) / total,
-        "white_ckpt": wpath,
-        "black_ckpt": bpath,
+        "checkpoints": paths,
+        "oriented": oriented,
         "seed": args.seed,
     }
     print(json.dumps(summary, indent=1))

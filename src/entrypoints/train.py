@@ -59,7 +59,7 @@ def resolve_eval_fn(config: Dict[str, Any]):
     if not path:
         return None
     puzzles = load_puzzles(path)
-    return lambda white, black: evaluate_mate_in_one(white, black, puzzles)
+    return lambda white, black, oriented=False: evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
 
 
 def resolve_eval_interval(config: Dict[str, Any]) -> int:
@@ -69,17 +69,7 @@ def resolve_eval_interval(config: Dict[str, Any]) -> int:
     return interval
 
 
-def save_models(white_model, black_model, save_dir, updates: int, timestamp: str = None):
-    """Save both state dicts as <color>_model_<timestamp>_episodes_<updates>.pth."""
-    save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = timestamp or datetime.now().strftime("%Y%m%d%H%M%S")
-    paths = []
-    for name, model in (("white", white_model), ("black", black_model)):
-        path = save_dir / f"{name}_model_{timestamp}_episodes_{updates}.pth"
-        torch.save(model.state_dict(), path)
-        paths.append(path)
-    return paths
+from src.model.checkpoints import save_model, save_models  # noqa: E402  (re-exported)
 
 
 def set_seed(seed: int):
@@ -123,10 +113,18 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     set_seed(seed)
 
     envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs)
+    shared = bool(config.get("shared_network", True))
     white_model = ChessPolicyProbs()
-    black_model = ChessPolicyProbs()
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
-    optimizer_black = torch.optim.Adam(black_model.parameters(), lr=lr)
+    if shared:
+        # One network for both colours, observations oriented to the mover.
+        black_model, optimizer_black = None, None
+    else:
+        black_model = ChessPolicyProbs()
+        optimizer_black = torch.optim.Adam(black_model.parameters(), lr=lr)
+    if eval_fn is not None:
+        eval_puzzles_fn = eval_fn
+        eval_fn = lambda w, b: eval_puzzles_fn(w, b, oriented=shared)
 
     logs, losses, white_model, black_model = run_chess_training(
         envs, white_model, black_model,
@@ -150,6 +148,8 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "losses": losses,
         "white_model": white_model,
         "black_model": black_model,
+        "shared": shared,
+        "model": white_model if shared else None,
     }
 
 
@@ -180,9 +180,12 @@ def main():
     result = run_training_from_config(config)
     print(f"Training complete. Processed {len(result['logs'])} log entries.")
     if args.save_dir:
-        paths = save_models(
-            result["white_model"], result["black_model"], args.save_dir, config["max_updates"]
-        )
+        if result["shared"]:
+            paths = [save_model(result["model"], args.save_dir, config["max_updates"])]
+        else:
+            paths = save_models(
+                result["white_model"], result["black_model"], args.save_dir, config["max_updates"]
+            )
         print("Saved:", ", ".join(str(p) for p in paths))
     return result
 

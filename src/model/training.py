@@ -5,6 +5,7 @@ from src.core.types import StepRecord
 from src.model.returns import compute_returns_for_model
 from src.training.metrics import MetricsAggregator
 from src.losses.composed_loss import ComposedLoss
+from src.model.orientation import orient
 
 WHITE = 1
 BLACK = 0
@@ -50,12 +51,16 @@ def _collect_rollout(
     num_envs,
     terminal_rewards,
     metrics,
+    oriented=False,
 ):
+    """`oriented`: observations are flipped to the mover's view before the model
+    (shared network). The environment still reports the absolute board."""
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
 
     for _ in range(num_steps):
         players = env_step.current_player
+        obs_in = orient(env_step.obs, players) if oriented else env_step.obs
         pre_move_material = env_step.material.clone()
         white_mask = players == WHITE
         black_mask = players == BLACK
@@ -74,7 +79,7 @@ def _collect_rollout(
             if not mask.any():
                 continue
             p, v = models[model_id](
-                env_step.obs[mask], env_step.legal_actions_mask[mask]
+                obs_in[mask], env_step.legal_actions_mask[mask]
             )
             dist = Categorical(probs=p)
             a = dist.sample()
@@ -152,11 +157,12 @@ def _weighted_mean(result_a, result_b, key, count_key):
     return acc / total
 
 
-def _compute_bootstrap(env_step, white_model, black_model, model_id):
+def _compute_bootstrap(env_step, white_model, black_model, model_id, oriented=False):
     num_envs = env_step.obs.shape[0]
     bootstrap = torch.zeros(num_envs)
     models = {WHITE: white_model, BLACK: black_model}
     opponent_id = WHITE if model_id == BLACK else BLACK
+    obs_in = orient(env_step.obs, env_step.current_player) if oriented else env_step.obs
 
     with torch.no_grad():
         same_player = env_step.current_player == model_id
@@ -164,13 +170,13 @@ def _compute_bootstrap(env_step, white_model, black_model, model_id):
 
         if same_player.any():
             _, v = models[model_id](
-                env_step.obs[same_player], env_step.legal_actions_mask[same_player]
+                obs_in[same_player], env_step.legal_actions_mask[same_player]
             )
             bootstrap[same_player] = v.squeeze(-1)
 
         if opponent_player.any():
             _, v = models[opponent_id](
-                env_step.obs[opponent_player],
+                obs_in[opponent_player],
                 env_step.legal_actions_mask[opponent_player],
             )
             bootstrap[opponent_player] = -v.squeeze(-1)
@@ -178,86 +184,46 @@ def _compute_bootstrap(env_step, white_model, black_model, model_id):
     return bootstrap
 
 
-def _backpropagate_for_model(
-    model, optimizer, steps_data, model_returns, model_id,
-    entropy_coef=0.01, grad_clip=1.0, puzzle_env_mask=None,
-):
-    filtered_log_probs = []
-    filtered_advantages = []
-    filtered_values = []
-    filtered_returns = []
-    filtered_entropies = []
-    filtered_num_legal = []
-    filtered_is_puzzle = []
+_EMPTY_STATS = {
+    "entropy_raw": 0.0, "entropy_normalized": 0.0, "step_count": 0,
+    "entropy_normalized_game": None, "entropy_normalized_puzzle": None,
+    "game_step_count": 0, "puzzle_step_count": 0,
+}
 
+
+def _gather_side(steps_data, model_returns, model_id, puzzle_env_mask=None):
+    """Concatenate one side's own-step tensors over the rollout; None if it never moved."""
+    parts = {"log_prob": [], "value": [], "ret": [], "entropy": [], "num_legal": [], "is_puzzle": []}
     for i, step in enumerate(steps_data):
         is_mine = step.player == model_id
         if not is_mine.any():
             continue
-        if puzzle_env_mask is not None:
-            filtered_is_puzzle.append(puzzle_env_mask[is_mine])
-        else:
-            filtered_is_puzzle.append(torch.zeros(int(is_mine.sum()), dtype=torch.bool))
-        ret = model_returns[i][is_mine]
-        val_tensor = step.value_white if model_id == WHITE else step.value_black
-        val = val_tensor.squeeze(-1)[is_mine]
-        lp = (step.log_prob_white if model_id == WHITE else step.log_prob_black)[is_mine]
-        ent = (step.entropy_white if model_id == WHITE else step.entropy_black)[is_mine]
-        nl = (step.num_legal_white if model_id == WHITE else step.num_legal_black)[is_mine]
-        advantage = (ret - val).detach()
-        filtered_advantages.append(advantage)
-        filtered_log_probs.append(lp)
-        filtered_values.append(val)
-        filtered_returns.append(ret.detach())
-        filtered_entropies.append(ent)
-        filtered_num_legal.append(nl)
+        white = model_id == WHITE
+        parts["ret"].append(model_returns[i][is_mine].detach())
+        parts["value"].append((step.value_white if white else step.value_black).squeeze(-1)[is_mine])
+        parts["log_prob"].append((step.log_prob_white if white else step.log_prob_black)[is_mine])
+        parts["entropy"].append((step.entropy_white if white else step.entropy_black)[is_mine])
+        parts["num_legal"].append((step.num_legal_white if white else step.num_legal_black)[is_mine])
+        parts["is_puzzle"].append(
+            puzzle_env_mask[is_mine] if puzzle_env_mask is not None
+            else torch.zeros(int(is_mine.sum()), dtype=torch.bool)
+        )
+    if not parts["log_prob"]:
+        return None
+    g = {k: torch.cat(v) for k, v in parts.items()}
+    g["normalized_entropy"] = g["entropy"] / torch.clamp(torch.log(g["num_legal"]), min=1e-8)
+    return g
 
-    if not filtered_log_probs:
-        return {
-            "total_loss": torch.tensor(0.0),
-            "entropy_raw": 0.0,
-            "entropy_normalized": 0.0,
-            "step_count": 0,
-            "entropy_normalized_game": None,
-            "entropy_normalized_puzzle": None,
-            "game_step_count": 0,
-            "puzzle_step_count": 0,
-        }
 
-    cat_log_probs = torch.cat(filtered_log_probs)
-    cat_advantages = torch.cat(filtered_advantages)
-    cat_values = torch.cat(filtered_values)
-    cat_returns = torch.cat(filtered_returns)
-    cat_entropies = torch.cat(filtered_entropies)
-    cat_num_legal = torch.cat(filtered_num_legal)
-    cat_is_puzzle = torch.cat(filtered_is_puzzle)
-    log_legal = torch.clamp(torch.log(cat_num_legal), min=1e-8)
-    normalized_entropy = cat_entropies / log_legal
-
-    policy_loss = -(cat_log_probs * cat_advantages.detach()).mean()
-    value_loss = (cat_values - cat_returns).pow(2).mean()
-    entropy_bonus = normalized_entropy.mean()
-
-    loss_composer = ComposedLoss()
-    loss_dict = loss_composer.compute(
-        policy_loss=policy_loss,
-        value_loss=value_loss,
-        entropy_bonus=entropy_bonus,
-        entropy_coef=entropy_coef,
-    )
-
-    total_loss = loss_dict["total_loss"]
-    optimizer.zero_grad()
-    total_loss.backward()
-    torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
-    optimizer.step()
-    game_ent = normalized_entropy[~cat_is_puzzle]
-    puzzle_ent = normalized_entropy[cat_is_puzzle]
+def _side_stats(g):
+    if g is None:
+        return dict(_EMPTY_STATS)
+    ne = g["normalized_entropy"]
+    game_ent, puzzle_ent = ne[~g["is_puzzle"]], ne[g["is_puzzle"]]
     return {
-        "total_loss": total_loss,
-        "entropy_raw": cat_entropies.mean().item(),
-        "entropy_normalized": normalized_entropy.mean().item(),
-        "step_count": len(cat_entropies),
+        "entropy_raw": g["entropy"].mean().item(),
+        "entropy_normalized": ne.mean().item(),
+        "step_count": len(ne),
         # Entropy split by board type: puzzle boards are expected to sharpen; the
         # opening boards tell whether real play has gone rigid.
         "entropy_normalized_game": game_ent.mean().item() if len(game_ent) else None,
@@ -265,6 +231,45 @@ def _backpropagate_for_model(
         "game_step_count": int(len(game_ent)),
         "puzzle_step_count": int(len(puzzle_ent)),
     }
+
+
+def _loss(gathered_list, entropy_coef):
+    """A2C loss over the concatenation of one or more sides' gathered tensors."""
+    gs = [g for g in gathered_list if g is not None]
+    if not gs:
+        return None
+    log_probs = torch.cat([g["log_prob"] for g in gs])
+    values = torch.cat([g["value"] for g in gs])
+    returns = torch.cat([g["ret"] for g in gs])
+    norm_ent = torch.cat([g["normalized_entropy"] for g in gs])
+    advantages = (returns - values).detach()
+    policy_loss = -(log_probs * advantages).mean()
+    value_loss = (values - returns).pow(2).mean()
+    return ComposedLoss().compute(
+        policy_loss=policy_loss, value_loss=value_loss,
+        entropy_bonus=norm_ent.mean(), entropy_coef=entropy_coef,
+    )["total_loss"]
+
+
+def _optimizer_step(model, optimizer, total_loss, grad_clip):
+    optimizer.zero_grad()
+    total_loss.backward()
+    torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
+    optimizer.step()
+
+
+def _backpropagate_for_model(
+    model, optimizer, steps_data, model_returns, model_id,
+    entropy_coef=0.01, grad_clip=1.0, puzzle_env_mask=None,
+):
+    """Legacy per-model update (two separate networks)."""
+    g = _gather_side(steps_data, model_returns, model_id, puzzle_env_mask)
+    stats = _side_stats(g)
+    total_loss = _loss([g], entropy_coef)
+    if total_loss is None:
+        return {"total_loss": torch.tensor(0.0), **stats}
+    _optimizer_step(model, optimizer, total_loss, grad_clip)
+    return {"total_loss": total_loss, **stats}
 
 
 def run_chess_training(
@@ -288,9 +293,20 @@ def run_chess_training(
     eval_interval=50,
     log_interval=10,
 ):
-    """Run A2C self-play. `eval_fn(white_model, black_model) -> dict` is called every
-    `eval_interval` updates and after the last one; its keys are merged into the log
-    entry for that update (a log entry is created for it if none is due)."""
+    """Run A2C self-play.
+
+    Two modes. Legacy: separate `white_model` / `black_model` with their optimizers.
+    Shared (AlphaZero-style): pass `black_model=None`; `white_model` then plays both
+    colours on observations oriented to the mover, and both sides' samples update it
+    in one backward pass per update with `optimizer_white`.
+
+    `eval_fn(white_model, black_model) -> dict` is called every `eval_interval`
+    updates and after the last one; its keys are merged into the log entry for
+    that update (a log entry is created for it if none is due)."""
+    shared = black_model is None
+    if shared:
+        black_model = white_model
+        optimizer_black = None
     if eval_interval <= 0:
         raise ValueError(f"eval_interval must be a positive integer, got {eval_interval}")
     if metrics is None:
@@ -316,13 +332,14 @@ def run_chess_training(
             num_envs,
             terminal_rewards,
             metrics,
+            oriented=shared,
         )
 
         bootstrap_white = _compute_bootstrap(
-            env_step, white_model, black_model, model_id=WHITE
+            env_step, white_model, black_model, model_id=WHITE, oriented=shared
         )
         bootstrap_black = _compute_bootstrap(
-            env_step, white_model, black_model, model_id=BLACK
+            env_step, white_model, black_model, model_id=BLACK, oriented=shared
         )
 
         returns_white = compute_returns_for_model(
@@ -334,14 +351,23 @@ def run_chess_training(
             final_material=env_step.material, shaping_scale=shaping_scale,
         )
 
-        result_w = _backpropagate_for_model(
-            white_model, optimizer_white, steps_data, returns_white, model_id=WHITE,
-            entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
-        )
-        result_b = _backpropagate_for_model(
-            black_model, optimizer_black, steps_data, returns_black, model_id=BLACK,
-            entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
-        )
+        if shared:
+            g_w = _gather_side(steps_data, returns_white, WHITE, puzzle_env_mask)
+            g_b = _gather_side(steps_data, returns_black, BLACK, puzzle_env_mask)
+            loss = _loss([g_w, g_b], entropy_coef)
+            if loss is not None:
+                _optimizer_step(white_model, optimizer_white, loss, grad_clip)
+            result_w = {"total_loss": loss if loss is not None else torch.tensor(0.0), **_side_stats(g_w)}
+            result_b = {"total_loss": torch.tensor(0.0), **_side_stats(g_b)}
+        else:
+            result_w = _backpropagate_for_model(
+                white_model, optimizer_white, steps_data, returns_white, model_id=WHITE,
+                entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
+            )
+            result_b = _backpropagate_for_model(
+                black_model, optimizer_black, steps_data, returns_black, model_id=BLACK,
+                entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
+            )
 
         total_loss = result_w["total_loss"].item() + result_b["total_loss"].item()
         total_steps = result_w["step_count"] + result_b["step_count"]
@@ -366,7 +392,8 @@ def run_chess_training(
 
         if episode % lr_decay_interval == 0:
             for opt in [optimizer_white, optimizer_black]:
-                opt.param_groups[0]["lr"] = max(min_lr, opt.param_groups[0]["lr"] * lr_decay_factor)
+                if opt is not None:
+                    opt.param_groups[0]["lr"] = max(min_lr, opt.param_groups[0]["lr"] * lr_decay_factor)
 
         eval_due = eval_fn is not None and (
             episode % eval_interval == 0 or episode == episodes

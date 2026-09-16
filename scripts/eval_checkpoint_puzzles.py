@@ -12,18 +12,13 @@ import torch
 
 from src.envs.start_positions import load_puzzles
 from src.eval.puzzles import evaluate_mate_in_one
-from src.model.chess_model import ChessPolicyProbs
+from src.model.checkpoints import load_models
 
 
 def load_pair(ckpt_dir: Path):
-    white = sorted(glob.glob(str(ckpt_dir / "white_model_*.pth")))[-1]
-    black = sorted(glob.glob(str(ckpt_dir / "black_model_*.pth")))[-1]
-    models = []
-    for path in (white, black):
-        m = ChessPolicyProbs()
-        m.load_state_dict(torch.load(path, map_location="cpu"))
-        models.append(m)
-    return models[0], models[1], white, black
+    """(white, black, white_path, black_path); kept for callers, see load_models for `oriented`."""
+    w, b, _oriented, paths = load_models(ckpt_dir)
+    return w, b, paths.get("white", paths.get("model")), paths.get("black", paths.get("model"))
 
 
 def main():
@@ -32,9 +27,9 @@ def main():
     ap.add_argument("--eval", default="data/puzzles/mate_in_1_eval.csv")
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args()
-    white, black, wpath, bpath = load_pair(args.ckpt_dir)
-    result = evaluate_mate_in_one(white, black, load_puzzles(args.eval))
-    result.update({"white_ckpt": wpath, "black_ckpt": bpath, "eval_file": args.eval})
+    white, black, oriented, paths = load_models(args.ckpt_dir)
+    result = evaluate_mate_in_one(white, black, load_puzzles(args.eval), oriented=oriented)
+    result.update({"checkpoints": paths, "oriented": oriented, "eval_file": args.eval})
     print(json.dumps(result, indent=1))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

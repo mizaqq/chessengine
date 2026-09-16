@@ -9,7 +9,8 @@ from pathlib import Path
 
 import yaml
 
-from src.entrypoints.train import run_training_from_config, save_models
+from src.entrypoints.train import run_training_from_config
+from src.model.checkpoints import save_model, save_models
 
 
 def parse_value(raw: str):
@@ -36,7 +37,10 @@ def main():
     elapsed = time.time() - start
 
     args.out.mkdir(parents=True, exist_ok=True)
-    paths = save_models(result["white_model"], result["black_model"], args.out, config["max_updates"])
+    if result["shared"]:
+        paths = [save_model(result["model"], args.out, config["max_updates"])]
+    else:
+        paths = save_models(result["white_model"], result["black_model"], args.out, config["max_updates"])
     run = {
         "config": config,
         "elapsed_s": elapsed,

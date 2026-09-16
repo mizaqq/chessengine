@@ -73,7 +73,8 @@ sides want opposite things; that is the intended averaging, not a bug.
   network), not a colour bug. Nothing to inspect before merging. Seed 1 also
   showed no in-game transfer (mate rate 4.7%, 25/40 games hit the 300-ply cap)
   despite held-out top-1 0.364, so single-seed in-game numbers are noisy; the
-  shared-network comparison must report two seeds.
+  owner chose to run one training seed anyway (time cost); the caveat stays on
+  the result.
 - [BatchNorm statistics now mix both colours] -> intended; note in learning
   notes that the small-batch BN caveat (record: notes "Where the time goes")
   still applies.

@@ -13,6 +13,7 @@ import torch
 
 from src.envs.open_spiel_env import OpenSpielEnv
 from src.envs.start_positions import Puzzle
+from src.model.orientation import orient_black
 
 WHITE = 1
 BLACK = 0
@@ -42,8 +43,12 @@ def evaluate_mate_in_one(
     black_model: torch.nn.Module,
     puzzles: List[Puzzle],
     batch_size: int = 256,
+    oriented: bool = False,
 ) -> Dict[str, float]:
-    """Return {"puzzle_top1": ..., "puzzle_mate_prob": ..., "puzzle_count": n}."""
+    """Return {"puzzle_top1": ..., "puzzle_mate_prob": ..., "puzzle_count": n}.
+
+    `oriented`: shared network; black-to-move observations are flipped to the
+    mover's view before the forward pass."""
     models = {WHITE: white_model, BLACK: black_model}
     was_training = {pid: m.training for pid, m in models.items()}
     for m in models.values():
@@ -59,6 +64,8 @@ def evaluate_mate_in_one(
         for start in range(0, len(items), batch_size):
             chunk = items[start : start + batch_size]
             obs = torch.tensor(np.stack([c[0] for c in chunk]), dtype=torch.float32)
+            if oriented and player == BLACK:
+                obs = orient_black(obs)
             legal = torch.stack([c[1] for c in chunk])
             probs, _ = models[player](obs, legal)
             top = probs.argmax(dim=1)

@@ -1,3 +1,6 @@
+# One network plays both colours on observations oriented to the mover (AlphaZero,
+# Silver et al. 2017). false = legacy separate white/black networks.
+shared_network: true
 num_envs: 12
 max_updates: 30000
 steps_per_update: 15
