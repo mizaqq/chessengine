@@ -96,3 +96,14 @@ def test_mean_terminal_return_resets_between_windows():
     m.add_terminal_return(2.0)
     m.episode_summary()
     assert m.episode_summary()["mean_terminal_return"] is None
+
+
+def test_puzzle_results_split_by_depth():
+    m = MetricsAggregator()
+    m.add_puzzle_result(True, depth=1); m.add_puzzle_result(False, depth=1)
+    m.add_puzzle_result(False, depth=2); m.add_puzzle_result(False, depth=2); m.add_puzzle_result(True, depth=2); m.add_puzzle_result(False, depth=2)
+    s = m.episode_summary()
+    assert s["puzzle_solved_rate"] == 2 / 6
+    assert s["puzzle_solved_rate_m1"] == 0.5 and s["puzzle_solved_rate_m2"] == 0.25
+    assert s["puzzle_attempts_m2"] == 4
+    assert "puzzle_solved_rate_m1" not in m.episode_summary()   # window reset

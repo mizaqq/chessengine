@@ -2,7 +2,7 @@
 
 The first `num_puzzle_envs` boards of a vectorized env are puzzle boards: every
 episode starts from a training puzzle drawn by a `StartPositionSampler` and ends
-after the mover's first move. The other boards play normal games from the opening.
+after the mover's `mate_in`-th move (or at once after a wrong first move). The other boards play normal games from the opening.
 """
 import csv
 import random
@@ -14,19 +14,27 @@ from typing import List, Optional
 @dataclass(frozen=True)
 class Puzzle:
     puzzle_id: str
-    fen: str                 # position where the side to move has a mate in one
-    mating_moves: List[str]  # UCI
+    fen: str                 # position where the side to move has a forced mate in `mate_in`
+    key_moves: List[str]     # UCI: all mating moves (mate_in 1) or the forcing first move(s) (mate_in 2)
     rating: int
+    mate_in: int = 1
+
+    @property
+    def mating_moves(self) -> List[str]:   # legacy name
+        return self.key_moves
 
 
 def load_puzzles(path) -> List[Puzzle]:
+    """CSV with `puzzle_id,fen,key_moves,mate_in,rating`; the older header
+    `mating_moves` (no `mate_in`) loads as mate-in-one."""
     with open(Path(path), newline="") as fh:
         return [
             Puzzle(
                 puzzle_id=row["puzzle_id"],
                 fen=row["fen"],
-                mating_moves=row["mating_moves"].split(),
+                key_moves=(row.get("key_moves") or row.get("mating_moves") or "").split(),
                 rating=int(row["rating"]),
+                mate_in=int(row.get("mate_in") or 1),
             )
             for row in csv.DictReader(fh)
         ]
@@ -42,8 +50,8 @@ class StartPositionSampler:
         self.seed = seed
         self._rng = random.Random(seed)
 
-    def sample(self) -> str:
-        return self._rng.choice(self.puzzles).fen
+    def sample(self) -> Puzzle:
+        return self._rng.choice(self.puzzles)
 
     def with_seed(self, seed: int) -> "StartPositionSampler":
         """Copy with a different seed (one per worker in the async env)."""
@@ -71,9 +79,9 @@ class MixedSampler:
         self.seed = seed
         self._rng = random.Random(seed)
 
-    def sample(self) -> str:
+    def sample(self) -> Puzzle:
         puzzles, = self._rng.choices([p for p, _ in self.sources], weights=self.weights, k=1)
-        return self._rng.choice(puzzles).fen
+        return self._rng.choice(puzzles)
 
     def with_seed(self, seed: int) -> "MixedSampler":
         return MixedSampler(self.sources, seed)

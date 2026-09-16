@@ -41,8 +41,12 @@ puzzle_boards: 4
 # own games (scripts/harvest_positions.py) raised accuracy on those positions but
 # lowered Lichess accuracy and did not move the in-game mate rate. To try the mix
 # again, add {file: data/puzzles/selfplay_mate_in_1_train.csv, weight: 0.5}.
+# Mate-in-two added 2026-09-16 (next curriculum rung): the win counts only when
+# the first move is the verified forcing move; a wrong first move ends the
+# episode at once as a miss.
 puzzle_train_files:
-  - {file: data/puzzles/mate_in_1_train.csv, weight: 1.0}
+  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.5}
+  - {file: data/puzzles/mate_in_2_train.csv, weight: 0.5}
 # Terminal reward for a missed mate on a puzzle board. 0 (default) keeps the value
 # head honest about still-winning positions; try negative values as an experiment.
 puzzle_miss_reward: 0.0
@@ -50,6 +54,7 @@ puzzle_miss_reward: 0.0
 # eval_interval updates and at the end. Remove the block to skip evaluation.
 puzzle_eval_files:
   lichess: data/puzzles/mate_in_1_eval.csv
+  lichess_m2: data/puzzles/mate_in_2_eval.csv
   selfplay: data/puzzles/selfplay_mate_in_1_eval.csv
 eval_interval: 50
 
@@ -61,6 +66,12 @@ eval_interval: 50
 # 64-ply rollouts it takes 4x fewer gradient steps and learned puzzles at 0.32
 # vs PPO's 0.42-0.44 from the same plies.
 algorithm: ppo
+
+# Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
+# maximum number of steps ... were terminated and assigned a drawn outcome").
+# Training games ran 200-220 plies into repetition draws; 120 is a first guess.
+# null = no cap. Not applied to puzzle boards or to evaluation games.
+max_plies: 120
 
 terminal_rewards:
   win: 2.0

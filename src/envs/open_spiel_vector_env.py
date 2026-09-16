@@ -23,6 +23,7 @@ class OpenSpielVectorEnv:
         num_envs: int,
         start_sampler: StartPositionSampler | None = None,
         num_puzzle_envs: int = 0,
+        max_plies: int | None = None,
     ):
         self.num_envs = num_envs
         self.envs = [OpenSpielEnv() for _ in range(num_envs)]
@@ -33,15 +34,19 @@ class OpenSpielVectorEnv:
         # Boards [0, num_puzzle_envs) play one-move puzzle episodes; the rest play games.
         self.start_sampler = start_sampler
         self.num_puzzle_envs = num_puzzle_envs
+        self.max_plies = max_plies          # game boards end as a draw at this ply count
+        self.puzzle_depth: dict[int, int] = {}
 
     def is_puzzle_env(self, i: int) -> bool:
         return i < self.num_puzzle_envs
 
     def _reset_env(self, i: int) -> None:
         if self.is_puzzle_env(i):
-            self.envs[i].reset(self.start_sampler.sample(), one_move=True)
+            p = self.start_sampler.sample()
+            self.puzzle_depth[i] = p.mate_in
+            self.envs[i].reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves)
         else:
-            self.envs[i].reset()
+            self.envs[i].reset(max_plies=self.max_plies)
 
     def reset(self) -> EnvStep:
         for i in range(self.num_envs):
@@ -71,6 +76,7 @@ class OpenSpielVectorEnv:
         terminal_observations: dict[int, np.ndarray] = {}
         game_results: dict[int, str] = {}
         puzzle_boards: dict[int, bool] = {}
+        puzzle_depth: dict[int, int] = {}
 
         for i, (env, action) in enumerate(zip(self.envs, actions)):
             if not env.is_done():
@@ -81,6 +87,8 @@ class OpenSpielVectorEnv:
                 terminal_observations[i] = env.state().copy()
                 game_results[i] = env.game_result()
                 puzzle_boards[i] = self.is_puzzle_env(i)
+                if puzzle_boards[i]:
+                    puzzle_depth[i] = self.puzzle_depth[i]
                 self._reset_env(i)
 
         states = [env.state() for env in self.envs]
@@ -96,6 +104,7 @@ class OpenSpielVectorEnv:
             info["terminal_observations"] = terminal_observations
             info["game_results"] = game_results
             info["puzzle_boards"] = puzzle_boards
+            info["puzzle_depth"] = puzzle_depth
 
         return EnvStep(
             obs=obs,

@@ -16,16 +16,20 @@ def _material_np(state: np.ndarray) -> float:
     return float(white_scores - black_scores)
 
 
-def worker(remote, parent_remote, start_sampler=None):
-    """`start_sampler` present means this board is a puzzle board (one-move episodes)."""
+def worker(remote, parent_remote, start_sampler=None, max_plies=None):
+    """`start_sampler` present means this board is a puzzle board; `max_plies`
+    caps game boards (ended as a draw)."""
     parent_remote.close()
     env = OpenSpielEnv()
+    depth = {"value": 0}
 
     def reset_env():
         if start_sampler is not None:
-            env.reset(start_sampler.sample(), one_move=True)
+            p = start_sampler.sample()
+            depth["value"] = p.mate_in
+            env.reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves)
         else:
-            env.reset()
+            env.reset(max_plies=max_plies)
 
     try:
         while True:
@@ -47,6 +51,7 @@ def worker(remote, parent_remote, start_sampler=None):
 
                 terminal_obs = None
                 game_result = None
+                ended_depth = depth["value"]
                 if done:
                     terminal_obs = obs.copy()
                     game_result = env.game_result()
@@ -55,7 +60,7 @@ def worker(remote, parent_remote, start_sampler=None):
 
                 legal = env.get_legal_actions().numpy()
                 cp = env.get_current_player()
-                remote.send((obs, _material_np(obs), done, terminal_obs, game_result, legal, cp))
+                remote.send((obs, _material_np(obs), done, terminal_obs, game_result, legal, cp, ended_depth))
     except Exception as e:
         print(f"Worker error: {e}")
     finally:
@@ -70,6 +75,7 @@ class OpenSpielAsyncVectorEnv:
         num_envs: int,
         start_sampler: StartPositionSampler | None = None,
         num_puzzle_envs: int = 0,
+        max_plies: int | None = None,
     ):
         self.num_envs = num_envs
         if num_puzzle_envs > 0 and start_sampler is None:
@@ -86,7 +92,7 @@ class OpenSpielAsyncVectorEnv:
             # Each worker owns a sampler with its own seed so auto-reset needs no
             # round trip to the parent and runs are reproducible.
             sampler = start_sampler.with_seed(start_sampler.seed + i) if i < num_puzzle_envs else None
-            p = self.ctx.Process(target=worker, args=(work_remote, remote, sampler))
+            p = self.ctx.Process(target=worker, args=(work_remote, remote, sampler, max_plies))
             p.daemon = True
             p.start()
             self.processes.append(p)
@@ -113,7 +119,7 @@ class OpenSpielAsyncVectorEnv:
             remote.send(("step", action))
 
         results = [remote.recv() for remote in self.remotes]
-        obs_list, materials, dones, terminal_obs_list, game_result_list, legal_list, cp_list = (
+        obs_list, materials, dones, terminal_obs_list, game_result_list, legal_list, cp_list, depth_list = (
             zip(*results)
         )
 
@@ -130,6 +136,7 @@ class OpenSpielAsyncVectorEnv:
             info["terminal_observations"] = terminal_observations
             info["game_results"] = game_results
             info["puzzle_boards"] = {i: i < self.num_puzzle_envs for i in game_results}
+            info["puzzle_depth"] = {i: depth_list[i] for i in game_results if i < self.num_puzzle_envs}
 
         return EnvStep(
             obs=torch.tensor(np.stack(obs_list)).float(),

@@ -57,3 +57,18 @@ def test_evaluation_restores_training_mode_and_rng():
     torch.manual_seed(5)
     assert torch.rand(1).item() == after_eval
     assert w.training and not b.training
+
+
+def test_mate_in_two_targets_are_key_moves_and_perfect_policy_scores_one():
+    from src.envs.open_spiel_env import OpenSpielEnv
+    from src.eval.puzzles import evaluate_puzzles, target_actions
+    m2 = Puzzle("m2", "7k/8/5K2/8/8/8/8/1R6 w - - 0 1", ["f6g6"], 900, mate_in=2)
+    env = OpenSpielEnv(); env.reset(m2.fen)
+    (key,) = target_actions(env, m2)
+
+    class KeyPolicy(torch.nn.Module):
+        def forward(self, obs, mask):
+            probs = torch.zeros(obs.shape[0], 4674); probs[:, key] = 1.0
+            return probs, torch.zeros(obs.shape[0], 1)
+    r = evaluate_puzzles(KeyPolicy(), KeyPolicy(), [m2])
+    assert r["puzzle_top1"] == 1.0 and r["puzzle_mate_prob"] == 1.0

@@ -72,7 +72,7 @@ def test_puzzle_fraction_rounds_to_board_count(tmp_path):
         {"puzzle_fraction": 0.5, "num_envs": 12, "puzzle_train_file": str(path), "seed": 3}
     )
     assert n == 6
-    assert sampler.sample().startswith("6k1/")
+    assert sampler.sample().fen.startswith("6k1/")
 
 
 def test_eval_interval_must_be_positive():
@@ -105,7 +105,7 @@ def test_puzzle_train_files_builds_mixed_sampler(tmp_path):
                                         "puzzle_train_files": [{"file": str(a), "weight": 0.5},
                                                                {"file": str(b), "weight": 0.5}]})
     assert n == 2 and isinstance(sampler, MixedSampler)
-    assert sampler.sample().startswith("6k1/")
+    assert sampler.sample().fen.startswith("6k1/")
 
 
 def test_named_eval_sets_prefix_keys(tmp_path):
@@ -158,3 +158,16 @@ def test_invalid_algorithm_settings_name_the_key(cfg, key):
     with pytest.raises(ValueError) as e:
         resolve_algorithm(cfg)
     assert key in str(e.value)
+
+
+# --- max_plies --------------------------------------------------------------------
+
+from src.entrypoints.train import resolve_max_plies  # noqa: E402
+
+
+def test_max_plies_default_none_and_values():
+    assert resolve_max_plies({}) is None
+    assert resolve_max_plies({"max_plies": None}) is None
+    assert resolve_max_plies({"max_plies": 120}) == 120
+    with pytest.raises(ValueError):
+        resolve_max_plies({"max_plies": 1})

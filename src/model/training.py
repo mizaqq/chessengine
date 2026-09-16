@@ -101,10 +101,14 @@ def _collect_rollout(
 
             if "game_results" in env_step.info:
                 puzzle_boards = env_step.info.get("puzzle_boards", {})
+                puzzle_depth = env_step.info.get("puzzle_depth", {})
                 for env_idx, result in env_step.info["game_results"].items():
                     if puzzle_boards.get(env_idx, False):
                         mover_won = (result == "white_win") == (int(players[env_idx]) == WHITE)
-                        metrics.add_puzzle_result(solved=result != "puzzle_miss" and mover_won)
+                        metrics.add_puzzle_result(
+                            solved=result != "puzzle_miss" and mover_won,
+                            depth=puzzle_depth.get(env_idx, 1),
+                        )
                         continue
                     metrics.add_terminal_return(tr_white[env_idx].item())
                     if result == "white_win":

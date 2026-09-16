@@ -22,25 +22,33 @@ def test_load_puzzles(tmp_path):
     assert len(puzzles) == 3
     assert puzzles[0].puzzle_id == "p1"
     assert puzzles[0].fen.startswith("7k/5ppp/")
-    assert puzzles[2].mating_moves == ["a8a1"]
+    assert puzzles[2].mating_moves == ["a8a1"] and puzzles[2].key_moves == ["a8a1"]
     assert puzzles[1].rating == 650
+    assert all(p.mate_in == 1 for p in puzzles)
+
+
+def test_load_puzzles_new_header_with_depth(tmp_path):
+    path = tmp_path / "p2.csv"
+    path.write_text("puzzle_id,fen,key_moves,mate_in,rating\nq1,7k/8/5K2/8/8/8/8/1R6 w - - 0 1,f6g6,2,900\n")
+    (pz,) = load_puzzles(path)
+    assert pz.mate_in == 2 and pz.key_moves == ["f6g6"]
 
 
 def test_sampler_always_returns_a_puzzle():
     s = StartPositionSampler(PUZZLES, seed=1)
-    assert all(s.sample() in {"fen1", "fen2", "fen3"} for _ in range(50))
+    assert all(s.sample().fen in {"fen1", "fen2", "fen3"} for _ in range(50))
 
 
 def test_same_seed_same_sequence():
     a = StartPositionSampler(PUZZLES, seed=7)
     b = StartPositionSampler(PUZZLES, seed=7)
-    assert [a.sample() for _ in range(30)] == [b.sample() for _ in range(30)]
+    assert [a.sample().fen for _ in range(30)] == [b.sample().fen for _ in range(30)]
 
 
 def test_with_seed_changes_sequence():
     a = StartPositionSampler(PUZZLES, seed=7)
     b = a.with_seed(8)
-    assert [a.sample() for _ in range(30)] != [b.sample() for _ in range(30)]
+    assert [a.sample().fen for _ in range(30)] != [b.sample().fen for _ in range(30)]
 
 
 def test_empty_puzzles_rejected():
@@ -53,7 +61,7 @@ def test_mixed_sampler_equal_weights():
     a = [Puzzle("a", "fenA", [], 0)]
     b = [Puzzle("b", "fenB", [], 0)]
     s = MixedSampler([(a, 0.5), (b, 0.5)], seed=0)
-    draws = [s.sample() for _ in range(1000)]
+    draws = [s.sample().fen for _ in range(1000)]
     assert 400 < draws.count("fenA") < 600
 
 
@@ -62,9 +70,9 @@ def test_mixed_sampler_zero_weight_and_determinism():
     a = [Puzzle("a", "fenA", [], 0)]
     b = [Puzzle("b", "fenB", [], 0)]
     s = MixedSampler([(a, 1.0), (b, 0.0)], seed=3)
-    assert all(s.sample() == "fenA" for _ in range(50))
+    assert all(s.sample().fen == "fenA" for _ in range(50))
     x, y = MixedSampler([(a, 1), (b, 1)], seed=5), MixedSampler([(a, 1), (b, 1)], seed=5)
-    assert [x.sample() for _ in range(40)] == [y.sample() for _ in range(40)]
+    assert [x.sample().fen for _ in range(40)] == [y.sample().fen for _ in range(40)]
 
 
 def test_mixed_sampler_rejects_bad_weights():

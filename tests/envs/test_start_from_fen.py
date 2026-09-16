@@ -7,6 +7,8 @@ from src.envs.start_positions import Puzzle, StartPositionSampler
 ROOK_MATE = "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1"   # Ra8# available, white +5
 BLACK_MATE = "r5k1/5ppp/8/8/8/8/5PPP/6K1 b - - 0 1"  # Ra1# available, black to move
 PUZZLES = [Puzzle("p1", ROOK_MATE, ["a1a8"], 600)]
+M2 = "7k/8/5K2/8/8/8/8/1R6 w - - 0 1"                # 1.Kg6! Kg8 2.Rb8#; key move f6g6
+M2_PUZZLE = Puzzle("m2", M2, ["f6g6"], 900, mate_in=2)
 
 
 def _winning_terminal_actions(env: OpenSpielEnv):
@@ -42,12 +44,12 @@ def test_reset_from_fen_black_to_move():
 
 def test_reset_without_fen_is_opening():
     env = OpenSpielEnv()
-    env.reset(ROOK_MATE, one_move=True)
+    env.reset(ROOK_MATE, puzzle_moves=1)
     env.reset()
     assert env.get_current_player() == 1
     assert _material_np(env.state()) == 0.0
     assert env.get_legal_actions().sum() == 20
-    assert not env.one_move
+    assert not env.is_puzzle
 
 
 def test_playing_the_mate_ends_the_game_as_white_win():
@@ -63,7 +65,7 @@ def test_playing_the_mate_ends_the_game_as_white_win():
 
 def test_one_move_episode_mate_found():
     env = OpenSpielEnv()
-    env.reset(ROOK_MATE, one_move=True)
+    env.reset(ROOK_MATE, puzzle_moves=1)
     (mate,) = _winning_terminal_actions(env)
     env.step(mate)
     assert env.is_done() and env.game_result() == "white_win"
@@ -71,7 +73,7 @@ def test_one_move_episode_mate_found():
 
 def test_one_move_episode_mate_missed():
     env = OpenSpielEnv()
-    env.reset(ROOK_MATE, one_move=True)
+    env.reset(ROOK_MATE, puzzle_moves=1)
     env.step(_non_mating_action(env))
     assert env.is_done()
     assert not env.is_terminal()
@@ -84,6 +86,61 @@ def test_opening_board_non_mating_move_continues():
     env.step(_non_mating_action(env))
     assert not env.is_done()
     assert env.game_result() is None
+
+
+# --- single env: mate-in-two episodes and ply cap ------------------------------------
+
+def _action(env, uci):
+    (a,) = env.actions_for_uci([uci])
+    return a
+
+
+def test_mate_in_two_solved_ends_after_three_plies_with_win():
+    env = OpenSpielEnv()
+    env.reset(M2, puzzle_moves=2, key_moves=["f6g6"])
+    env.step(_action(env, "f6g6"))
+    assert not env.is_done()
+    env.step(_action(env, "h8g8"))          # forced reply
+    assert not env.is_done()
+    env.step(_action(env, "b1b8"))
+    assert env.is_done() and env.game_result() == "white_win" and env.plies == 3
+
+
+def test_mate_in_two_wrong_first_move_ends_at_once_as_miss():
+    env = OpenSpielEnv()
+    env.reset(M2, puzzle_moves=2, key_moves=["f6g6"])
+    env.step(_action(env, "b1b2"))
+    assert env.is_done() and not env.is_terminal()
+    assert env.game_result() == "puzzle_miss" and env.plies == 1
+
+
+def test_mate_in_two_right_first_move_then_missed_mate():
+    env = OpenSpielEnv()
+    env.reset(M2, puzzle_moves=2, key_moves=["f6g6"])
+    env.step(_action(env, "f6g6"))
+    env.step(_action(env, "h8g8"))
+    env.step(_action(env, "b1b2"))          # not mate
+    assert env.is_done() and env.game_result() == "puzzle_miss" and env.plies == 3
+
+
+def test_actions_for_uci_handles_castling_and_promotion():
+    env = OpenSpielEnv()
+    env.reset("r3k2r/8/8/8/8/8/7P/R3K2R w KQkq - 0 1")
+    assert len(env.actions_for_uci(["e1g1", "e1c1"])) == 2
+    env.reset("8/P6k/8/8/8/8/8/K7 w - - 0 1")
+    assert len(env.actions_for_uci(["a7a8q", "a7a8n"])) == 2
+
+
+def test_ply_cap_ends_game_as_draw_on_game_board_only():
+    env = OpenSpielEnv()
+    env.reset(max_plies=4)
+    for _ in range(4):
+        env.step(int((env.get_legal_actions() == 1).nonzero()[0]))
+    assert env.is_done() and not env.is_terminal() and env.game_result() == "draw"
+    puzzle = OpenSpielEnv()
+    puzzle.reset(M2, puzzle_moves=2, key_moves=["f6g6"], max_plies=1)   # cap ignored on puzzles
+    puzzle.step(_action(puzzle, "f6g6"))
+    assert not puzzle.is_done()
 
 
 # --- sync vector env: puzzle boards ------------------------------------------------
@@ -110,7 +167,23 @@ def test_vector_env_puzzle_board_auto_resets_after_miss_and_mate():
     assert step.done.tolist() == [True, True]
     assert step.info["game_results"] == {0: "white_win", 1: "puzzle_miss"}
     assert step.info["puzzle_boards"] == {0: True, 1: True}
+    assert step.info["puzzle_depth"] == {0: 1, 1: 1}
     assert (step.material == 5.0).all()  # both boards on a new puzzle
+
+
+def test_vector_env_mate_in_two_board_reports_depth_and_cap_draws_game_board():
+    env = OpenSpielVectorEnv(2, StartPositionSampler([M2_PUZZLE], seed=0), num_puzzle_envs=1, max_plies=2)
+    step = env.reset()
+    wrong = int((step.legal_actions_mask[0] == 1).nonzero()[0])
+    if wrong in env.envs[0].key_actions:
+        wrong = int((step.legal_actions_mask[0] == 1).nonzero()[1])
+    opening = int((step.legal_actions_mask[1] == 1).nonzero()[0])
+    step = env.step(torch.tensor([wrong, opening]))
+    assert step.info["game_results"] == {0: "puzzle_miss"} and step.info["puzzle_depth"] == {0: 2}
+    opening = int((step.legal_actions_mask[1] == 1).nonzero()[0])
+    step = env.step(torch.tensor([wrong, opening]))
+    assert step.info["game_results"].get(1) == "draw" and step.info["puzzle_boards"].get(1) is False
+    assert step.material[1] == 0.0  # game board reset to the opening
 
 
 def test_vector_env_opening_board_flagged_false_on_game_end():
@@ -147,6 +220,7 @@ def test_async_env_puzzle_boards_and_auto_reset():
         assert step.done.tolist() == [True, True, False]
         assert step.info["game_results"] == {0: "white_win", 1: "puzzle_miss"}
         assert step.info["puzzle_boards"] == {0: True, 1: True}
+        assert step.info["puzzle_depth"] == {0: 1, 1: 1}
         assert step.material.tolist()[:2] == [5.0, 5.0]
     finally:
         env.close()

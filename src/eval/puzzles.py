@@ -1,10 +1,10 @@
-"""Held-out mate-in-one evaluation.
+"""Held-out puzzle evaluation.
 
 For every puzzle position the model of the side to move is queried with the legal
-move mask. Reported: top-1 accuracy (most probable move is a mate) and the mean
-total probability placed on mating moves. Mating moves are computed from the board
-(a child state that is terminal with a win for the mover), not read from the file,
-so the metric does not depend on the UCI-to-action mapping.
+move mask. Reported: top-1 accuracy (most probable move is a target) and the mean
+total probability placed on target moves. Targets: for mate-in-one every mating
+move, computed from the board (a child state that is terminal with a win for the
+mover); for mate-in-two the puzzle's key move(s), mapped from UCI via SAN.
 """
 from typing import Dict, List
 
@@ -30,15 +30,21 @@ def mating_actions(env: OpenSpielEnv) -> List[int]:
     return out
 
 
+def target_actions(env: OpenSpielEnv, puzzle: Puzzle) -> List[int]:
+    if puzzle.mate_in == 1:
+        return mating_actions(env)
+    return sorted(env.actions_for_uci(puzzle.key_moves))
+
+
 def _positions(puzzles: List[Puzzle]):
     env = OpenSpielEnv()
     for puzzle in puzzles:
         env.reset(puzzle.fen)
-        yield env.state(), env.get_legal_actions(), env.get_current_player(), mating_actions(env)
+        yield env.state(), env.get_legal_actions(), env.get_current_player(), target_actions(env, puzzle)
 
 
 @torch.no_grad()
-def evaluate_mate_in_one(
+def evaluate_puzzles(
     white_model: torch.nn.Module,
     black_model: torch.nn.Module,
     puzzles: List[Puzzle],
@@ -85,3 +91,6 @@ def evaluate_mate_in_one(
         "puzzle_mate_prob": mate_prob_sum / n if n else 0.0,
         "puzzle_count": n,
     }
+
+
+evaluate_mate_in_one = evaluate_puzzles   # legacy name

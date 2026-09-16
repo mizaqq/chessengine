@@ -29,6 +29,7 @@ class MetricsAggregator:
         self._terminal_return_count = 0
         self.puzzle_attempts = 0
         self.puzzle_solved = 0
+        self._puzzle_by_depth = {}   # depth -> [attempts, solved]
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
 
@@ -46,10 +47,14 @@ class MetricsAggregator:
         elif draw:
             self.draws += 1
 
-    def add_puzzle_result(self, solved: bool):
-        """Record a finished one-move puzzle episode (kept out of the game rates)."""
+    def add_puzzle_result(self, solved: bool, depth: int = 1):
+        """Record a finished puzzle episode (kept out of the game rates); `depth` is
+        the puzzle's mate-in, reported as `puzzle_solved_rate_m<depth>`."""
         self.puzzle_attempts += 1
         self.puzzle_solved += int(solved)
+        entry = self._puzzle_by_depth.setdefault(int(depth), [0, 0])
+        entry[0] += 1
+        entry[1] += int(solved)
 
     def add_terminal_return(self, white_view_return: float):
         """Record the unshaped terminal reward (white view) of a finished game."""
@@ -106,6 +111,8 @@ class MetricsAggregator:
                 f"mean_{k}": (self._update_sums[k] / self._update_counts[k] if self._update_counts[k] else None)
                 for k in self._update_sums
             },
+            **{f"puzzle_solved_rate_m{d}": (v[1] / v[0]) for d, v in sorted(self._puzzle_by_depth.items())},
+            **{f"puzzle_attempts_m{d}": v[0] for d, v in sorted(self._puzzle_by_depth.items())},
             "mean_terminal_return": (
                 self._terminal_return_sum / self._terminal_return_count
                 if self._terminal_return_count > 0

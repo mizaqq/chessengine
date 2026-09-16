@@ -4,7 +4,11 @@ Lichess stores the FEN *before* the opponent's move; the solution starts with th
 second move. We apply the first move so the stored FEN is the position where the
 side to move has a mate in one, and store every checkmating move (UCI) from there.
 
-Usage: python -m scripts.prepare_puzzles [--train 20000] [--eval 2000] [--seed 0]
+Depth 2 (`--depth 2`, theme mateIn2): the stored FEN is after the opponent's first
+move; `key_moves` is the puzzle's forcing move, kept only if a rules-engine check
+confirms every reply leaves a mate in one.
+
+Usage: python -m scripts.prepare_puzzles [--depth 1|2] [--train 20000] [--eval 2000] [--seed 0]
 """
 import argparse
 import csv
@@ -19,7 +23,7 @@ import zstandard
 DUMP_URL = "https://database.lichess.org/lichess_db_puzzle.csv.zst"
 RAW_DIR = Path("data/raw")
 OUT_DIR = Path("data/puzzles")
-FIELDS = ["puzzle_id", "fen", "mating_moves", "rating"]
+FIELDS = ["puzzle_id", "fen", "key_moves", "mate_in", "rating"]
 
 
 def download(url: str, dest: Path) -> Path:
@@ -46,22 +50,45 @@ def mating_moves(board: chess.Board) -> list[str]:
     return out
 
 
-def convert_row(row: dict) -> dict | None:
-    """Return a stored row for a mateIn1 puzzle, or None if it does not check out."""
-    if "mateIn1" not in row["Themes"].split():
+def forces_mate_in_two(board: chess.Board, key_uci: str) -> bool:
+    """True if `key_uci` leaves the opponent no reply that avoids mate on the move after."""
+    board.push_uci(key_uci)
+    try:
+        if board.is_game_over():
+            return False
+        for reply in board.legal_moves:
+            board.push(reply)
+            has_mate = bool(mating_moves(board))
+            board.pop()
+            if not has_mate:
+                return False
+        return True
+    finally:
+        board.pop()
+
+
+def convert_row(row: dict, depth: int = 1) -> dict | None:
+    """Return a stored row for a mateIn<depth> puzzle, or None if it does not check out."""
+    if f"mateIn{depth}" not in row["Themes"].split():
         return None
     moves = row["Moves"].split()
-    if len(moves) != 2:
+    if len(moves) != 2 * depth:
         return None
     board = chess.Board(row["FEN"])
     board.push_uci(moves[0])
-    mates = mating_moves(board)
-    if moves[1] not in mates:
-        return None
+    if depth == 1:
+        key = mating_moves(board)
+        if moves[1] not in key:
+            return None
+    else:
+        if not forces_mate_in_two(board, moves[1]):
+            return None
+        key = [moves[1]]
     return {
         "puzzle_id": row["PuzzleId"],
         "fen": board.fen(),
-        "mating_moves": " ".join(mates),
+        "key_moves": " ".join(key),
+        "mate_in": str(depth),
         "rating": row["Rating"],
     }
 
@@ -83,6 +110,7 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--depth", type=int, default=1, choices=(1, 2))
     ap.add_argument("--train", type=int, default=20000)
     ap.add_argument("--eval", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)
@@ -96,10 +124,13 @@ def main() -> None:
     seen = 0
     for raw in iter_dump(args.dump):
         seen += 1
-        converted = convert_row(raw)
+        converted = convert_row(raw, args.depth)
         if converted is not None:
             rows.append(converted)
-    print(f"scanned {seen} puzzles, kept {len(rows)} mate-in-one")
+        if seen % 500_000 == 0:
+            print(f"  scanned {seen}, kept {len(rows)}", flush=True)
+    print(f"scanned {seen} puzzles, kept {len(rows)} mate-in-{args.depth}")
+    prefix = f"mate_in_{args.depth}"
 
     random.Random(args.seed).shuffle(rows)
     if args.keep_eval:
@@ -111,14 +142,14 @@ def main() -> None:
         rows = [r for r in rows if r["puzzle_id"] not in keep_ids]
         if len(rows) < args.train:
             raise SystemExit(f"only {len(rows)} usable puzzles, need {args.train}")
-        write_csv(OUT_DIR / "mate_in_1_train.csv", rows[: args.train])
+        write_csv(OUT_DIR / f"{prefix}_train.csv", rows[: args.train])
         print(f"wrote {args.train} train rows to {OUT_DIR}; held-out {args.keep_eval} unchanged")
         return
     need = args.train + args.eval
     if len(rows) < need:
         raise SystemExit(f"only {len(rows)} usable puzzles, need {need}")
-    write_csv(OUT_DIR / "mate_in_1_train.csv", rows[: args.train])
-    write_csv(OUT_DIR / "mate_in_1_eval.csv", rows[args.train : need])
+    write_csv(OUT_DIR / f"{prefix}_train.csv", rows[: args.train])
+    write_csv(OUT_DIR / f"{prefix}_eval.csv", rows[args.train : need])
     print(f"wrote {args.train} train and {args.eval} eval rows to {OUT_DIR}")
 
 

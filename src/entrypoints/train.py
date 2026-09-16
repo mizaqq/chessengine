@@ -126,6 +126,18 @@ def resolve_eval_fn(config: Dict[str, Any]):
     return lambda white, black, oriented=False: evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
 
 
+def resolve_max_plies(config: Dict[str, Any]):
+    """`max_plies`: game boards end as a draw after this many plies (AlphaZero
+    terminated over-long games as draws); null/absent = no cap."""
+    value = config.get("max_plies")
+    if value is None:
+        return None
+    value = int(value)
+    if value < 2:
+        raise ValueError(f"max_plies must be >= 2 or null, got {value}")
+    return value
+
+
 def resolve_eval_interval(config: Dict[str, Any]) -> int:
     interval = int(config.get("eval_interval", 50))
     if interval <= 0:
@@ -142,11 +154,11 @@ def set_seed(seed: int):
     np.random.seed(seed)
 
 
-def _create_envs(env_type: str, num_envs: int, start_sampler=None, num_puzzle_envs=0):
+def _create_envs(env_type: str, num_envs: int, start_sampler=None, num_puzzle_envs=0, max_plies=None):
     if env_type == "async":
-        return OpenSpielAsyncVectorEnv(num_envs, start_sampler, num_puzzle_envs)
+        return OpenSpielAsyncVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies)
     elif env_type == "sync":
-        return OpenSpielVectorEnv(num_envs, start_sampler, num_puzzle_envs)
+        return OpenSpielVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies)
     else:
         raise ValueError(f"Unknown env_type: {env_type}")
 
@@ -174,10 +186,11 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     eval_interval = resolve_eval_interval(config)
     log_interval = int(config.get("log_interval", 10))
     algorithm = resolve_algorithm(config)
+    max_plies = resolve_max_plies(config)
 
     set_seed(seed)
 
-    envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs)
+    envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs, max_plies)
     shared = bool(config.get("shared_network", True))
     init_from = config.get("init_from")
     if init_from:
