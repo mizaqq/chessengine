@@ -42,7 +42,7 @@ def test_written_files_are_disjoint_and_sized():
         with open(DATA / name) as fh:
             return [r["puzzle_id"] for r in csv.DictReader(fh)]
     train, ev = ids("mate_in_1_train.csv"), ids("mate_in_1_eval.csv")
-    assert len(train) == 20000 and len(ev) == 2000
+    assert len(train) == 50000 and len(ev) == 2000
     assert not set(train) & set(ev)
 
 
