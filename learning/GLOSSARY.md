@@ -44,3 +44,19 @@ Add a term only once it has been understood, not when first met.
 **Mate-in-one rate**: Share of positions with a mate available where the mover played one. Project's first evaluation metric; baseline 3.7%.
 
 **Entropy (normalised)**: Spread of the move distribution divided by log of the number of legal moves, so 1 is uniform and 0 is a single move. Kept in the loss to prevent premature certainty.
+
+**Reverse curriculum**: Start episodes near the goal state and move the starts outward as the agent succeeds (Florensa et al. 2017). Needs failed attempts to end quickly.
+
+**Start state**: The position an episode begins from. Changing it changes exploration cost without changing what is optimal.
+
+**One-move puzzle episode**: A training episode from a mate-in-one position that ends after the mover's move: mate gives the win, anything else ends with `puzzle_miss` and reward 0.
+
+**Attempts per update**: How many tries at the sparse reward one gradient update sees. The real currency of a start-state curriculum.
+
+**Held-out set**: Positions never used in training, kept to measure whether a skill transfers. Here 2,000 Lichess mate-in-one puzzles.
+
+**Train/test gap**: Training solve rate minus held-out accuracy. Near zero means learned skill; large means memorised positions.
+
+**Distribution shift**: Training positions (tactical puzzles) differ from deployment positions (self-play games), so puzzle accuracy moves before the in-game rate.
+
+**Metrics by source**: Counting puzzle episodes and opening games separately, because short episodes flood any shared counter.

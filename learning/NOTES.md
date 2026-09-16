@@ -103,6 +103,33 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Candidate remedy: endgame / mate curriculum (start games near the goal), with
   supervised puzzle pre-training as the comparison, not the starting point.
 
+## Start-state curriculum (Sep 2026)
+
+- Sparse reward: exploration cost grows with the number of steps between reward
+  and start. Resetting near the reward (Florensa 2017; Salimans & Chen 2018)
+  collapses that distance, but only if a failed attempt also ends the episode.
+  In chess a missed mate does not end anything, so puzzle episodes are cut after
+  the mover's move (miss = terminal, reward 0, configurable penalty).
+- Mix by board, not by reset: a one-ply episode next to a 200-ply game gives
+  ~1% of plies to puzzles at "fraction 0.5". Fixed puzzle boards give the share
+  the knob promises.
+- Attempts per update is the quantity to watch, not updates.
+- Held-out set vs training solve rate = the train/test gap; equal means the skill
+  transfers across positions, not memorised.
+- Puzzle accuracy (35%) leads the in-game rate (18%): distribution shift between
+  tactical puzzle positions and self-play positions.
+- Under potential shaping a mid-game start charges the start potential and never
+  repays it; values shift, policy does not.
+
+## Where the time goes (Sep 2026)
+
+- Per update (12 boards x 15 steps, sync): forward 0.65 s, backward 1.02 s,
+  environment 0.07 s. The network dominates; environment language is irrelevant.
+- Sync vs async differ by ~5%.
+- Two separate colour networks halve the data each pattern sees; batch norm on
+  batches of ~6 is noisy and evaluation uses running stats (train/eval regime
+  mismatch); the LR floor above the start makes the rate jump up at update 100.
+
 ## Experiment hygiene
 
 - State the prediction before the run; compare afterwards; record the gap.
@@ -112,6 +139,10 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
   also make "rerun" silently replay the same game.
 - Loss level is not the test. Behaviour is: outcomes, mate rate, value-head
   sanity.
+- Split every counter by source (puzzle vs game) and by side (white vs black)
+  before reading it; a 5x asymmetry hid inside an aggregate.
+- "Small sample" is a hypothesis with a test: the binomial odds, then a second
+  seed.
 
 ## Business analogues
 

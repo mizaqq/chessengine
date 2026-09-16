@@ -36,4 +36,4 @@
 ## 5. Record
 
 - [x] 5.1 README config table and roadmap 04/06 updated; `learning/RESOURCES.md` gains Florensa et al. 2017, Salimans & Chen 2018, Lichess puzzle DB
-- [ ] 5.2 Comprehension check with owner (CLAUDE.md "Trace by hand" on the sampler and returns for a one-move puzzle episode, and "Diagnose from symptoms" on the puzzle curve), code pasted inline; outcome goes to `learning/records/`
+- [x] 5.2 Comprehension check with owner (CLAUDE.md "Trace by hand" on the sampler and returns for a one-move puzzle episode, and "Diagnose from symptoms" on the puzzle curve), code pasted inline; outcome goes to `learning/records/`

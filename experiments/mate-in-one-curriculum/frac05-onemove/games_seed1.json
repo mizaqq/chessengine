@@ -1,0 +1,18 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 15,
+  "white_win": 4,
+  "unfinished": 11,
+  "black_win": 10
+ },
+ "draw_rate": 0.375,
+ "decisive_rate": 0.35,
+ "mate_in_one_opportunities": 96,
+ "mate_in_one_found": 14,
+ "mate_in_one_rate": 0.14583333333333334,
+ "mean_plies": 153.0,
+ "white_ckpt": "experiments/mate-in-one-curriculum/frac05-onemove/white_model_20260916101024_episodes_500.pth",
+ "black_ckpt": "experiments/mate-in-one-curriculum/frac05-onemove/black_model_20260916101024_episodes_500.pth",
+ "seed": 1
+}
