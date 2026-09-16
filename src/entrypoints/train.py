@@ -98,7 +98,7 @@ def resolve_eval_interval(config: Dict[str, Any]) -> int:
     return interval
 
 
-from src.model.checkpoints import save_model, save_models  # noqa: E402  (re-exported)
+from src.model.checkpoints import load_models, save_model, save_models  # noqa: E402  (re-exported)
 
 
 def set_seed(seed: int):
@@ -143,14 +143,24 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
 
     envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs)
     shared = bool(config.get("shared_network", True))
-    white_model = ChessPolicyProbs()
-    optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
-    if shared:
-        # One network for both colours, observations oriented to the mover.
-        black_model, optimizer_black = None, None
+    init_from = config.get("init_from")
+    if init_from:
+        # Continue training from a saved checkpoint directory (newest file wins).
+        w0, b0, oriented, paths = load_models(init_from)
+        if shared != oriented:
+            raise ValueError(
+                f"init_from {init_from} holds a {'shared' if oriented else 'two-network'} "
+                f"checkpoint but shared_network={shared}"
+            )
+        white_model = w0
+        black_model = None if shared else b0
+        print("initialised from", paths)
     else:
-        black_model = ChessPolicyProbs()
-        optimizer_black = torch.optim.Adam(black_model.parameters(), lr=lr)
+        white_model = ChessPolicyProbs()
+        black_model = None if shared else ChessPolicyProbs()
+    optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
+    # Shared: one network for both colours, observations oriented to the mover.
+    optimizer_black = None if shared else torch.optim.Adam(black_model.parameters(), lr=lr)
     if eval_fn is not None:
         eval_puzzles_fn = eval_fn
         eval_fn = lambda w, b: eval_puzzles_fn(w, b, oriented=shared)

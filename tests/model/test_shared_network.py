@@ -69,3 +69,23 @@ def test_config_default_is_shared_and_saves_one_file(tmp_path):
     result2 = run_training_from_config({"num_envs": 1, "max_updates": 1, "steps_per_update": 1, "seed": 0,
                                         "shared_network": False})
     assert not result2["shared"] and result2["white_model"] is not result2["black_model"]
+
+
+def test_init_from_checkpoint_starts_with_saved_weights(tmp_path):
+    from src.entrypoints.train import run_training_from_config
+    m = ChessPolicyProbs()
+    save_model(m, tmp_path, updates=1, timestamp="20260916150000")
+    ref = {k: v.clone() for k, v in m.state_dict().items()}
+    result = run_training_from_config({"num_envs": 1, "max_updates": 0, "steps_per_update": 1,
+                                       "init_from": str(tmp_path)})
+    for k, v in result["model"].state_dict().items():
+        assert torch.equal(v, ref[k]), k
+
+
+def test_init_from_layout_mismatch_is_rejected(tmp_path):
+    import pytest
+    from src.entrypoints.train import run_training_from_config
+    save_models(ChessPolicyProbs(), ChessPolicyProbs(), tmp_path, updates=1, timestamp="20260916150000")
+    with pytest.raises(ValueError, match="two-network"):
+        run_training_from_config({"num_envs": 1, "max_updates": 0, "steps_per_update": 1,
+                                  "init_from": str(tmp_path)})
