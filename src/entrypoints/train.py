@@ -7,12 +7,47 @@ from typing import Dict, Any
 from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
 from src.model.chess_model import ChessPolicyProbs
-from src.model.training import run_chess_training
+from src.model.training import run_chess_training, A2C_PRESET, PPO_PRESET
 from src.envs.start_positions import MixedSampler, StartPositionSampler, load_puzzles
 from src.eval.puzzles import evaluate_mate_in_one
 
 
 SHAPING_MODES = ("potential", "none")
+ALGORITHMS = {"a2c": A2C_PRESET, "ppo": PPO_PRESET}
+ALGORITHM_KEYS = {  # config key -> preset key
+    "ppo_epochs": "epochs", "ppo_minibatches": "minibatches", "clip_epsilon": "clip_epsilon",
+    "normalize_advantage": "normalize_advantage", "value_coef": "value_coef", "gae_lambda": "gae_lambda",
+}
+
+
+def resolve_algorithm(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Update-step settings: `algorithm: a2c | ppo` picks a preset (design D3);
+    explicit keys override it. a2c = 1 epoch, 1 minibatch, no clip, lambda 1
+    (today's REINFORCE-with-baseline step); ppo = Schulman et al. 2017 values."""
+    name = config.get("algorithm", "a2c")
+    if name not in ALGORITHMS:
+        raise ValueError(f"Unknown algorithm {name!r}; accepted values: {', '.join(ALGORITHMS)}")
+    algo = dict(ALGORITHMS[name])
+    for key, target in ALGORITHM_KEYS.items():
+        if key in config and config[key] is not None:
+            algo[target] = config[key]
+    lam = float(algo["gae_lambda"])
+    if not 0.0 <= lam <= 1.0:
+        raise ValueError(f"gae_lambda must be in [0, 1], got {lam}")
+    algo["gae_lambda"] = lam
+    if algo["clip_epsilon"] is not None:
+        algo["clip_epsilon"] = float(algo["clip_epsilon"])
+        if algo["clip_epsilon"] <= 0:
+            raise ValueError(f"clip_epsilon must be > 0 (or null for no clipping), got {algo['clip_epsilon']}")
+    for key in ("epochs", "minibatches"):
+        algo[key] = int(algo[key])
+        if algo[key] < 1:
+            raise ValueError(f"ppo_{key} must be >= 1, got {algo[key]}")
+    algo["value_coef"] = float(algo["value_coef"])
+    if algo["value_coef"] < 0:
+        raise ValueError(f"value_coef must be >= 0, got {algo['value_coef']}")
+    algo["normalize_advantage"] = bool(algo["normalize_advantage"])
+    return algo
 
 
 def resolve_shaping(config: Dict[str, Any]) -> float:
@@ -138,6 +173,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     eval_fn = resolve_eval_fn(config)
     eval_interval = resolve_eval_interval(config)
     log_interval = int(config.get("log_interval", 10))
+    algorithm = resolve_algorithm(config)
 
     set_seed(seed)
 
@@ -180,6 +216,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         eval_fn=eval_fn,
         eval_interval=eval_interval,
         log_interval=log_interval,
+        algorithm=algorithm,
     )
 
     return {

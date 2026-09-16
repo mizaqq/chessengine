@@ -1,117 +1,119 @@
 ## Why
 
-The current update is one REINFORCE-with-baseline gradient step per rollout, using
-the full discounted return minus the value as the advantage. That advantage is the
-highest-variance choice available (GAE with lambda=1), and nothing limits how far a
-single update can move the policy. This is roadmap item 03/1 and the most-cited
-remedy in the literature: Generalized Advantage Estimation to trade variance for a
-little bias, and the PPO clipped objective to bound each policy step and allow
-several optimisation epochs per rollout.
+The update step is one REINFORCE-with-baseline gradient step per rollout on the
+shared network: advantage = full 15-ply shaped return minus value (GAE with
+lambda = 1, the noisiest estimator), and nothing bounds how far one step moves the
+policy. Three runs on 2026-09-16 showed the consequence: opening-board normalised
+entropy fell 0.51 -> 0.37 -> 0.24 and games collapsed into repetition and
+fifty-move draws (~80-180 plies), so mate chances never arise and the curriculum's
+puzzle skill (held-out top-1 0.486) does not transfer in-game (4.5%). This is
+roadmap item 03/1 and the standard remedy: Generalized Advantage Estimation to
+trade variance for a little bias, and the PPO clipped objective to bound each step
+and allow several optimisation epochs per rollout.
 
 ## What Changes
 
-- Add a GAE(gamma, lambda) advantage estimator for the per-model self-play rollout.
-  It keeps the existing cross-player done propagation and opponent bootstrap. With
-  lambda=1 it reproduces the current discounted-return advantage exactly.
-- Make the update algorithm config-selectable: `algorithm: a2c | ppo`. A2C remains
-  the default so existing configs and logs stay comparable.
-- Add a PPO update: clipped surrogate objective, several epochs of shuffled
-  minibatches over the rollout, per-minibatch advantage normalisation, a value loss
-  coefficient, and the existing normalised-entropy bonus and gradient clipping.
-- Rollout collection stores what an update needs to re-evaluate the policy
-  (observation, legal mask, action, old log-probability, old value) instead of
-  graph-connected tensors. A2C becomes the degenerate PPO configuration (one epoch,
-  one minibatch, no clipping) and its gradient is mathematically identical to today's.
-- Log PPO diagnostics: clip fraction and approximate KL divergence between old and
-  new policy.
-- Add a `train_ppo.yaml` config with sourced defaults.
-- Not **BREAKING**: default config behaviour is preserved; `steps_per_update` and
-  existing keys keep their meaning.
+- Add a GAE(gamma, lambda) advantage estimator that mirrors the existing shaped
+  returns walk (cross-player done propagation, opponent bootstrap, potential-based
+  shaping). lambda = 1 reproduces today's advantage exactly.
+- Make the update algorithm config-selectable: `algorithm: a2c | ppo`. A2C stays
+  the default; the default yaml is unchanged.
+- Add a PPO update: clipped surrogate objective, `ppo_epochs` passes of
+  `ppo_minibatches` shuffled minibatches, per-minibatch advantage normalisation, a
+  value-loss coefficient, the existing normalised-entropy bonus and gradient clip.
+- Rollout collection runs under `no_grad` and stores what re-evaluation needs
+  (oriented observation, legal mask, action, old log-prob, old value). The update
+  re-runs the network. A2C is the degenerate PPO configuration (1 epoch, 1
+  minibatch, no clip, lambda 1).
+- Under the shared network, both colours' own steps form one batch for the
+  epochs; the legacy two-network mode updates each model on its own steps.
+- Log PPO diagnostics: clip fraction and approximate KL between old and new policy.
+- Add `src/configs/train_ppo.yaml`; `steps_per_update: 64` (768 samples/update).
+- Not **BREAKING**: default behaviour preserved; checkpoints unchanged.
+
+## Decisions taken in conversation (2026-09-16)
+
+1. Scope: both switches, three arms (A2C lambda 1, A2C lambda 0.95, PPO lambda 0.95).
+2. Rollout length 64 plies for **all** arms so the algorithm is the only variable.
+3. Fresh network, seed 42, 4 Lichess puzzle boards, equal plies per arm.
+4. Paper hyperparameters: eps 0.2, 4 epochs, 4 minibatches, value coef 0.5,
+   advantage normalisation on, lambda 0.95.
+
+Owner's prediction: **skipped at the owner's request** ("for now skip questions
+and implement"). The lambda comprehension question was parked; the plain-language
+version to return to: lambda is how many moves ahead we look at what actually
+happened before letting the value head fill in the rest.
 
 ## Alternatives considered
 
-1. **GAE only, keep A2C** — Schulman et al. 2016, *High-Dimensional Continuous
-   Control Using GAE*, arXiv:1506.02438, Section 3. Cheapest change and it isolates
-   the variance-reduction effect. Rejected as the whole change because it leaves
-   step size uncontrolled, but it is kept as an experiment arm (A2C with lambda<1).
-2. **PPO with clipped objective** (chosen) — Schulman et al. 2017, *Proximal Policy
-   Optimization Algorithms*, arXiv:1707.06347, eq. 7 and Algorithm 1. Bounds the
-   per-sample policy ratio so multiple epochs on the same rollout are safe.
-3. **PPO with adaptive KL penalty** — same paper, Section 4. Penalises KL(old, new)
-   with a coefficient adjusted toward a target. The paper reports it performs worse
-   than clipping in its experiments (Section 6.1), so not chosen.
-4. **TRPO** — discussed in the PPO paper Section 2.2 as the method PPO simplifies.
-   Requires a conjugate-gradient second-order step and is incompatible with
-   shared-parameter noise like dropout. Too heavy for a learning codebase on CPU.
-5. **Implementation extras from Huang et al. 2022, *The 37 Implementation Details
-   of PPO*, ICLR Blog Track** — value-loss clipping, orthogonal init, Adam eps 1e-5,
-   linear LR annealing. Only the details the paper itself specifies plus advantage
-   normalisation and the two diagnostics are included; the rest are recorded as
-   follow-ups so their effect can be tested one at a time.
+1. **GAE only, keep A2C** (Schulman et al. 2016, arXiv:1506.02438 §3). Isolates the
+   variance effect; kept as arm B, not the whole change because step size stays
+   uncontrolled.
+2. **PPO clipped objective** (chosen; Schulman et al. 2017, arXiv:1707.06347 eq. 7,
+   Algorithm 1).
+3. **PPO adaptive KL penalty** (same paper §4): reported worse than clipping (§6.1).
+4. **TRPO** (§2.2): second-order step, too heavy on CPU for a learning codebase.
+5. **Extras from Huang et al. 2022 (37 details)**: only advantage normalisation
+   (detail 7) and the two diagnostics (detail 12) are included; value-loss
+   clipping, orthogonal init, Adam eps, LR annealing are follow-ups so their effect
+   can be measured one at a time.
+
+## BatchNorm handling (found during apply)
+
+`ChessPolicyProbs` uses BatchNorm. Re-evaluating with the statistics of a
+192-sample minibatch instead of the 12-board step that sampled the action moved
+half the ratios outside the clip band before any learning (measured: clip
+fraction 0.52, approx KL 0.10 on a fresh network). Training now keeps the
+network in eval mode and refreshes the running statistics once per update from
+the rollout (design D7). Ratios start at exactly 1; the maths tests hold on the
+real network.
 
 ## Capabilities
 
 ### New Capabilities
-- `advantage-estimation`: how per-step advantages and value targets are computed
-  from a self-play rollout, including the lambda parameter and its limits.
-- `policy-update`: how a rollout is turned into parameter updates, selection between
-  A2C and PPO, the PPO objective and its hyperparameters, and the diagnostics logged.
-
-### Modified Capabilities
-- none (no main specs exist yet)
+- `advantage-estimation`: per-step advantages and value targets from a self-play
+  rollout, lambda and its limits.
+- `policy-update`: rollout to parameter updates; A2C vs PPO; PPO objective,
+  hyperparameters, diagnostics; shared-network batching.
 
 ## Impact
 
-- `src/model/returns.py`: new GAE function beside the existing returns function.
-- `src/core/types.py`: `StepRecord` stores observation, legal mask, action, old
-  log-prob and old value (detached) instead of graph-connected per-model tensors.
-- `src/model/training.py`: rollout collection under `no_grad`; update step
-  dispatches on algorithm; PPO epochs/minibatches; diagnostics into metrics.
-- `src/training/metrics.py`: clip fraction and approx KL fields.
-- `src/entrypoints/train.py`, `src/configs/`: new keys and a PPO config.
-- Tests: new GAE tests, PPO loss tests, A2C gradient-equivalence regression test,
-  smoke test with the PPO config. Existing `StepRecord`-based tests updated.
-- Roadmap 03/1 marked done at archive time.
+- `src/model/returns.py`: `compute_gae_for_model` beside the existing returns.
+- `src/core/types.py`: `StepRecord` holds obs, mask, action, old log-prob, old
+  value, entropy (for stats), legal counts, player, potential, done, terminal rewards.
+- `src/model/training.py`: collection under `no_grad`; `update_model`; dispatch.
+- `src/training/metrics.py`: `clip_fraction`, `approx_kl`.
+- `src/entrypoints/train.py`, `src/configs/train_ppo.yaml`: keys, presets, validation.
+- Tests: GAE, PPO update, preset equivalence, config, metrics, smoke.
 
 ## How we will know it worked
 
-Experiment: three arms, same seed, same env count and budget (proposed 12 envs,
-500 updates each). Configs differ only in the keys named.
+Three arms, seed 42, fresh network, 12 boards (4 Lichess puzzle boards),
+`steps_per_update: 64`, 250 updates each (16,000 plies per board, about the plies
+the seed0 + cont-lichess path saw). Configs differ only in the keys named.
 
 | Arm | algorithm | gae_lambda | Purpose |
 |-----|-----------|------------|---------|
-| A | a2c | 1.0 | baseline, identical to today (potential shaping, scale 0.2) |
-| B | a2c | 0.95 | effect of GAE alone |
-| C | ppo | 0.95 | effect of clipping + epochs on top of GAE |
+| A | a2c | 1.0 | today's update, 64-ply rollouts |
+| B | a2c | 0.95 | GAE alone |
+| C | ppo | 0.95 | clipping + 4x4 epochs/minibatches + normalisation on top of GAE |
 
-Metrics to watch, per arm, from the logs:
-- total, policy and value loss over updates (level and noise)
-- normalised entropy (should not collapse faster under PPO than A2C)
-- white/black/draw rates in the windowed summary
-- PPO only: clip fraction and approx KL per update
-- wall-clock per update
-- mate-in-one rate on 40 sampled games from the final checkpoints (roadmap/06 §0)
+Metrics per arm: opening-board and puzzle-board normalised entropy, draw rate and
+mean plies on game boards, puzzle solved rate, Lichess and selfplay held-out
+top-1/mate-prob, value loss, wall-clock per update; C only: clip fraction,
+approx KL. Then `scripts/eval_games.py` on each final checkpoint (in-game mate rate).
 
-Owner's prediction (fill in before the first run):
-
-> **Loss noise A vs B:** ...
-> **Value loss B vs A:** ...
-> **Entropy C vs B:** ...
-> **Clip fraction in C, early vs late:** ...
-> **Wall-clock per update C vs A:** ...
-> **Draw rate after 500 updates, any arm you expect to differ:** ...
+Baseline for context: `experiments/mixed-puzzle-sources/cont-lichess` (Lichess
+0.486, in-game 4.5%, opening entropy 0.24).
 
 ## What to understand
 
-After this change the owner should be able to explain, in their own words:
 - Return vs value vs advantage, and why the policy gradient wants the advantage.
-- The TD residual and how GAE sums residuals; what lambda=0 and lambda=1 mean and
-  why the best lambda is usually below the best gamma.
-- Why REINFORCE cannot reuse a rollout for several gradient steps, and how the
-  probability ratio plus clipping makes reuse safe.
-- What clip fraction and approximate KL tell you about an update, and what a very
-  high or a zero clip fraction means.
-- Why A2C is the special case of PPO with one epoch and no clipping.
-- Where this applies outside chess: PPO is the standard policy optimiser in
-  robotics and in RL from human feedback for language models; the lambda choice is
-  the same bias/variance dial as smoothing in any noisy sequential estimate.
+- The TD residual and how GAE sums residuals; lambda 0 and 1; why the best lambda
+  is usually below the best gamma.
+- Why REINFORCE cannot reuse a rollout, and how the ratio plus clipping makes
+  reuse safe.
+- What clip fraction and approximate KL say about an update.
+- Why A2C is PPO with one epoch and no clipping.
+- Outside chess: PPO is the default optimiser in robotics and RLHF for language
+  models; lambda is the same bias/variance dial as smoothing any noisy estimate.

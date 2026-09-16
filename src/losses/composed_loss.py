@@ -11,6 +11,7 @@ class ComposedLoss:
         value_loss: torch.Tensor,
         entropy_bonus: torch.Tensor,
         entropy_coef: float = 0.01,
+        value_coef: float = 1.0,
     ) -> Dict[str, torch.Tensor]:
         """
         Compute total loss from individual components.
@@ -20,11 +21,12 @@ class ComposedLoss:
             value_loss: Value function MSE loss
             entropy_bonus: Entropy bonus for exploration
             entropy_coef: Coefficient for entropy regularization
+            value_coef: Coefficient on the value loss (PPO eq. 9 c1; 1.0 = legacy A2C)
         
         Returns:
             Dictionary with individual losses and total loss
         """
-        total_loss = policy_loss + value_loss - entropy_coef * entropy_bonus
+        total_loss = policy_loss + value_coef * value_loss - entropy_coef * entropy_bonus
         
         return {
             "policy_loss": policy_loss,

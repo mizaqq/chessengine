@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 from torch.distributions import Categorical
 from src.core.types import StepRecord
-from src.model.returns import compute_returns_for_model
+from src.model.returns import compute_gae_for_model
 from src.training.metrics import MetricsAggregator
 from src.losses.composed_loss import ComposedLoss
 from src.model.orientation import orient
@@ -53,96 +53,94 @@ def _collect_rollout(
     metrics,
     oriented=False,
 ):
-    """`oriented`: observations are flipped to the mover's view before the model
-    (shared network). The environment still reports the absolute board."""
+    """Play `num_steps` plies on every board and record what the update needs.
+
+    Runs under `no_grad`: the rollout stores plain tensors (observation as the
+    model saw it, legal mask, action, old log-prob, old value) and the update
+    re-runs the network on them. `oriented`: observations are flipped to the
+    mover's view before the model (shared network); the environment still
+    reports the absolute board."""
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
 
-    for _ in range(num_steps):
-        players = env_step.current_player
-        obs_in = orient(env_step.obs, players) if oriented else env_step.obs
-        pre_move_material = env_step.material.clone()
-        white_mask = players == WHITE
-        black_mask = players == BLACK
+    with torch.no_grad():
+        for _ in range(num_steps):
+            players = env_step.current_player
+            obs_in = orient(env_step.obs, players) if oriented else env_step.obs
+            legal = env_step.legal_actions_mask
+            pre_move_material = env_step.material.clone()
 
-        actions = torch.zeros(num_envs, dtype=torch.long)
-        val_w = torch.zeros(num_envs, 1)
-        val_b = torch.zeros(num_envs, 1)
-        lp_w = torch.zeros(num_envs)
-        lp_b = torch.zeros(num_envs)
-        ent_w = torch.zeros(num_envs)
-        ent_b = torch.zeros(num_envs)
-        nleg_w = torch.ones(num_envs)
-        nleg_b = torch.ones(num_envs)
+            actions = torch.zeros(num_envs, dtype=torch.long)
+            old_value = torch.zeros(num_envs)
+            old_log_prob = torch.zeros(num_envs)
+            entropy = torch.zeros(num_envs)
+            num_legal = legal.sum(dim=1).float().clamp(min=1.0)
 
-        for model_id, mask in [(WHITE, white_mask), (BLACK, black_mask)]:
-            if not mask.any():
-                continue
-            p, v = models[model_id](
-                obs_in[mask], env_step.legal_actions_mask[mask]
-            )
-            dist = Categorical(probs=p)
-            a = dist.sample()
-            actions[mask] = a
-
-            if model_id == WHITE:
-                val_w[mask] = v
-                lp_w[mask] = dist.log_prob(a)
-                ent_w[mask] = dist.entropy()
-                nleg_w[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
-            else:
-                val_b[mask] = v
-                lp_b[mask] = dist.log_prob(a)
-                ent_b[mask] = dist.entropy()
-                nleg_b[mask] = env_step.legal_actions_mask[mask].sum(dim=1).float()
-
-        sampled_is_legal = (
-            env_step.legal_actions_mask.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
-        )
-        empty_masks = (env_step.legal_actions_mask.sum(dim=1) == 0).sum().item()
-        illegal_samples = (~sampled_is_legal).sum().item()
-        metrics.add_step(empty_masks=empty_masks, illegal_samples=illegal_samples)
-
-        env_step = envs.step(actions)
-
-        tr_white, tr_black = _precompute_terminal_rewards(
-            env_step.info, num_envs, terminal_rewards, players
-        )
-
-        if "game_results" in env_step.info:
-            puzzle_boards = env_step.info.get("puzzle_boards", {})
-            for env_idx, result in env_step.info["game_results"].items():
-                if puzzle_boards.get(env_idx, False):
-                    mover_won = (result == "white_win") == (int(players[env_idx]) == WHITE)
-                    metrics.add_puzzle_result(solved=result != "puzzle_miss" and mover_won)
+            for model_id in (WHITE, BLACK):
+                mask = players == model_id
+                if not mask.any():
                     continue
-                metrics.add_terminal_return(tr_white[env_idx].item())
-                if result == "white_win":
-                    metrics.add_terminal_result(white_win=True)
-                elif result == "black_win":
-                    metrics.add_terminal_result(black_win=True)
-                else:
-                    metrics.add_terminal_result(draw=True)
+                p, v = models[model_id](obs_in[mask], legal[mask])
+                dist = Categorical(probs=p)
+                a = dist.sample()
+                actions[mask] = a
+                old_value[mask] = v.squeeze(-1)
+                old_log_prob[mask] = dist.log_prob(a)
+                entropy[mask] = dist.entropy()
 
-        steps_data.append(
-            StepRecord(
-                player=players.clone(),
-                value_white=val_w,
-                value_black=val_b,
-                log_prob_white=lp_w,
-                log_prob_black=lp_b,
-                entropy_white=ent_w,
-                entropy_black=ent_b,
-                num_legal_white=nleg_w,
-                num_legal_black=nleg_b,
-                potential_white=pre_move_material,
-                done=env_step.done.clone(),
-                terminal_r_white=tr_white,
-                terminal_r_black=tr_black,
+            sampled_is_legal = legal.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
+            empty_masks = (legal.sum(dim=1) == 0).sum().item()
+            illegal_samples = (~sampled_is_legal).sum().item()
+            metrics.add_step(empty_masks=empty_masks, illegal_samples=illegal_samples)
+
+            env_step = envs.step(actions)
+
+            tr_white, tr_black = _precompute_terminal_rewards(
+                env_step.info, num_envs, terminal_rewards, players
             )
-        )
+
+            if "game_results" in env_step.info:
+                puzzle_boards = env_step.info.get("puzzle_boards", {})
+                for env_idx, result in env_step.info["game_results"].items():
+                    if puzzle_boards.get(env_idx, False):
+                        mover_won = (result == "white_win") == (int(players[env_idx]) == WHITE)
+                        metrics.add_puzzle_result(solved=result != "puzzle_miss" and mover_won)
+                        continue
+                    metrics.add_terminal_return(tr_white[env_idx].item())
+                    if result == "white_win":
+                        metrics.add_terminal_result(white_win=True)
+                    elif result == "black_win":
+                        metrics.add_terminal_result(black_win=True)
+                    else:
+                        metrics.add_terminal_result(draw=True)
+
+            steps_data.append(
+                StepRecord(
+                    player=players.clone(),
+                    obs=obs_in.clone(),
+                    legal_mask=legal.clone(),
+                    action=actions,
+                    old_log_prob=old_log_prob,
+                    old_value=old_value,
+                    entropy=entropy,
+                    num_legal=num_legal,
+                    potential_white=pre_move_material,
+                    done=env_step.done.clone(),
+                    terminal_r_white=tr_white,
+                    terminal_r_black=tr_black,
+                )
+            )
 
     return steps_data, env_step
+
+
+def _sample_weighted(updates, key):
+    """Sample-weighted mean of an update statistic over the models updated; None if absent."""
+    pairs = [(u[key], u["sample_count"]) for u in updates if u.get(key) is not None and u["sample_count"]]
+    if not pairs:
+        return None
+    total = sum(c for _, c in pairs)
+    return sum(v * c for v, c in pairs) / total
 
 
 def _weighted_mean(result_a, result_b, key, count_key):
@@ -190,29 +188,46 @@ _EMPTY_STATS = {
     "game_step_count": 0, "puzzle_step_count": 0,
 }
 
+_EMPTY_UPDATE = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0,
+                 "clip_fraction": None, "approx_kl": None, "optimizer_steps": 0, "sample_count": 0}
 
-def _gather_side(steps_data, model_returns, model_id, puzzle_env_mask=None):
+
+def _gather_side(steps_data, advantages, targets, model_id, puzzle_env_mask=None):
     """Concatenate one side's own-step tensors over the rollout; None if it never moved."""
-    parts = {"log_prob": [], "value": [], "ret": [], "entropy": [], "num_legal": [], "is_puzzle": []}
+    keys = ("obs", "legal_mask", "action", "old_log_prob", "old_value", "entropy", "num_legal")
+    parts = {k: [] for k in keys + ("adv", "target", "is_puzzle")}
     for i, step in enumerate(steps_data):
         is_mine = step.player == model_id
         if not is_mine.any():
             continue
-        white = model_id == WHITE
-        parts["ret"].append(model_returns[i][is_mine].detach())
-        parts["value"].append((step.value_white if white else step.value_black).squeeze(-1)[is_mine])
-        parts["log_prob"].append((step.log_prob_white if white else step.log_prob_black)[is_mine])
-        parts["entropy"].append((step.entropy_white if white else step.entropy_black)[is_mine])
-        parts["num_legal"].append((step.num_legal_white if white else step.num_legal_black)[is_mine])
+        for k in keys:
+            parts[k].append(getattr(step, k)[is_mine])
+        parts["adv"].append(advantages[i][is_mine])
+        parts["target"].append(targets[i][is_mine])
         parts["is_puzzle"].append(
             puzzle_env_mask[is_mine] if puzzle_env_mask is not None
             else torch.zeros(int(is_mine.sum()), dtype=torch.bool)
         )
-    if not parts["log_prob"]:
+    if not parts["obs"]:
         return None
     g = {k: torch.cat(v) for k, v in parts.items()}
-    g["normalized_entropy"] = g["entropy"] / torch.clamp(torch.log(g["num_legal"]), min=1e-8)
+    g["normalized_entropy"] = normalized_entropy(g["entropy"], g["num_legal"])
     return g
+
+
+def normalized_entropy(entropy, num_legal):
+    """entropy / log(legal moves), in [0, 1]. A forced move (one legal move) has
+    entropy 0 by definition; dividing its float noise (~1e-7) by a tiny guard used
+    to report values like 12, so it is set to 0 explicitly."""
+    log_n = torch.log(num_legal)
+    return torch.where(num_legal > 1, entropy / torch.clamp(log_n, min=1e-8), torch.zeros_like(entropy))
+
+
+def _concat_batches(gathered_list):
+    gs = [g for g in gathered_list if g is not None]
+    if not gs:
+        return None
+    return {k: torch.cat([g[k] for g in gs]) for k in gs[0]}
 
 
 def _side_stats(g):
@@ -233,43 +248,99 @@ def _side_stats(g):
     }
 
 
-def _loss(gathered_list, entropy_coef):
-    """A2C loss over the concatenation of one or more sides' gathered tensors."""
-    gs = [g for g in gathered_list if g is not None]
-    if not gs:
-        return None
-    log_probs = torch.cat([g["log_prob"] for g in gs])
-    values = torch.cat([g["value"] for g in gs])
-    returns = torch.cat([g["ret"] for g in gs])
-    norm_ent = torch.cat([g["normalized_entropy"] for g in gs])
-    advantages = (returns - values).detach()
-    policy_loss = -(log_probs * advantages).mean()
-    value_loss = (values - returns).pow(2).mean()
-    return ComposedLoss().compute(
-        policy_loss=policy_loss, value_loss=value_loss,
-        entropy_bonus=norm_ent.mean(), entropy_coef=entropy_coef,
-    )["total_loss"]
+def _minibatch_indices(n, minibatches, generator=None):
+    """Shuffled split of range(n) into at most `minibatches` chunks (never empty)."""
+    perm = torch.randperm(n, generator=generator)
+    return list(torch.tensor_split(perm, min(minibatches, n)))
 
 
-def _optimizer_step(model, optimizer, total_loss, grad_clip):
-    optimizer.zero_grad()
-    total_loss.backward()
-    torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
-    optimizer.step()
+def ppo_policy_loss(new_log_prob, old_log_prob, advantages, clip_epsilon):
+    """Clipped surrogate (Schulman et al. 2017, eq. 7); `clip_epsilon=None` = plain
+    ratio * A, whose gradient at theta = theta_old is the REINFORCE gradient.
+    Returns (loss, ratio)."""
+    ratio = torch.exp(new_log_prob - old_log_prob)
+    if clip_epsilon is None:
+        return -(ratio * advantages).mean(), ratio
+    clipped = torch.clamp(ratio, 1.0 - clip_epsilon, 1.0 + clip_epsilon)
+    return -torch.min(ratio * advantages, clipped * advantages).mean(), ratio
 
 
-def _backpropagate_for_model(
-    model, optimizer, steps_data, model_returns, model_id,
-    entropy_coef=0.01, grad_clip=1.0, puzzle_env_mask=None,
+def update_model(
+    model, optimizer, batch, *, epochs=1, minibatches=1, clip_epsilon=None,
+    normalize_advantage=False, value_coef=1.0, entropy_coef=0.01, grad_clip=1.0,
+    generator=None,
 ):
-    """Legacy per-model update (two separate networks)."""
-    g = _gather_side(steps_data, model_returns, model_id, puzzle_env_mask)
-    stats = _side_stats(g)
-    total_loss = _loss([g], entropy_coef)
-    if total_loss is None:
-        return {"total_loss": torch.tensor(0.0), **stats}
-    _optimizer_step(model, optimizer, total_loss, grad_clip)
-    return {"total_loss": total_loss, **stats}
+    """Turn one gathered batch into `epochs * minibatches` optimizer steps.
+
+    Each minibatch re-runs the network on the stored observations, forms the
+    probability ratio against the stored log-probs, and minimises
+        policy_loss + value_coef * value_loss - entropy_coef * normalised_entropy
+    (PPO eq. 9 with the entropy normalised by log(legal moves)). The a2c preset is
+    epochs=1, minibatches=1, clip_epsilon=None, normalize_advantage=False.
+    Returns per-update means of the losses plus clip fraction and approx KL
+    (Huang et al. 2022, detail 12).
+    """
+    if batch is None or batch["obs"].shape[0] == 0:
+        return dict(_EMPTY_UPDATE)
+    n = batch["obs"].shape[0]
+    sums = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
+    steps = 0
+    for _ in range(epochs):
+        for idx in _minibatch_indices(n, minibatches, generator):
+            probs, value = model(batch["obs"][idx], batch["legal_mask"][idx])
+            dist = Categorical(probs=probs)
+            new_log_prob = dist.log_prob(batch["action"][idx])
+            adv = batch["adv"][idx]
+            if normalize_advantage:
+                adv = (adv - adv.mean()) / (adv.std(unbiased=False) + 1e-8) if len(adv) > 1 else torch.zeros_like(adv)
+            policy_loss, ratio = ppo_policy_loss(new_log_prob, batch["old_log_prob"][idx], adv, clip_epsilon)
+            value_loss = (value.squeeze(-1) - batch["target"][idx]).pow(2).mean()
+            norm_ent = normalized_entropy(dist.entropy(), batch["num_legal"][idx])
+            composed = ComposedLoss().compute(
+                policy_loss=policy_loss, value_loss=value_loss, entropy_bonus=norm_ent.mean(),
+                entropy_coef=entropy_coef, value_coef=value_coef,
+            )
+            optimizer.zero_grad()
+            composed["total_loss"].backward()
+            torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
+            optimizer.step()
+            steps += 1
+            with torch.no_grad():
+                sums["total_loss"] += composed["total_loss"].item()
+                sums["policy_loss"] += policy_loss.item()
+                sums["value_loss"] += value_loss.item()
+                if clip_epsilon is not None:
+                    sums["clip_fraction"] += ((ratio - 1.0).abs() > clip_epsilon).float().mean().item()
+                sums["approx_kl"] += (batch["old_log_prob"][idx] - new_log_prob).mean().item()
+    out = {k: v / steps for k, v in sums.items()}
+    if clip_epsilon is None:
+        out["clip_fraction"] = None
+    out["optimizer_steps"] = steps
+    out["sample_count"] = n
+    return out
+
+
+def refresh_norm_stats(model, obs, legal_mask, chunk=256):
+    """Recompute BatchNorm running statistics from `obs` and return the model to
+    evaluation mode.
+
+    Training keeps the network in eval mode so the probability the update
+    re-computes equals the one the rollout sampled from (ratio exactly 1 before
+    the first step). Train-mode BatchNorm breaks that: measured 2026-09-16 on a
+    fresh network, batch statistics of 12 boards vs 192 samples alone gave clip
+    fraction 0.52 and approx KL 0.10. The statistics still track the data because
+    they are refreshed here once per update (one update stale)."""
+    model.train()
+    with torch.no_grad():
+        for i in range(0, obs.shape[0], chunk):
+            model(obs[i:i + chunk], legal_mask[i:i + chunk])
+    model.eval()
+
+
+A2C_PRESET = dict(epochs=1, minibatches=1, clip_epsilon=None, normalize_advantage=False,
+                  value_coef=1.0, gae_lambda=1.0)
+PPO_PRESET = dict(epochs=4, minibatches=4, clip_epsilon=0.2, normalize_advantage=True,
+                  value_coef=0.5, gae_lambda=0.95)
 
 
 def run_chess_training(
@@ -292,8 +363,12 @@ def run_chess_training(
     eval_fn=None,
     eval_interval=50,
     log_interval=10,
+    algorithm=None,
 ):
-    """Run A2C self-play.
+    """Run A2C or PPO self-play.
+
+    `algorithm`: dict of update settings (`epochs`, `minibatches`, `clip_epsilon`,
+    `normalize_advantage`, `value_coef`, `gae_lambda`); default `A2C_PRESET`.
 
     Two modes. Legacy: separate `white_model` / `black_model` with their optimizers.
     Shared (AlphaZero-style): pass `black_model=None`; `white_model` then plays both
@@ -303,6 +378,8 @@ def run_chess_training(
     `eval_fn(white_model, black_model) -> dict` is called every `eval_interval`
     updates and after the last one; its keys are merged into the log entry for
     that update (a log entry is created for it if none is due)."""
+    algo = {**A2C_PRESET, **(algorithm or {})}
+    lam = algo.pop("gae_lambda")
     shared = black_model is None
     if shared:
         black_model = white_model
@@ -313,6 +390,10 @@ def run_chess_training(
         metrics = MetricsAggregator()
     if terminal_rewards is None:
         terminal_rewards = {"win": 2.0, "loss": -2.0, "draw": -0.5}
+
+    # BatchNorm in eval mode during collection and update; see refresh_norm_stats.
+    white_model.eval()
+    black_model.eval()
 
     num_envs = envs.num_envs
     num_puzzle_envs = getattr(envs, "num_puzzle_envs", 0)
@@ -342,34 +423,33 @@ def run_chess_training(
             env_step, white_model, black_model, model_id=BLACK, oriented=shared
         )
 
-        returns_white = compute_returns_for_model(
-            steps_data, model_id=WHITE, bootstrap_value=bootstrap_white, gamma=gamma,
+        adv_w, tgt_w = compute_gae_for_model(
+            steps_data, model_id=WHITE, bootstrap_value=bootstrap_white, gamma=gamma, lam=lam,
             final_material=env_step.material, shaping_scale=shaping_scale,
         )
-        returns_black = compute_returns_for_model(
-            steps_data, model_id=BLACK, bootstrap_value=bootstrap_black, gamma=gamma,
+        adv_b, tgt_b = compute_gae_for_model(
+            steps_data, model_id=BLACK, bootstrap_value=bootstrap_black, gamma=gamma, lam=lam,
             final_material=env_step.material, shaping_scale=shaping_scale,
         )
+        g_w = _gather_side(steps_data, adv_w, tgt_w, WHITE, puzzle_env_mask)
+        g_b = _gather_side(steps_data, adv_b, tgt_b, BLACK, puzzle_env_mask)
+        update_kwargs = dict(algo, entropy_coef=entropy_coef, grad_clip=grad_clip)
 
         if shared:
-            g_w = _gather_side(steps_data, returns_white, WHITE, puzzle_env_mask)
-            g_b = _gather_side(steps_data, returns_black, BLACK, puzzle_env_mask)
-            loss = _loss([g_w, g_b], entropy_coef)
-            if loss is not None:
-                _optimizer_step(white_model, optimizer_white, loss, grad_clip)
-            result_w = {"total_loss": loss if loss is not None else torch.tensor(0.0), **_side_stats(g_w)}
-            result_b = {"total_loss": torch.tensor(0.0), **_side_stats(g_b)}
+            # One batch of both colours' own steps, one optimizer.
+            batch = _concat_batches([g_w, g_b])
+            updates = [update_model(white_model, optimizer_white, batch, **update_kwargs)]
+            if batch is not None:
+                refresh_norm_stats(white_model, batch["obs"], batch["legal_mask"])
         else:
-            result_w = _backpropagate_for_model(
-                white_model, optimizer_white, steps_data, returns_white, model_id=WHITE,
-                entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
-            )
-            result_b = _backpropagate_for_model(
-                black_model, optimizer_black, steps_data, returns_black, model_id=BLACK,
-                entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
-            )
+            updates = []
+            for model, opt, g in ((white_model, optimizer_white, g_w), (black_model, optimizer_black, g_b)):
+                updates.append(update_model(model, opt, g, **update_kwargs))
+                if g is not None:
+                    refresh_norm_stats(model, g["obs"], g["legal_mask"])
+        result_w, result_b = _side_stats(g_w), _side_stats(g_b)
 
-        total_loss = result_w["total_loss"].item() + result_b["total_loss"].item()
+        total_loss = sum(u["total_loss"] for u in updates)
         total_steps = result_w["step_count"] + result_b["step_count"]
         if total_steps > 0:
             metrics.add_entropy(
@@ -387,6 +467,12 @@ def run_chess_training(
                 puzzle=_weighted_mean(result_w, result_b, "entropy_normalized_puzzle", "puzzle_step_count"),
             )
         losses.append(total_loss)
+        metrics.add_update_stats(
+            policy_loss=_sample_weighted(updates, "policy_loss"),
+            value_loss=_sample_weighted(updates, "value_loss"),
+            clip_fraction=_sample_weighted(updates, "clip_fraction"),
+            approx_kl=_sample_weighted(updates, "approx_kl"),
+        )
 
         pbar.set_postfix(loss=total_loss)
 

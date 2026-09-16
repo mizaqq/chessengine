@@ -3,7 +3,9 @@
 shared_network: true
 num_envs: 12
 max_updates: 30000
-steps_per_update: 15
+# 64 plies x 12 boards = 768 samples per update (decided 2026-09-16; the paper
+# uses ~1000). Use the same value in a2c arms when comparing algorithms.
+steps_per_update: 64
 # 3e-4 is the rate every run before 2026-09-16 effectively used from update 100 on
 # (the old hard-coded floor 3e-4 sat above the 1e-4 start). Kept for comparability.
 learning_rate: 0.0003
@@ -50,10 +52,26 @@ puzzle_eval_files:
   selfplay: data/puzzles/selfplay_mate_in_1_eval.csv
 eval_interval: 50
 
-# Update algorithm: a2c (today's single REINFORCE-with-baseline step per rollout,
+# Update algorithm: ppo
+# PPO (Schulman et al. 2017) with GAE (Schulman et al. 2016). Values from the
+# paper's Table 3 (Atari) / Table 5 (MuJoCo), scaled to our batch:
+gae_lambda: 0.95          # Tables 3 and 5; 1.0 = today's return-minus-value advantage
+clip_epsilon: 0.2         # Table 5 (0.1 in Table 3); trusted ratio band per update
+ppo_epochs: 4             # Table 3 uses 3, Table 5 uses 10
+ppo_minibatches: 4        # 768 samples / 4 = 192 per minibatch (Table 3: 1024 / 32)
+value_coef: 0.5           # eq. 9, c1
+normalize_advantage: true # Huang et al. 2022, detail 7 (today's single REINFORCE-with-baseline step per rollout,
 # GAE lambda 1) or ppo (see train_ppo.yaml). Keys ppo_epochs, ppo_minibatches,
 # clip_epsilon, normalize_advantage, value_coef, gae_lambda override the preset.
-algorithm: a2c
+algorithm: ppo
+# PPO (Schulman et al. 2017) with GAE (Schulman et al. 2016). Values from the
+# paper's Table 3 (Atari) / Table 5 (MuJoCo), scaled to our batch:
+gae_lambda: 0.95          # Tables 3 and 5; 1.0 = today's return-minus-value advantage
+clip_epsilon: 0.2         # Table 5 (0.1 in Table 3); trusted ratio band per update
+ppo_epochs: 4             # Table 3 uses 3, Table 5 uses 10
+ppo_minibatches: 4        # 768 samples / 4 = 192 per minibatch (Table 3: 1024 / 32)
+value_coef: 0.5           # eq. 9, c1
+normalize_advantage: true # Huang et al. 2022, detail 7
 
 terminal_rewards:
   win: 2.0

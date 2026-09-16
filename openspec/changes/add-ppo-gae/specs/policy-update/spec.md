@@ -74,6 +74,27 @@ loss `-mean(min(ratio * A, clip(ratio, 1 - eps, 1 + eps) * A))` where `eps` is
 - **WHEN** a model has 180 own steps, `ppo_epochs` is 4 and `ppo_minibatches` is 4
 - **THEN** the model receives 16 optimizer steps with minibatches of 45 samples
 
+### Requirement: Normalisation statistics are fixed within an update
+The system SHALL run rollout collection and the update with normalisation layers
+in evaluation mode, so the probabilities re-computed by the update equal those the
+rollout sampled from, and SHALL refresh the running statistics from the rollout
+observations once per update.
+
+#### Scenario: statistics refreshed and model left in eval mode
+- **WHEN** one training update completes
+- **THEN** the network is in evaluation mode and its BatchNorm running statistics
+  differ from their values before the update
+
+### Requirement: Shared network batches both colours
+When one network plays both colours, the update SHALL treat the own steps of both
+colours as a single batch (one set of epochs and minibatches, one optimizer). In
+the legacy two-network mode each model SHALL be updated on its own steps only.
+
+#### Scenario: shared mode step count
+- **WHEN** the shared network has 100 white steps and 80 black steps in the rollout
+  under `a2c`
+- **THEN** exactly one optimizer step is taken on a batch of 180 samples
+
 ### Requirement: Advantage normalisation per minibatch
 Under `ppo`, when `normalize_advantage` is true (default), advantages within each
 minibatch SHALL be shifted to mean 0 and scaled to standard deviation 1 (with a 1e-8

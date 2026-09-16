@@ -117,3 +117,44 @@ def test_named_eval_sets_prefix_keys(tmp_path):
     out = fn(m, m, oriented=True)
     assert {"lichess_top1", "lichess_mate_prob", "lichess_count", "selfplay_top1"} <= set(out)
     assert out["lichess_count"] == 1
+
+
+# --- algorithm presets ------------------------------------------------------------
+
+from src.entrypoints.train import resolve_algorithm  # noqa: E402
+
+
+def test_default_algorithm_is_a2c_preset():
+    algo = resolve_algorithm({})
+    assert algo == {"epochs": 1, "minibatches": 1, "clip_epsilon": None,
+                    "normalize_advantage": False, "value_coef": 1.0, "gae_lambda": 1.0}
+
+
+def test_ppo_preset_values_from_paper():
+    algo = resolve_algorithm({"algorithm": "ppo"})
+    assert algo == {"epochs": 4, "minibatches": 4, "clip_epsilon": 0.2,
+                    "normalize_advantage": True, "value_coef": 0.5, "gae_lambda": 0.95}
+
+
+def test_explicit_keys_override_preset():
+    algo = resolve_algorithm({"algorithm": "a2c", "gae_lambda": 0.95, "value_coef": 0.5})
+    assert algo["gae_lambda"] == 0.95 and algo["value_coef"] == 0.5 and algo["epochs"] == 1
+
+
+def test_unknown_algorithm_lists_both_names():
+    with pytest.raises(ValueError) as e:
+        resolve_algorithm({"algorithm": "sac"})
+    assert "a2c" in str(e.value) and "ppo" in str(e.value)
+
+
+@pytest.mark.parametrize("cfg,key", [
+    ({"gae_lambda": 1.5}, "gae_lambda"),
+    ({"algorithm": "ppo", "clip_epsilon": 0}, "clip_epsilon"),
+    ({"algorithm": "ppo", "ppo_epochs": 0}, "ppo_epochs"),
+    ({"algorithm": "ppo", "ppo_minibatches": 0}, "ppo_minibatches"),
+    ({"value_coef": -1}, "value_coef"),
+])
+def test_invalid_algorithm_settings_name_the_key(cfg, key):
+    with pytest.raises(ValueError) as e:
+        resolve_algorithm(cfg)
+    assert key in str(e.value)

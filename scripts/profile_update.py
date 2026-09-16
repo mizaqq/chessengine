@@ -20,8 +20,8 @@ BUCKETS = {
     "      get_legal_actions() mask glue": ("open_spiel_env.py", "get_legal_actions"),
     "      env.reset (incl. FEN starts)": ("open_spiel_env.py", "reset"),
     "    model forward (rollout + bootstrap)": ("chess_model.py", "forward"),
-    "  returns walk": ("returns.py", "compute_returns_for_model"),
-    "  backprop per model (loss+backward+step)": ("training.py", "_backpropagate_for_model"),
+    "  GAE walk": ("returns.py", "compute_gae_for_model"),
+    "  update step (re-eval forward+backward+step)": ("training.py", "update_model"),
     "    backward": ("", "backward"),
 }
 

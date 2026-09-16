@@ -29,6 +29,8 @@ class MetricsAggregator:
         self._terminal_return_count = 0
         self.puzzle_attempts = 0
         self.puzzle_solved = 0
+        self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
+        self._update_counts = {k: 0 for k in self._update_sums}
 
     def add_step(self, empty_masks: int = 0, illegal_samples: int = 0):
         self.episode_empty_masks += empty_masks
@@ -66,6 +68,15 @@ class MetricsAggregator:
             self._entropy_puzzle_sum += puzzle
             self._entropy_puzzle_count += 1
 
+    def add_update_stats(self, policy_loss=None, value_loss=None, clip_fraction=None, approx_kl=None):
+        """Per-update losses and PPO diagnostics; None values are skipped (a2c has no
+        clip fraction) and report as null."""
+        for key, val in (("policy_loss", policy_loss), ("value_loss", value_loss),
+                         ("clip_fraction", clip_fraction), ("approx_kl", approx_kl)):
+            if val is not None:
+                self._update_sums[key] += val
+                self._update_counts[key] += 1
+
     def episode_summary(self) -> Dict[str, Any]:
         """Return windowed stats and reset counters for the next window."""
         total_games = self.white_wins + self.black_wins + self.draws
@@ -91,6 +102,10 @@ class MetricsAggregator:
             "puzzle_solved_rate": (
                 self.puzzle_solved / self.puzzle_attempts if self.puzzle_attempts > 0 else None
             ),
+            **{
+                f"mean_{k}": (self._update_sums[k] / self._update_counts[k] if self._update_counts[k] else None)
+                for k in self._update_sums
+            },
             "mean_terminal_return": (
                 self._terminal_return_sum / self._terminal_return_count
                 if self._terminal_return_count > 0

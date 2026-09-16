@@ -9,7 +9,8 @@ rollout so that either player's policy can be improved from the steps it acted o
 For a chosen model, the system SHALL compute an advantage for every rollout step
 where that model acted, as the GAE(gamma, lambda) sum of temporal-difference
 residuals over that model's subsequent own steps. The residual at an own step is
-`reward + gamma * next_value - value`, where `next_value` is the value the model
+`reward + gamma * next_value - value`, where `reward` is the potential-based
+shaped reward of that move (see the `reward-shaping` spec), where `next_value` is the value the model
 assigns to the next state it acts in, or the bootstrap value at the end of the
 rollout, and where opponent steps between two own steps contribute no discount and
 no residual of their own.

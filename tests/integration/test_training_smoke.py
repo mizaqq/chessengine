@@ -52,3 +52,23 @@ def test_training_smoke_with_puzzle_curriculum_and_eval(tmp_path):
         assert entry["puzzle_count"] == 3
         assert 0.0 <= entry["puzzle_top1"] <= 1.0
         assert 0.0 <= entry["puzzle_mate_prob"] <= 1.0
+
+
+def test_training_smoke_ppo_logs_diagnostics():
+    config = {
+        "num_envs": 2, "max_updates": 3, "steps_per_update": 3, "seed": 3, "env_type": "sync",
+        "algorithm": "ppo", "ppo_epochs": 2, "ppo_minibatches": 2, "log_interval": 1,
+    }
+    result = run_training_from_config(config)
+    for loss in result["losses"]:
+        assert not torch.isnan(torch.tensor(loss))
+    for entry in result["logs"]:
+        assert isinstance(entry["mean_clip_fraction"], float)
+        assert isinstance(entry["mean_approx_kl"], float)
+        assert isinstance(entry["mean_value_loss"], float)
+
+
+def test_training_smoke_a2c_has_null_clip_fraction():
+    result = run_training_from_config({"num_envs": 2, "max_updates": 1, "steps_per_update": 2, "log_interval": 1})
+    assert result["logs"][-1]["mean_clip_fraction"] is None
+    assert isinstance(result["logs"][-1]["mean_approx_kl"], float)
