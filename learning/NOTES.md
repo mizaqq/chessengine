@@ -65,7 +65,7 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Quirk kept: the terminal reward enters as `gamma * terminal` at the ending move
   (1% at gamma 0.99).
 
-## Variance and GAE (introduced, not yet implemented)
+## Variance and GAE (implemented Sep 2026)
 
 - `return − value` is GAE with lambda = 1: unbiased given gamma, high variance,
   and every move in the window leans on one value-head guess at the horizon.
@@ -74,8 +74,13 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Lambda adds bias only when V is wrong; gamma adds bias always. So lambda can sit
   around 0.95 while gamma stays 0.99 (Schulman et al. 2016, Section 3).
 - GAE leans on the value head, so the shaped-head lesson above matters for it.
+- Implemented as `compute_gae_for_model`: the same backward walk as the returns,
+  accumulating surprises; lambda 1 reproduces return minus value exactly.
+- Single-seed result (2026-09-16, arm B vs A): lambda 0.95 alone changed neither
+  puzzle accuracy (0.32 both) nor the game outcome; its entropy curve collapsed
+  and recovered. Not a conclusion, a reason for a second seed.
 
-## Step size and PPO (introduced, not yet implemented)
+## Step size and PPO (implemented Sep 2026)
 
 - Plain policy gradient buys one gradient step per rollout: after the step the
   policy has changed and the samples are stale.
@@ -85,6 +90,21 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - A2C is the special case: one epoch, one minibatch, no clip; at ratio 1 the
   gradients are identical.
 - Diagnostics to log: clip fraction, approximate KL.
+- Reuse is the point: with 64-ply rollouts A2C took 250 gradient steps in a run,
+  PPO 4000, from the same moves. A2C's learning is bounded by gradient steps,
+  which is why the old 15-ply A2C (1000 steps) beat 64-ply A2C (250 steps) on
+  puzzles, 0.43 vs 0.32, and PPO matched the old A2C per ply (0.44).
+- The ratio must depend only on parameters. BatchNorm in train mode made the
+  re-evaluated probability depend on batch composition: clip fraction 0.52 on
+  a fresh network with no parameter change. Fix: eval-mode BatchNorm during
+  training, running statistics refreshed from the rollout once per update.
+- Clip fraction is a learning-rate reading. At 3e-4 a fresh update left the band
+  after 5 of 16 minibatches; at 1e-4 after 11; at 3e-5 never. Over a run both
+  PPO arms sat near clip fraction 0.24, but KL halved at 1e-4 (0.05 vs 0.12) and
+  the opening policy kept entropy 0.5-0.67 instead of 0.2-0.3, at almost no
+  puzzle cost (0.42 vs 0.44). Practitioner target KL ~0.01-0.02 is still lower.
+- None of it fixed the games: 200-plus-ply draws and 5-9% in-game mate rate in
+  all four arms. The update rule was not the bottleneck for that symptom.
 
 ## Sampling versus greedy play
 

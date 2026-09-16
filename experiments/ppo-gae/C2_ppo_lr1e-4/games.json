@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 19,
+  "unfinished": 14,
+  "white_win": 5,
+  "black_win": 2
+ },
+ "draw_rate": 0.475,
+ "decisive_rate": 0.175,
+ "mate_in_one_opportunities": 101,
+ "mate_in_one_found": 7,
+ "mate_in_one_rate": 0.06930693069306931,
+ "mean_plies": 221.55,
+ "checkpoints": {
+  "model": "experiments/ppo-gae/C2_ppo_lr1e-4/model_20260916174041_episodes_250.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

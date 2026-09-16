@@ -112,6 +112,43 @@ stay at 250 and are also read at update 120.
 Baseline for context: `experiments/mixed-puzzle-sources/cont-lichess` (Lichess
 0.486, in-game 4.5%, opening entropy 0.24).
 
+
+### Outcome (2026-09-16, 4 arms, seed 42, 250 updates x 64 plies)
+
+| Arm | Lichess top-1 @150 / @250 | opening entropy (range 50-250) | value loss | clip / KL | in-game mate (opps) | s/update |
+|-----|------|------|------|------|------|------|
+| A a2c lam 1 | 0.29 / 0.32 | 0.15-0.55, dipped to 0.15 | 0.85-1.6 | - / 0 | 8/90 = 0.089 | 4.6 |
+| B a2c lam 0.95 | 0.32 / 0.32 | 0.03-0.50 (collapsed at 100, recovered) | 0.9-1.3 | - / 0 | 5/71 = 0.070 | 4.6 |
+| C ppo lr 3e-4 | 0.41 / 0.44 | 0.21-0.31 | 0.42-0.46 | 0.24-0.36 / 0.09-0.18 | 6/120 = 0.050 | 14.5 |
+| C2 ppo lr 1e-4 | 0.41 / 0.42 | 0.51-0.67, never collapsed | 0.46-0.57 | 0.22-0.38 / 0.04-0.09 | 7/101 = 0.069 | 17.4 |
+
+Reference: `experiments/mixed-puzzle-sources/cont-lichess` (a2c, 15-ply
+rollouts, 1000 updates = 15,000 plies): Lichess 0.486, in-game 4.5%;
+`shared-network/seed0` (a2c, 15-ply, 500 updates = 7,500 plies): 0.427.
+
+Reading:
+- **PPO learned the puzzles from ~10 points more of the same plies than A2C with
+  64-ply rollouts** (0.44 vs 0.32), and fit the value head twice as well.
+- **But the A2C arms are handicapped by the rollout length**: one gradient step
+  per 768 samples gives 250 steps in the run, versus 1000 steps in the old
+  15-ply runs, and the old fresh 7,500-ply run reached 0.427. A2C's learning is
+  bounded by gradient steps, not plies; PPO's 16 steps per rollout (4000 in
+  total) is exactly the fix for that. Per ply, PPO ~= old 15-ply A2C on puzzles.
+- **Learning rate 1e-4 kept the opening policy alive** (entropy 0.5-0.67 all
+  run) at almost no puzzle cost (0.42 vs 0.44) and half the KL. Clip fraction
+  sat near 0.24 in both PPO arms regardless of LR; KL, not clip fraction,
+  separated them. Both KLs are above the ~0.01-0.02 practitioners target.
+- **The game problem is not solved by any arm**: 40-game evaluations still end
+  around 200-220 plies with 47-70% draws and 5-9% in-game mate rate (counts of
+  5-8 mates, so the arms are indistinguishable there).
+- GAE alone (B vs A) did not change puzzle accuracy; its entropy curve went
+  through a collapse and recovery, so a single seed says little about it.
+- Wall-clock: PPO 3-4x per update. Owner's standard budget going forward:
+  7,500 plies per board (~120 updates at 64 plies).
+
+Owner's prediction was skipped, so there is no gap to discuss; the comprehension
+tasks (7.x) are open and should use these numbers.
+
 ## What to understand
 
 - Return vs value vs advantage, and why the policy gradient wants the advantage.

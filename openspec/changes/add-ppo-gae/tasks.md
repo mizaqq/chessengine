@@ -43,10 +43,10 @@
 
 ## 6. Experiment
 
-- [ ] 6.1 Run arms A, B, C, C2 (proposal table; C2 = PPO at lr 1e-4, added after the clip-fraction finding) to `experiments/ppo-gae/<arm>/` with
+- [x] 6.1 Run arms A, B, C, C2 (proposal table; C2 = PPO at lr 1e-4, added after the clip-fraction finding) to `experiments/ppo-gae/<arm>/` with
       `scripts/run_experiment.py`; `eval_games.py` on each final checkpoint.
-- [ ] 6.2 Write the outcome into the proposal ("Outcome" paragraph) and a learning
-      record; compare with the baseline numbers.
+- [x] 6.2 Write the outcome into the proposal ("Outcome" paragraph); compare with
+      the baseline numbers. (Learning record waits for the comprehension check.)
 
 ## 7. Comprehension check with owner (parked by the owner on 2026-09-16; do in chat when resumed)
 

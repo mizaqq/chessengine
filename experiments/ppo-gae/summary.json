@@ -1,0 +1,58 @@
+[
+ {
+  "arm": "A_a2c_lam1",
+  "s/update": 4.626687291145324,
+  "entropy_game": 0.2642723657998431,
+  "puzzle_solved": 0.273828125,
+  "lichess_top1": 0.3205,
+  "selfplay_top1": 0.05,
+  "draw_rate": 0.8571428571428571,
+  "clip_frac": null,
+  "approx_kl": -1.3163656564785241e-08,
+  "in_game_mate": 0.08888888888888889,
+  "opps": 90,
+  "mean_plies": 206.075
+ },
+ {
+  "arm": "B_a2c_lam095",
+  "s/update": 4.593888607978821,
+  "entropy_game": 0.5022576967956411,
+  "puzzle_solved": 0.194140625,
+  "lichess_top1": 0.3175,
+  "selfplay_top1": 0.06333333333333334,
+  "draw_rate": 0.7894736842105263,
+  "clip_frac": null,
+  "approx_kl": -9.902395958771848e-09,
+  "in_game_mate": 0.07042253521126761,
+  "opps": 71,
+  "mean_plies": 200.0
+ },
+ {
+  "arm": "C2_ppo_lr1e-4",
+  "s/update": 17.41312433242798,
+  "entropy_game": 0.5237999791861512,
+  "puzzle_solved": 0.4078125,
+  "lichess_top1": 0.4235,
+  "selfplay_top1": 0.04666666666666667,
+  "draw_rate": 0.7037037037037037,
+  "clip_frac": 0.23909505291667302,
+  "approx_kl": 0.05263887881258518,
+  "in_game_mate": 0.06930693069306931,
+  "opps": 101,
+  "mean_plies": 221.55
+ },
+ {
+  "arm": "C_ppo_lr3e-4",
+  "s/update": 14.454935060501098,
+  "entropy_game": 0.20605688355863094,
+  "puzzle_solved": 0.441796875,
+  "lichess_top1": 0.4415,
+  "selfplay_top1": 0.06,
+  "draw_rate": 0.6176470588235294,
+  "clip_frac": 0.2420247399219079,
+  "approx_kl": 0.12071187487482198,
+  "in_game_mate": 0.05,
+  "opps": 120,
+  "mean_plies": 204.6
+ }
+]
