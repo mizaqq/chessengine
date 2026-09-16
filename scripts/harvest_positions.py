@@ -52,9 +52,14 @@ def harvest(white, black, oriented, positions, boards, seed):
     step = env.reset()
     models = {WHITE: white.eval(), BLACK: black.eval()}
     seen, rows = set(), []
+    steps, next_report = 0, 500
     while len(rows) < positions:
         fens = [e.env.get_state.to_string() for e in env.envs]
         rows.extend(collect(fens, seen))
+        steps += 1
+        if steps >= next_report:
+            print(f"step {steps}: {len(rows)} positions", flush=True)
+            next_report += 500
         players = step.current_player
         obs = orient(step.obs, players) if oriented else step.obs
         actions = torch.zeros(boards, dtype=torch.long)

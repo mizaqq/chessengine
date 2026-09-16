@@ -1,7 +1,7 @@
 ## 1. Data
 
 - [x] 1.1 `prepare_puzzles.py --train 50000 --keep-eval`: exclude held-out ids, rewrite train only; verify eval file unchanged (hash) and train has 50,000 rows disjoint from eval
-- [ ] 1.2 `scripts/harvest_positions.py`: vectorized sampled self-play from a checkpoint dir, collect mate-in-one positions, dedup, split; unit tests on the collection/dedup/split functions with a stub; run on `experiments/shared-network/seed0` for 3,000 train / 300 held-out and verify every row mates
+- [x] 1.2 `scripts/harvest_positions.py`: vectorized sampled self-play from a checkpoint dir, collect mate-in-one positions, dedup, split; unit tests on the collection/dedup/split functions with a stub; run on `experiments/shared-network/seed0` for 3,000 train / 300 held-out and verify every row mates
 
 ## 2. Mixing and configuration
 
