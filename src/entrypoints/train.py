@@ -104,6 +104,10 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     lr = config.get("learning_rate", 1e-4)
     seed = config.get("seed", 42)
     lr_decay_interval = config.get("lr_decay_interval", 100)
+    lr_decay_factor = float(config.get("lr_decay_factor", 0.5))
+    min_lr = float(config.get("min_lr", 3e-5))
+    if min_lr > lr:
+        raise ValueError(f"min_lr ({min_lr}) must not exceed learning_rate ({lr}); the rate would jump up")
     env_type = config.get("env_type", "sync")
     terminal_rewards = config.get("terminal_rewards", {"win": 2.0, "loss": -2.0, "draw": -0.5})
     gamma = config.get("gamma", 0.99)
@@ -129,6 +133,8 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         optimizer_white, optimizer_black,
         steps=steps, episodes=max_updates,
         lr_decay_interval=lr_decay_interval,
+        lr_decay_factor=lr_decay_factor,
+        min_lr=min_lr,
         terminal_rewards=terminal_rewards,
         gamma=gamma,
         entropy_coef=entropy_coef,

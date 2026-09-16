@@ -202,7 +202,7 @@ class MyCustomEnv:
 | `num_envs` | int | 12 | Number of parallel environments |
 | `max_updates` | int | 30000 | Maximum training updates |
 | `steps_per_update` | int | 15 | Rollout steps per training update |
-| `learning_rate` | float | 1e-4 | Initial learning rate |
+| `learning_rate` | float | 3e-4 | Initial learning rate (3e-4 is what pre-2026-09-16 runs effectively used) |
 | `gamma` | float | 0.99 | Discount factor |
 | `entropy_coef` | float | 0.01 | Normalized entropy bonus coefficient |
 | `grad_clip` | float | 1.0 | Gradient clipping max norm |
@@ -212,15 +212,16 @@ class MyCustomEnv:
 | `terminal_rewards.draw` | float | -0.5 | Reward for drawing |
 | `shaping` | str | potential | `potential` (material shaping) or `none` (outcome only) |
 | `shaping_scale` | float | 0.2 | Multiplier on the shaping term (>= 0) |
-| `puzzle_fraction` | float | 0.0 (default yaml: 0.5) | Probability a reset starts from a training mate-in-one puzzle instead of the opening |
+| `puzzle_fraction` | float | 0.0 (default yaml: 0.5) | Share of boards that play one-move mate-in-one puzzle episodes; `round(fraction * num_envs)` boards |
 | `puzzle_train_file` | str | – | CSV of training puzzles (required when `puzzle_fraction` > 0) |
 | `puzzle_eval_file` | str | – | CSV of held-out puzzles; enables `puzzle_top1` / `puzzle_mate_prob` in the logs |
 | `eval_interval` | int | 50 | Updates between held-out puzzle evaluations (also runs at the end) |
 
 CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed S] [--env-type sync|async] [--save-dir DIR]`. With `--save-dir`, both models are written as `<color>_model_<timestamp>_episodes_<N>.pth`.
-| `lr_decay_interval` | int | 100 | LR decay interval (episodes) |
+| `lr_decay_interval` | int | 1000 | LR decay interval (updates) |
 | `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
-| `min_lr` | float | 3e-4 | Minimum learning rate floor |
+| `min_lr` | float | 3e-5 | Learning rate floor; must not exceed `learning_rate` |
+| `puzzle_miss_reward` | float | 0.0 | Terminal reward to the mover for a missed mate on a puzzle board |
 | `seed` | int | 42 | Random seed |
 
 ## Training Loop Details
@@ -233,7 +234,7 @@ The training loop (`src/model/training.py`) runs a player-agnostic A2C:
 
 **Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) are clamped to avoid division by zero.
 
-**Start-position curriculum**: with probability `puzzle_fraction` a board resets into a Lichess mate-in-one position (side to move has a mate) instead of the opening, so the sparse outcome reward is one move away (reverse curriculum by start state; Florensa et al. 2017, Salimans & Chen 2018). Build the puzzle files with `python -m scripts.prepare_puzzles` (downloads the CC0 dump to `data/raw/`). Evaluate checkpoints with `python -m scripts.eval_checkpoint_puzzles <ckpt_dir>` and in-game with `python -m scripts.eval_games <ckpt_dir>`.
+**Start-position curriculum**: `round(puzzle_fraction * num_envs)` boards play one-move episodes from Lichess mate-in-one positions (mate = win; anything else ends as `puzzle_miss` paying the mover `puzzle_miss_reward`), so the sparse outcome reward is one move away and every ply is an attempt; the other boards play full games. Logs report `puzzle_attempts`, `puzzle_solved_rate`, and entropy split into `_game` / `_puzzle` (reverse curriculum by start state; Florensa et al. 2017, Salimans & Chen 2018). Build the puzzle files with `python -m scripts.prepare_puzzles` (downloads the CC0 dump to `data/raw/`). Evaluate checkpoints with `python -m scripts.eval_checkpoint_puzzles <ckpt_dir>` and in-game with `python -m scripts.eval_games <ckpt_dir>`.
 
 **Reward signal**: configurable terminal rewards on game end, plus potential-based material shaping (Ng, Harada & Russell 1999): each own move receives `shaping_scale * (gamma * material(next own position) - material(this position))` from the mover's perspective, with the terminal position counting as 0. Shaping sums to zero over a complete game, so only the outcome is net reward; `shaping: none` disables it.
 

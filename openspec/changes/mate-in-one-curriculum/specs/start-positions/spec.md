@@ -67,6 +67,11 @@ Puzzle episodes SHALL be counted as puzzle attempts and puzzle solves, and SHALL
 NOT be counted in the win, draw and loss rates of the windowed summary, which cover
 opening games only.
 
+#### Scenario: entropy split by board type
+- **WHEN** a window has steps on puzzle boards and on opening boards
+- **THEN** the summary reports normalised entropy separately for each, and the
+  puzzle figure is absent when there are no puzzle boards
+
 #### Scenario: window with puzzle and opening games
 - **WHEN** a window contains 30 puzzle attempts of which 3 were mates, and 2
   opening games that were drawn

@@ -21,6 +21,10 @@ class MetricsAggregator:
         self._entropy_raw_sum = 0.0
         self._entropy_norm_sum = 0.0
         self._entropy_count = 0
+        self._entropy_game_sum = 0.0
+        self._entropy_game_count = 0
+        self._entropy_puzzle_sum = 0.0
+        self._entropy_puzzle_count = 0
         self._terminal_return_sum = 0.0
         self._terminal_return_count = 0
         self.puzzle_attempts = 0
@@ -50,10 +54,17 @@ class MetricsAggregator:
         self._terminal_return_sum += white_view_return
         self._terminal_return_count += 1
 
-    def add_entropy(self, raw: float, normalized: float):
+    def add_entropy(self, raw: float, normalized: float, game=None, puzzle=None):
+        """`game` / `puzzle`: normalized entropy on opening boards / puzzle boards."""
         self._entropy_raw_sum += raw
         self._entropy_norm_sum += normalized
         self._entropy_count += 1
+        if game is not None:
+            self._entropy_game_sum += game
+            self._entropy_game_count += 1
+        if puzzle is not None:
+            self._entropy_puzzle_sum += puzzle
+            self._entropy_puzzle_count += 1
 
     def episode_summary(self) -> Dict[str, Any]:
         """Return windowed stats and reset counters for the next window."""
@@ -70,6 +81,12 @@ class MetricsAggregator:
             "draw_rate": self.draws / total_games if total_games > 0 else 0.0,
             "mean_entropy_raw": self._entropy_raw_sum / max(self._entropy_count, 1),
             "mean_entropy_normalized": self._entropy_norm_sum / max(self._entropy_count, 1),
+            "mean_entropy_normalized_game": (
+                self._entropy_game_sum / self._entropy_game_count if self._entropy_game_count else None
+            ),
+            "mean_entropy_normalized_puzzle": (
+                self._entropy_puzzle_sum / self._entropy_puzzle_count if self._entropy_puzzle_count else None
+            ),
             "puzzle_attempts": self.puzzle_attempts,
             "puzzle_solved_rate": (
                 self.puzzle_solved / self.puzzle_attempts if self.puzzle_attempts > 0 else None

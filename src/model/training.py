@@ -140,6 +140,18 @@ def _collect_rollout(
     return steps_data, env_step
 
 
+def _weighted_mean(result_a, result_b, key, count_key):
+    """Step-weighted mean of a per-model metric, None when neither model has steps."""
+    total = result_a[count_key] + result_b[count_key]
+    if total == 0:
+        return None
+    acc = 0.0
+    for r in (result_a, result_b):
+        if r[count_key]:
+            acc += r[key] * r[count_key]
+    return acc / total
+
+
 def _compute_bootstrap(env_step, white_model, black_model, model_id):
     num_envs = env_step.obs.shape[0]
     bootstrap = torch.zeros(num_envs)
@@ -168,7 +180,7 @@ def _compute_bootstrap(env_step, white_model, black_model, model_id):
 
 def _backpropagate_for_model(
     model, optimizer, steps_data, model_returns, model_id,
-    entropy_coef=0.01, grad_clip=1.0,
+    entropy_coef=0.01, grad_clip=1.0, puzzle_env_mask=None,
 ):
     filtered_log_probs = []
     filtered_advantages = []
@@ -176,11 +188,16 @@ def _backpropagate_for_model(
     filtered_returns = []
     filtered_entropies = []
     filtered_num_legal = []
+    filtered_is_puzzle = []
 
     for i, step in enumerate(steps_data):
         is_mine = step.player == model_id
         if not is_mine.any():
             continue
+        if puzzle_env_mask is not None:
+            filtered_is_puzzle.append(puzzle_env_mask[is_mine])
+        else:
+            filtered_is_puzzle.append(torch.zeros(int(is_mine.sum()), dtype=torch.bool))
         ret = model_returns[i][is_mine]
         val_tensor = step.value_white if model_id == WHITE else step.value_black
         val = val_tensor.squeeze(-1)[is_mine]
@@ -201,6 +218,10 @@ def _backpropagate_for_model(
             "entropy_raw": 0.0,
             "entropy_normalized": 0.0,
             "step_count": 0,
+            "entropy_normalized_game": None,
+            "entropy_normalized_puzzle": None,
+            "game_step_count": 0,
+            "puzzle_step_count": 0,
         }
 
     cat_log_probs = torch.cat(filtered_log_probs)
@@ -209,6 +230,7 @@ def _backpropagate_for_model(
     cat_returns = torch.cat(filtered_returns)
     cat_entropies = torch.cat(filtered_entropies)
     cat_num_legal = torch.cat(filtered_num_legal)
+    cat_is_puzzle = torch.cat(filtered_is_puzzle)
     log_legal = torch.clamp(torch.log(cat_num_legal), min=1e-8)
     normalized_entropy = cat_entropies / log_legal
 
@@ -229,11 +251,19 @@ def _backpropagate_for_model(
     total_loss.backward()
     torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
     optimizer.step()
+    game_ent = normalized_entropy[~cat_is_puzzle]
+    puzzle_ent = normalized_entropy[cat_is_puzzle]
     return {
         "total_loss": total_loss,
         "entropy_raw": cat_entropies.mean().item(),
         "entropy_normalized": normalized_entropy.mean().item(),
         "step_count": len(cat_entropies),
+        # Entropy split by board type: puzzle boards are expected to sharpen; the
+        # opening boards tell whether real play has gone rigid.
+        "entropy_normalized_game": game_ent.mean().item() if len(game_ent) else None,
+        "entropy_normalized_puzzle": puzzle_ent.mean().item() if len(puzzle_ent) else None,
+        "game_step_count": int(len(game_ent)),
+        "puzzle_step_count": int(len(puzzle_ent)),
     }
 
 
@@ -247,6 +277,8 @@ def run_chess_training(
     episodes=2000,
     steps=5,
     lr_decay_interval=100,
+    lr_decay_factor=0.5,
+    min_lr=3e-5,
     terminal_rewards=None,
     gamma=0.99,
     entropy_coef=0.01,
@@ -267,6 +299,8 @@ def run_chess_training(
         terminal_rewards = {"win": 2.0, "loss": -2.0, "draw": -0.5}
 
     num_envs = envs.num_envs
+    num_puzzle_envs = getattr(envs, "num_puzzle_envs", 0)
+    puzzle_env_mask = torch.arange(num_envs) < num_puzzle_envs
     logs = []
     losses = []
     env_step = envs.reset()
@@ -302,11 +336,11 @@ def run_chess_training(
 
         result_w = _backpropagate_for_model(
             white_model, optimizer_white, steps_data, returns_white, model_id=WHITE,
-            entropy_coef=entropy_coef, grad_clip=grad_clip,
+            entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
         )
         result_b = _backpropagate_for_model(
             black_model, optimizer_black, steps_data, returns_black, model_id=BLACK,
-            entropy_coef=entropy_coef, grad_clip=grad_clip,
+            entropy_coef=entropy_coef, grad_clip=grad_clip, puzzle_env_mask=puzzle_env_mask,
         )
 
         total_loss = result_w["total_loss"].item() + result_b["total_loss"].item()
@@ -323,6 +357,8 @@ def run_chess_training(
                     + result_b["entropy_normalized"] * result_b["step_count"]
                 )
                 / total_steps,
+                game=_weighted_mean(result_w, result_b, "entropy_normalized_game", "game_step_count"),
+                puzzle=_weighted_mean(result_w, result_b, "entropy_normalized_puzzle", "puzzle_step_count"),
             )
         losses.append(total_loss)
 
@@ -330,7 +366,7 @@ def run_chess_training(
 
         if episode % lr_decay_interval == 0:
             for opt in [optimizer_white, optimizer_black]:
-                opt.param_groups[0]["lr"] = max(3e-4, opt.param_groups[0]["lr"] * 0.5)
+                opt.param_groups[0]["lr"] = max(min_lr, opt.param_groups[0]["lr"] * lr_decay_factor)
 
         eval_due = eval_fn is not None and (
             episode % eval_interval == 0 or episode == episodes

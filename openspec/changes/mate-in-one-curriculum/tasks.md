@@ -25,6 +25,11 @@
 - [x] 3b.3 Training: `puzzle_miss` terminal rewards (mover gets `puzzle_miss_reward`, other 0); metrics `puzzle_attempts` / `puzzle_solved_rate`, opening-only game rates; tests for the reward mapping and the split window
 - [x] 3b.4 Config: `num_puzzle_envs = round(puzzle_fraction * num_envs)`, `puzzle_miss_reward` default 0; smoke test with 1 puzzle board of 2
 
+## 3c. Surfaced by the run (owner decision 2026-09-16)
+
+- [x] 3c.1 Learning-rate schedule from config (`lr_decay_factor`, `min_lr` were ignored; floor 3e-4 above start 1e-4 made the rate jump up at update 100); default 3e-4 constant over 500 updates for comparability; `min_lr > learning_rate` rejected; test
+- [x] 3c.2 Normalised entropy split into opening-board and puzzle-board figures in results and logs; tests
+
 ## 4. Measure
 
 - [x] 4.0 Run 1 (mixing by reset): puzzle top-1 flat 0.04-0.08 vs 0.074 baseline, 423 games / 90k plies, games eval 2/157; recorded in `experiments/mate-in-one-curriculum/frac05/`

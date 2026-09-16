@@ -1,7 +1,9 @@
 num_envs: 12
 max_updates: 30000
 steps_per_update: 15
-learning_rate: 0.0001
+# 3e-4 is the rate every run before 2026-09-16 effectively used from update 100 on
+# (the old hard-coded floor 3e-4 sat above the 1e-4 start). Kept for comparability.
+learning_rate: 0.0003
 seed: 42
 env_type: sync
 
@@ -40,7 +42,9 @@ terminal_rewards:
   loss: -2.0
   draw: -0.5
 
-lr_decay_interval: 100
+# Halve the rate every lr_decay_interval updates down to min_lr. 1000 keeps a
+# 500-update run at a constant rate; min_lr must not exceed learning_rate.
+lr_decay_interval: 1000
 lr_decay_factor: 0.5
-min_lr: 0.0003
+min_lr: 0.00003
 log_interval: 10
