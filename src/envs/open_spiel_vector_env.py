@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from src.core.types import EnvStep
 from src.envs.open_spiel_env import OpenSpielEnv
+from src.envs.start_positions import StartPositionSampler
 
 PIECE_VALUES = np.array([0, 9, 5, 3, 3, 1], dtype=np.float32)
 
@@ -17,13 +18,19 @@ def _material_np(state: np.ndarray) -> float:
 class OpenSpielVectorEnv:
     """Vectorized OpenSpiel environment with auto-reset; reports material of each position."""
 
-    def __init__(self, num_envs: int):
+    def __init__(self, num_envs: int, start_sampler: StartPositionSampler | None = None):
         self.num_envs = num_envs
         self.envs = [OpenSpielEnv() for _ in range(num_envs)]
+        # Decides per reset whether a board starts from the opening or a puzzle.
+        self.start_sampler = start_sampler
+
+    def _reset_env(self, env: OpenSpielEnv) -> None:
+        fen = self.start_sampler.sample() if self.start_sampler is not None else None
+        env.reset(fen)
 
     def reset(self) -> EnvStep:
         for env in self.envs:
-            env.reset()
+            self._reset_env(env)
 
         states = [env.state() for env in self.envs]
 
@@ -57,7 +64,7 @@ class OpenSpielVectorEnv:
                 done[i] = True
                 terminal_observations[i] = env.state().copy()
                 game_results[i] = env.game_result()
-                env.reset()
+                self._reset_env(env)
 
         states = [env.state() for env in self.envs]
         obs = torch.tensor(np.array(states, dtype=np.float32))

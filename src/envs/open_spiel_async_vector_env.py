@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from src.core.types import EnvStep
 from src.envs.open_spiel_env import OpenSpielEnv
+from src.envs.start_positions import StartPositionSampler
 
 PIECE_VALUES = np.array([0, 9, 5, 3, 3, 1], dtype=np.float32)
 
@@ -15,16 +16,21 @@ def _material_np(state: np.ndarray) -> float:
     return float(white_scores - black_scores)
 
 
-def worker(remote, parent_remote):
+def worker(remote, parent_remote, start_sampler=None):
     parent_remote.close()
     env = OpenSpielEnv()
+
+    def reset_env():
+        fen = start_sampler.sample() if start_sampler is not None else None
+        env.reset(fen)
+
     try:
         while True:
             cmd, data = remote.recv()
             if cmd == "close":
                 break
             elif cmd == "reset":
-                env.reset()
+                reset_env()
                 obs = env.state()
                 legal = env.get_legal_actions().numpy()
                 cp = env.get_current_player()
@@ -41,7 +47,7 @@ def worker(remote, parent_remote):
                 if done:
                     terminal_obs = obs.copy()
                     game_result = env.game_result()
-                    env.reset()
+                    reset_env()
                     obs = env.state()
 
                 legal = env.get_legal_actions().numpy()
@@ -56,15 +62,18 @@ def worker(remote, parent_remote):
 class OpenSpielAsyncVectorEnv:
     """Async vectorized OpenSpiel environment using multiprocessing with EnvStep API."""
 
-    def __init__(self, num_envs: int):
+    def __init__(self, num_envs: int, start_sampler: StartPositionSampler | None = None):
         self.num_envs = num_envs
         self.ctx = mp.get_context("fork")
         self.remotes, self.work_remotes = zip(
             *[self.ctx.Pipe() for _ in range(num_envs)]
         )
         self.processes = []
-        for work_remote, remote in zip(self.work_remotes, self.remotes):
-            p = self.ctx.Process(target=worker, args=(work_remote, remote))
+        for i, (work_remote, remote) in enumerate(zip(self.work_remotes, self.remotes)):
+            # Each worker owns a sampler with its own seed so auto-reset needs no
+            # round trip to the parent and runs are reproducible.
+            sampler = None if start_sampler is None else start_sampler.with_seed(start_sampler.seed + i)
+            p = self.ctx.Process(target=worker, args=(work_remote, remote, sampler))
             p.daemon = True
             p.start()
             self.processes.append(p)

@@ -32,3 +32,6 @@ losses.png
 
 # Local knowledge base (never commit)
 knowledge/
+
+# Raw puzzle dump (downloaded by scripts/prepare_puzzles.py)
+data/raw/

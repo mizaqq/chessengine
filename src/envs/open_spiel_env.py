@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import pyspiel
 from open_spiel.python import rl_environment
 import chess
 
@@ -18,8 +19,18 @@ class OpenSpielEnv:
             chess.QUEEN: 9,
         }
 
-    def reset(self):
-        return self.env.reset()
+    def reset(self, fen: str | None = None):
+        """Start a new game from the opening, or from `fen` when given.
+
+        OpenSpiel's chess game has no FEN parameter, so a custom start is built
+        with `new_initial_state(fen)` and installed with `set_state`.
+        """
+        time_step = self.env.reset()
+        if fen is None:
+            return time_step
+        game = pyspiel.load_game("chess")
+        self.env.set_state(game.new_initial_state(fen))
+        return self.env.get_time_step()
 
     def step(self, action):
         if not isinstance(action, list):

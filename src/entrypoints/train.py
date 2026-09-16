@@ -8,6 +8,8 @@ from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
 from src.model.chess_model import ChessPolicyProbs
 from src.model.training import run_chess_training
+from src.envs.start_positions import StartPositionSampler, load_puzzles
+from src.eval.puzzles import evaluate_mate_in_one
 
 
 SHAPING_MODES = ("potential", "none")
@@ -31,6 +33,40 @@ def resolve_shaping(config: Dict[str, Any]) -> float:
     return 0.0 if mode == "none" else scale
 
 
+def resolve_start_sampler(config: Dict[str, Any]):
+    """Build the start-position sampler from `puzzle_fraction` / `puzzle_train_file`.
+
+    `puzzle_fraction` (default 0.0) is the probability that a reset starts from a
+    training puzzle instead of the opening; 0 keeps today's behaviour, 1 never shows
+    an opening. Returns None when the fraction is 0.
+    """
+    fraction = float(config.get("puzzle_fraction", 0.0))
+    if not 0.0 <= fraction <= 1.0:
+        raise ValueError(f"puzzle_fraction must be in [0, 1], got {fraction}")
+    if fraction == 0.0:
+        return None
+    path = config.get("puzzle_train_file")
+    if not path:
+        raise ValueError("puzzle_fraction > 0 requires puzzle_train_file")
+    return StartPositionSampler(load_puzzles(path), fraction, seed=int(config.get("seed", 42)))
+
+
+def resolve_eval_fn(config: Dict[str, Any]):
+    """Return a held-out puzzle evaluation callable, or None without `puzzle_eval_file`."""
+    path = config.get("puzzle_eval_file")
+    if not path:
+        return None
+    puzzles = load_puzzles(path)
+    return lambda white, black: evaluate_mate_in_one(white, black, puzzles)
+
+
+def resolve_eval_interval(config: Dict[str, Any]) -> int:
+    interval = int(config.get("eval_interval", 50))
+    if interval <= 0:
+        raise ValueError(f"eval_interval must be a positive integer, got {interval}")
+    return interval
+
+
 def save_models(white_model, black_model, save_dir, updates: int, timestamp: str = None):
     """Save both state dicts as <color>_model_<timestamp>_episodes_<updates>.pth."""
     save_dir = Path(save_dir)
@@ -50,11 +86,11 @@ def set_seed(seed: int):
     np.random.seed(seed)
 
 
-def _create_envs(env_type: str, num_envs: int):
+def _create_envs(env_type: str, num_envs: int, start_sampler=None):
     if env_type == "async":
-        return OpenSpielAsyncVectorEnv(num_envs)
+        return OpenSpielAsyncVectorEnv(num_envs, start_sampler)
     elif env_type == "sync":
-        return OpenSpielVectorEnv(num_envs)
+        return OpenSpielVectorEnv(num_envs, start_sampler)
     else:
         raise ValueError(f"Unknown env_type: {env_type}")
 
@@ -72,10 +108,14 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     entropy_coef = config.get("entropy_coef", 0.01)
     grad_clip = config.get("grad_clip", 1.0)
     shaping_scale = resolve_shaping(config)
+    start_sampler = resolve_start_sampler(config)
+    eval_fn = resolve_eval_fn(config)
+    eval_interval = resolve_eval_interval(config)
+    log_interval = int(config.get("log_interval", 10))
 
     set_seed(seed)
 
-    envs = _create_envs(env_type, num_envs)
+    envs = _create_envs(env_type, num_envs, start_sampler)
     white_model = ChessPolicyProbs()
     black_model = ChessPolicyProbs()
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
@@ -91,6 +131,9 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         entropy_coef=entropy_coef,
         grad_clip=grad_clip,
         shaping_scale=shaping_scale,
+        eval_fn=eval_fn,
+        eval_interval=eval_interval,
+        log_interval=log_interval,
     )
 
     return {

@@ -232,7 +232,15 @@ def run_chess_training(
     entropy_coef=0.01,
     grad_clip=1.0,
     shaping_scale=1.0,
+    eval_fn=None,
+    eval_interval=50,
+    log_interval=10,
 ):
+    """Run A2C self-play. `eval_fn(white_model, black_model) -> dict` is called every
+    `eval_interval` updates and after the last one; its keys are merged into the log
+    entry for that update (a log entry is created for it if none is due)."""
+    if eval_interval <= 0:
+        raise ValueError(f"eval_interval must be a positive integer, got {eval_interval}")
     if metrics is None:
         metrics = MetricsAggregator()
     if terminal_rewards is None:
@@ -304,9 +312,16 @@ def run_chess_training(
             for opt in [optimizer_white, optimizer_black]:
                 opt.param_groups[0]["lr"] = max(3e-4, opt.param_groups[0]["lr"] * 0.5)
 
-        if episode % 10 == 0:
+        eval_due = eval_fn is not None and (
+            episode % eval_interval == 0 or episode == episodes
+        )
+        eval_metrics = eval_fn(white_model, black_model) if eval_due else {}
+
+        if episode % log_interval == 0:
             summary = metrics.episode_summary()
-            logs.append({"episode": episode, "loss": total_loss, **summary})
+            logs.append({"episode": episode, "loss": total_loss, **summary, **eval_metrics})
+        elif eval_metrics:
+            logs.append({"episode": episode, "loss": total_loss, **eval_metrics})
 
     if hasattr(envs, "close"):
         envs.close()
