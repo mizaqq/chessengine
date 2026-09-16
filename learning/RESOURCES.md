@@ -76,6 +76,31 @@ reach for it. Prune anything that turns out shallow or wrong.
   inherits these parameters except where it says otherwise (800 simulations,
   Dir alpha 0.3 for chess, lr 0.2 dropped 3x, max game length -> draw).
 
+- [Paper: "Mastering the game of Go with deep neural networks and tree search" — Silver et al. (Nature 529, 2016)](https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf)
+  Read 2026-09-16 (pp. 484-485, Methods "Policy network: classification",
+  "Policy network: reinforcement learning", "Value network: regression"). SL
+  policy: 13 layers, trained on 30M positions from 160k KGS games (6-9 dan) to
+  predict the human move by stochastic gradient ascent on log p(a|s); 57.0%
+  held-out accuracy (44.4% prior state of the art); minibatch 16, step 0.003
+  halved every 80M steps, 340M steps. RL stage: "weights rho are initialized to
+  the same values" as the SL network, REINFORCE with a value baseline against a
+  pool of earlier policies ("randomizing from a pool of opponents ... stabilizes
+  training by preventing overfitting to the current policy"); the RL policy won
+  >80% of games against the SL policy and 85% against Pachi with no search.
+  Value network: regressing on all positions of KGS games overfit ("successive
+  positions are strongly correlated ... regression target is shared for the
+  entire game"; test MSE 0.37 vs 0.19 train), fixed by one position per
+  self-play game. Caution (p. 486): the SL policy worked better *inside search*
+  than the stronger RL policy, "presumably because humans select a diverse beam
+  of promising moves". Use for: supervised pretraining on Lichess games before
+  PPO (change `human-pretraining`), sampling few positions per game, and the
+  opponent-pool idea for later.
+- [Data: Lichess standard rated games database (CC0)](https://database.lichess.org/)
+  Monthly PGN .zst files; counts at `standard/counts.txt`. 2013-06: 293,459
+  games, 33 MB; 2013-12: 578,262 games, 92 MB; 2014-06: 961,868 games, 182 MB.
+  Headers carry WhiteElo/BlackElo/Result. Use for: human-move pretraining and
+  mid-game start positions.
+
 - [Paper: "Reverse Curriculum Generation for Reinforcement Learning" — Florensa et al. (CoRL 2017)](https://arxiv.org/abs/1707.05300)
   Abstract: for goal-oriented sparse-reward tasks, start the agent near the goal and
   widen the start-state distribution as it succeeds; needs only one goal state, no
@@ -104,5 +129,4 @@ Sources still needed, ordered by roadmap priority:
 
 - Engine-based evaluation of learned policies (roadmap/06_evaluation.md §1)
 - Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
-- Supervised pre-training on expert moves before RL (AlphaGo, Silver et al. 2016, Nature 529) — fetch the paper body before running the comparison arm
 - Fictitious self-play and opponent sampling (roadmap/05_opponent_sampling.md §1)
