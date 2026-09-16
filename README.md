@@ -202,9 +202,9 @@ class MyCustomEnv:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `num_envs` | int | 12 | Number of parallel environments |
-| `max_updates` | int | 30000 | Maximum training updates |
-| `steps_per_update` | int | 15 | Rollout steps per training update |
-| `learning_rate` | float | 3e-4 | Initial learning rate (3e-4 is what pre-2026-09-16 runs effectively used) |
+| `max_updates` | int | 120 | Training updates (default yaml = 7,500 plies per board) |
+| `steps_per_update` | int | 64 | Rollout plies per training update |
+| `learning_rate` | float | 1e-4 | Initial learning rate (3e-4 in the a2c era) |
 | `gamma` | float | 0.99 | Discount factor |
 | `entropy_coef` | float | 0.01 | Normalized entropy bonus coefficient |
 | `grad_clip` | float | 1.0 | Gradient clipping max norm |
@@ -229,7 +229,7 @@ CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed 
 | `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
 | `min_lr` | float | 3e-5 | Learning rate floor; must not exceed `learning_rate` |
 | `puzzle_miss_reward` | float | 0.0 | Terminal reward to the mover for a missed mate on a puzzle board |
-| `algorithm` | str | a2c | `a2c` (one unclipped step per rollout, GAE lambda 1) or `ppo` (Schulman et al. 2017 preset) |
+| `algorithm` | str | a2c (default yaml: ppo) | `a2c` (one unclipped step per rollout, GAE lambda 1) or `ppo` (Schulman et al. 2017 preset) |
 | `gae_lambda` | float | 1.0 / 0.95 | GAE lambda (Schulman et al. 2016); preset default per algorithm |
 | `clip_epsilon` | float | – / 0.2 | PPO ratio clip half-width; null = no clipping |
 | `ppo_epochs` | int | 1 / 4 | Passes over the rollout per update |
@@ -248,7 +248,7 @@ The training loop (`src/model/training.py`) runs player-agnostic A2C or PPO:
 
 **BatchNorm and the PPO ratio**: the network stays in eval mode during training so the re-evaluated probabilities equal the sampled ones; running statistics are refreshed from the rollout once per update (`refresh_norm_stats`). Train-mode statistics alone put half the samples outside the clip band on a fresh network.
 
-`src/configs/train_ppo.yaml` holds the PPO preset with 64-ply rollouts (768 samples per update). Its keys are explicit, so to run an A2C arm start from `train_default.yaml` instead.
+The default config runs PPO at learning rate 1e-4 with 64-ply rollouts (768 samples per update, 120 updates = the standard 7,500-ply budget). `algorithm: a2c` restores the single-step update; see `experiments/ppo-gae/` for the comparison.
 
 **Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) contribute 0.
 

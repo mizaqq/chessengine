@@ -48,7 +48,7 @@
 - [x] 6.2 Write the outcome into the proposal ("Outcome" paragraph); compare with
       the baseline numbers. (Learning record waits for the comprehension check.)
 
-## 7. Comprehension check with owner (parked by the owner on 2026-09-16; do in chat when resumed)
+## 7. Comprehension check with owner (parked by the owner on 2026-09-16; archived open, carried to the next session's spaced review)
 
 - [ ] 7.1 Plain-language lambda question (scene first), then *trace by hand* the
       lambda 0.95 scenario.

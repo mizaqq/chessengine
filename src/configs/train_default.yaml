@@ -2,11 +2,14 @@
 # Silver et al. 2017). false = legacy separate white/black networks.
 shared_network: true
 num_envs: 12
-max_updates: 30000
-steps_per_update: 15
-# 3e-4 is the rate every run before 2026-09-16 effectively used from update 100 on
-# (the old hard-coded floor 3e-4 sat above the 1e-4 start). Kept for comparability.
-learning_rate: 0.0003
+# Standard budget (owner, 2026-09-16): 7,500 plies per board = 120 updates x 64 plies.
+max_updates: 120
+# 64 plies x 12 boards = 768 samples per update, split into 4 PPO minibatches.
+steps_per_update: 64
+# 1e-4 for PPO (16 gradient steps per rollout): at 3e-4 a fresh update left the
+# clip band after 5 of 16 minibatches and opening entropy fell to 0.2; at 1e-4
+# entropy stayed above 0.5 at the same puzzle accuracy (arms C vs C2, 2026-09-16).
+learning_rate: 0.0001
 seed: 42
 env_type: sync
 
@@ -50,10 +53,14 @@ puzzle_eval_files:
   selfplay: data/puzzles/selfplay_mate_in_1_eval.csv
 eval_interval: 50
 
-# Update algorithm: a2c (today's single REINFORCE-with-baseline step per rollout,
-# GAE lambda 1) or ppo (see train_ppo.yaml). Keys ppo_epochs, ppo_minibatches,
-# clip_epsilon, normalize_advantage, value_coef, gae_lambda override the preset.
-algorithm: a2c
+# Update algorithm. ppo (default since 2026-09-16, arm C2): clipped surrogate
+# (Schulman et al. 2017) over GAE advantages (Schulman et al. 2016), preset
+# gae_lambda 0.95, clip_epsilon 0.2, ppo_epochs 4, ppo_minibatches 4, value_coef
+# 0.5, normalize_advantage true; any of those keys overrides the preset.
+# a2c = one unclipped step per rollout with lambda 1 (the pre-PPO update); with
+# 64-ply rollouts it takes 4x fewer gradient steps and learned puzzles at 0.32
+# vs PPO's 0.42-0.44 from the same plies.
+algorithm: ppo
 
 terminal_rewards:
   win: 2.0

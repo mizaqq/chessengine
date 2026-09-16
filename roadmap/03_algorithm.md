@@ -6,7 +6,14 @@
 done propagation, configurable hyperparams (`gamma`, `entropy_coef`, `grad_clip`),
 and inlined loss computation. See `src/model/training.py`.
 
-## 1. PPO + GAE (Immediate Priority)
+## 1. PPO + GAE — DONE 2026-09-16 (change `add-ppo-gae`)
+
+`compute_gae_for_model`, `update_model` (clipped surrogate, 4x4 epochs/minibatches,
+advantage normalisation, value_coef 0.5), `algorithm: a2c | ppo`, diagnostics
+`mean_clip_fraction` / `mean_approx_kl`. Default is PPO at lr 1e-4 on 64-ply
+rollouts. Result (`experiments/ppo-gae/`): Lichess held-out 0.42-0.44 vs A2C 0.32
+at equal plies; lr 1e-4 kept opening entropy above 0.5; games still collapse into
+long draws, so the next problem is not the optimiser. Original plan below.
 
 **Current State:**
 Synchronous A2C-style updates.
