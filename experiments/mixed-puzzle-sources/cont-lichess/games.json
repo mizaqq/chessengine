@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 28,
+  "white_win": 1,
+  "unfinished": 5,
+  "black_win": 6
+ },
+ "draw_rate": 0.7,
+ "decisive_rate": 0.175,
+ "mate_in_one_opportunities": 157,
+ "mate_in_one_found": 7,
+ "mate_in_one_rate": 0.044585987261146494,
+ "mean_plies": 178.4,
+ "checkpoints": {
+  "model": "experiments/mixed-puzzle-sources/cont-lichess/model_20260916121103_episodes_500.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

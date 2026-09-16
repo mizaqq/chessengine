@@ -17,7 +17,7 @@
 ## 3b. Surfaced by run 1 (design flaw: harvest came from a different network)
 
 - [x] 3b.1 `init_from: <ckpt_dir>` config to continue training from a checkpoint (shared/legacy layout must match `shared_network`); test that a run initialised from a saved model starts with its weights
-- [ ] 3b.2 Continuations from `shared-network/seed0`, 500 updates each, 4 puzzle boards: A mixed Lichess/self-play (harvest from that checkpoint), B Lichess only (control); 40 games each; compare on Lichess, self-play and in-game
+- [x] 3b.2 Continuations from `shared-network/seed0`, 500 updates each, 4 puzzle boards: A mixed Lichess/self-play (harvest from that checkpoint), B Lichess only (control); 40 games each; compare on Lichess, self-play and in-game
 
 ## 4. Record
 

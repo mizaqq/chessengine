@@ -1,0 +1,19 @@
+{
+ "games": 40,
+ "results": {
+  "unfinished": 6,
+  "draw": 33,
+  "white_win": 1
+ },
+ "draw_rate": 0.825,
+ "decisive_rate": 0.025,
+ "mate_in_one_opportunities": 29,
+ "mate_in_one_found": 1,
+ "mate_in_one_rate": 0.034482758620689655,
+ "mean_plies": 83.075,
+ "checkpoints": {
+  "model": "experiments/mixed-puzzle-sources/cont-mixed/model_20260916120333_episodes_500.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
