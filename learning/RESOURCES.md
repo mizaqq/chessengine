@@ -50,6 +50,15 @@ reach for it. Prune anything that turns out shallow or wrong.
   outcome-only reference point. The exact reward formulation (game outcome only) is
   in the paper body; verify there before quoting numbers.
 
+- [Paper: "Mastering Chess and Shogi by Self-Play..." — Silver et al. (2017), methods p.13](https://arxiv.org/abs/1712.01815)
+  "The board is oriented to the perspective of the current player. The M feature
+  planes are composed of binary feature planes indicating the presence of the
+  player's pieces ... and a second set of planes indicating the presence of the
+  opponent's pieces", plus constant planes for colour, move count, castling,
+  repetitions, no-progress count. Use for: one network for both colours;
+  `src/model/orientation.py`. OpenSpiel's move ids are already mover-relative
+  (verified 2026-09-16), its observation planes are absolute.
+
 - [Paper: "Reverse Curriculum Generation for Reinforcement Learning" — Florensa et al. (CoRL 2017)](https://arxiv.org/abs/1707.05300)
   Abstract: for goal-oriented sparse-reward tasks, start the agent near the goal and
   widen the start-state distribution as it succeeds; needs only one goal state, no

@@ -21,5 +21,5 @@
 
 ## 5. Record
 
-- [ ] 5.1 README (architecture, checkpoint name, config), `learning/RESOURCES.md` (AlphaZero methods p.13 quote), `knowledge/` notes, glossary (orientation, weight sharing)
-- [ ] 5.2 Comprehension check with owner (CLAUDE.md "Map paper to code": the AlphaZero input description against `orient`; "Review the diff": which planes flip/swap/stay and why the move index does not), code pasted inline; outcome to `learning/records/`
+- [x] 5.1 README (architecture, checkpoint name, config), `learning/RESOURCES.md` (AlphaZero methods p.13 quote), `knowledge/` notes, glossary (orientation, weight sharing)
+- [x] 5.2 Comprehension check with owner (CLAUDE.md "Map paper to code": the AlphaZero input description against `orient`; "Review the diff": which planes flip/swap/stay and why the move index does not), code pasted inline; outcome to `learning/records/`

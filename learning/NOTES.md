@@ -121,6 +121,18 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Under potential shaping a mid-game start charges the start potential and never
   repays it; values shift, policy does not.
 
+## One network, oriented input (Sep 2026)
+
+- AlphaZero: board oriented to the current player, "my pieces" / "their pieces"
+  planes, colour plane kept. OpenSpiel gives absolute planes but mover-relative
+  move ids, so only the observation is transformed (`orient_black`: flip ranks,
+  swap colour pairs, swap castling planes; files untouched).
+- Effect on one seed: held-out mate-in-one 0.352 -> 0.427, reached 0.30 at ~60
+  updates instead of 200; colour split of decisive games 6/24 -> 3/3. No wall-
+  time gain: one backward on both sides' samples costs the same as two.
+- Per-side bookkeeping (returns, bootstrap sign, terminal rewards) is unchanged;
+  only the parameters are shared.
+
 ## Where the time goes (Sep 2026)
 
 - Per update (12 boards x 15 steps, sync): forward 0.65 s, backward 1.02 s,

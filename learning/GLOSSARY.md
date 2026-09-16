@@ -60,3 +60,9 @@ Add a term only once it has been understood, not when first met.
 **Distribution shift**: Training positions (tactical puzzles) differ from deployment positions (self-play games), so puzzle accuracy moves before the in-game rate.
 
 **Metrics by source**: Counting puzzle episodes and opening games separately, because short episodes flood any shared counter.
+
+**Orientation (mover's view)**: Flipping the board and swapping colour planes so the side to move always sits at the bottom with "my pieces" first. Makes mirror-image positions the same input.
+
+**Weight sharing across a symmetry**: One set of parameters serving both sides of a symmetric problem. Doubles the data each pattern sees and removes asymmetries that only came from separate initialisations.
+
+**Colour plane**: A constant input saying whether the mover is white or black. Kept after orientation because white's first move makes outcomes colour-dependent.

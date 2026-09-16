@@ -4,7 +4,7 @@ A reinforcement learning engine for training chess agents via self-play using Py
 
 ## Architecture
 
-Two separate `ChessPolicyProbs` models (white and black) train against each other in a **player-agnostic A2C loop**. Each model has its own policy head, value head, and optimizer — no shared parameters.
+One `ChessPolicyProbs` network plays both colours (AlphaZero representation, Silver et al. 2017): black-to-move observations are flipped and colour-swapped so the network always sees the mover at the bottom (`src/model/orientation.py`); OpenSpiel's move ids are already mover-relative. Both sides' samples update the same parameters in one backward pass per update. `shared_network: false` restores the legacy two-network setup.
 
 ```
 src/
@@ -24,6 +24,8 @@ src/
 - **`envs/`**: `OpenSpielVectorEnv` (sync) and `OpenSpielAsyncVectorEnv` (multiprocessing) — duck-typed, same API
 - **`model/training.py`**: Core training loop — rollout collection, returns computation, backpropagation
 - **`model/chess_model.py`**: `ChessPolicyProbs` — ResNet (10 blocks, 128 filters) with policy + value heads
+- **`model/orientation.py`**: mover-oriented observations for the shared network
+- **`model/checkpoints.py`**: `model_*.pth` (shared) and legacy `white_/black_model_*.pth` loading
 - **`model/returns.py`**: Discounted returns with potential-based material shaping and cross-player done propagation
 - **`training/metrics.py`**: `MetricsAggregator` — windowed stats (win rates, entropy, illegal moves)
 - **`losses/composed_loss.py`**: `total = policy + value - entropy_coef * normalized_entropy`
@@ -212,12 +214,13 @@ class MyCustomEnv:
 | `terminal_rewards.draw` | float | -0.5 | Reward for drawing |
 | `shaping` | str | potential | `potential` (material shaping) or `none` (outcome only) |
 | `shaping_scale` | float | 0.2 | Multiplier on the shaping term (>= 0) |
+| `shared_network` | bool | true | One network for both colours with oriented observations; `false` = two networks |
 | `puzzle_fraction` | float | 0.0 (default yaml: 0.5) | Share of boards that play one-move mate-in-one puzzle episodes; `round(fraction * num_envs)` boards |
 | `puzzle_train_file` | str | – | CSV of training puzzles (required when `puzzle_fraction` > 0) |
 | `puzzle_eval_file` | str | – | CSV of held-out puzzles; enables `puzzle_top1` / `puzzle_mate_prob` in the logs |
 | `eval_interval` | int | 50 | Updates between held-out puzzle evaluations (also runs at the end) |
 
-CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed S] [--env-type sync|async] [--save-dir DIR]`. With `--save-dir`, both models are written as `<color>_model_<timestamp>_episodes_<N>.pth`.
+CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed S] [--env-type sync|async] [--save-dir DIR]`. With `--save-dir`, the model is written as `model_<timestamp>_episodes_<N>.pth` (legacy mode: `<color>_model_...pth` pair). `src.model.checkpoints.load_models(dir)` loads either layout.
 | `lr_decay_interval` | int | 1000 | LR decay interval (updates) |
 | `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
 | `min_lr` | float | 3e-5 | Learning rate floor; must not exceed `learning_rate` |
