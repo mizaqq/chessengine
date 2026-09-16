@@ -62,7 +62,11 @@ boards, seed 0, lr 3e-4). Compare against `frac05-onemove`:
 - wall-clock per update (1.25 s; one backward on 180 samples replaces two on 90);
 - opening-board entropy.
 
-Owner's prediction: <to be stated in conversation before apply>. Claude's guess:
+Owner's prediction (2026-09-16): an upward trend, with learning roughly twice as fast
+because every pattern now sees both colours' data; no exact numbers. Sharpened in
+conversation to a testable form: run 2 crossed held-out top-1 0.30 at update 200,
+so the shared network should cross 0.30 by about update 100 and finish above
+0.352; in-game figures expected to trend up across two seeds. Claude's guess:
 held-out top-1 0.40-0.45 (each pattern now sees both colours' attempts), decisive
 games split within noise of 50/50, wall-clock within 10% of before.
 
