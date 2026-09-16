@@ -104,6 +104,11 @@ mean plies on game boards, puzzle solved rate, Lichess and selfplay held-out
 top-1/mate-prob, value loss, wall-clock per update; C only: clip fraction,
 approx KL. Then `scripts/eval_games.py` on each final checkpoint (in-game mate rate).
 
+Budget note (owner, 2026-09-16, while the arms were running): the standard
+budget for future arms is 7,500 plies per board (the old single 500-update run),
+i.e. about 120 updates at 64 plies; "then our progress slows a lot". These arms
+stay at 250 and are also read at update 120.
+
 Baseline for context: `experiments/mixed-puzzle-sources/cont-lichess` (Lichess
 0.486, in-game 4.5%, opening entropy 0.24).
 
