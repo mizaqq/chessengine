@@ -1,0 +1,10 @@
+{
+ "puzzle_top1": 0.06666666666666667,
+ "puzzle_mate_prob": 0.05279423011890094,
+ "puzzle_count": 300,
+ "checkpoints": {
+  "model": "experiments/shared-network/seed0/model_20260916105921_episodes_500.pth"
+ },
+ "oriented": true,
+ "eval_file": "data/puzzles/selfplay_mate_in_1_eval.csv"
+}

@@ -11,8 +11,8 @@
 
 ## 3. Measure
 
-- [ ] 3.1 Baseline: `shared-network/seed0` on the self-play held-out set; record `experiments/mixed-puzzle-sources/baseline.json`
-- [ ] 3.2 Run 500 updates, seed 0, 4 puzzle boards, Lichess 0.5 / self-play 0.5 -> `experiments/mixed-puzzle-sources/seed0/`; then 40 games; compare with predictions
+- [x] 3.1 Baseline: `shared-network/seed0` on the self-play held-out set; record `experiments/mixed-puzzle-sources/baseline.json`
+- [x] 3.2 Run 500 updates, seed 0, 4 puzzle boards, Lichess 0.5 / self-play 0.5 -> `experiments/mixed-puzzle-sources/seed0/`; then 40 games; compare with predictions
 
 ## 4. Record
 
