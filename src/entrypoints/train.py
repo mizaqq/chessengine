@@ -8,7 +8,7 @@ from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
 from src.model.chess_model import ChessPolicyProbs
 from src.model.training import run_chess_training
-from src.envs.start_positions import StartPositionSampler, load_puzzles
+from src.envs.start_positions import MixedSampler, StartPositionSampler, load_puzzles
 from src.eval.puzzles import evaluate_mate_in_one
 
 
@@ -34,27 +34,56 @@ def resolve_shaping(config: Dict[str, Any]) -> float:
 
 
 def resolve_puzzle_boards(config: Dict[str, Any]):
-    """Return (sampler, num_puzzle_envs) from `puzzle_fraction` / `puzzle_train_file`.
+    """Return (sampler, num_puzzle_envs).
 
-    `puzzle_fraction` (default 0.0) is the share of boards that play one-move
-    puzzle episodes instead of full games: num_puzzle_envs = round(fraction *
-    num_envs). 0 keeps today's behaviour, 1 means no board ever sees an opening.
+    Board count: `puzzle_boards` if given (integer in [0, num_envs]), else
+    `round(puzzle_fraction * num_envs)` with `puzzle_fraction` in [0, 1], default 0.
+    Sources: `puzzle_train_files: [{file, weight}, ...]` (weighted mix) or a single
+    `puzzle_train_file`. 0 boards keeps today's behaviour; num_envs boards means
+    no board ever sees an opening.
     """
+    num_envs = int(config.get("num_envs", 12))
     fraction = float(config.get("puzzle_fraction", 0.0))
     if not 0.0 <= fraction <= 1.0:
         raise ValueError(f"puzzle_fraction must be in [0, 1], got {fraction}")
-    num_envs = int(config.get("num_envs", 12))
-    num_puzzle_envs = int(round(fraction * num_envs))
+    if "puzzle_boards" in config and config["puzzle_boards"] is not None:
+        num_puzzle_envs = int(config["puzzle_boards"])
+        if not 0 <= num_puzzle_envs <= num_envs:
+            raise ValueError(f"puzzle_boards must be in [0, {num_envs}], got {num_puzzle_envs}")
+    else:
+        num_puzzle_envs = int(round(fraction * num_envs))
     if num_puzzle_envs == 0:
         return None, 0
+    seed = int(config.get("seed", 42))
+    files = config.get("puzzle_train_files")
+    if files:
+        sources = [(load_puzzles(entry["file"]), float(entry.get("weight", 1.0))) for entry in files]
+        return MixedSampler(sources, seed=seed), num_puzzle_envs
     path = config.get("puzzle_train_file")
     if not path:
-        raise ValueError("puzzle_fraction > 0 requires puzzle_train_file")
-    return StartPositionSampler(load_puzzles(path), seed=int(config.get("seed", 42))), num_puzzle_envs
+        raise ValueError("puzzle boards > 0 require puzzle_train_file or puzzle_train_files")
+    return StartPositionSampler(load_puzzles(path), seed=seed), num_puzzle_envs
 
 
 def resolve_eval_fn(config: Dict[str, Any]):
-    """Return a held-out puzzle evaluation callable, or None without `puzzle_eval_file`."""
+    """Held-out evaluation callable, or None.
+
+    `puzzle_eval_files: {name: path}` reports each set under `<name>_top1`,
+    `<name>_mate_prob`, `<name>_count`; a single `puzzle_eval_file` keeps the
+    unprefixed `puzzle_*` keys.
+    """
+    named = config.get("puzzle_eval_files")
+    if named:
+        sets = {name: load_puzzles(path) for name, path in named.items()}
+
+        def eval_many(white, black, oriented=False):
+            out = {}
+            for name, puzzles in sets.items():
+                r = evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
+                out.update({f"{name}_top1": r["puzzle_top1"], f"{name}_mate_prob": r["puzzle_mate_prob"],
+                            f"{name}_count": r["puzzle_count"]})
+            return out
+        return eval_many
     path = config.get("puzzle_eval_file")
     if not path:
         return None

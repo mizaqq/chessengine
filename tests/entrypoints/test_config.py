@@ -80,3 +80,40 @@ def test_eval_interval_must_be_positive():
     assert resolve_eval_interval({}) == 50
     with pytest.raises(ValueError, match="eval_interval"):
         resolve_eval_interval({"eval_interval": 0})
+
+
+def test_puzzle_boards_overrides_fraction(tmp_path):
+    from src.entrypoints.train import resolve_puzzle_boards
+    path = tmp_path / "p.csv"; path.write_text(FIXTURE)
+    _, n = resolve_puzzle_boards({"puzzle_fraction": 0.5, "puzzle_boards": 4, "num_envs": 12,
+                                  "puzzle_train_file": str(path)})
+    assert n == 4
+
+
+def test_puzzle_boards_out_of_range():
+    from src.entrypoints.train import resolve_puzzle_boards
+    with pytest.raises(ValueError, match=r"puzzle_boards"):
+        resolve_puzzle_boards({"puzzle_boards": 13, "num_envs": 12})
+
+
+def test_puzzle_train_files_builds_mixed_sampler(tmp_path):
+    from src.entrypoints.train import resolve_puzzle_boards
+    from src.envs.start_positions import MixedSampler
+    a = tmp_path / "a.csv"; a.write_text(FIXTURE)
+    b = tmp_path / "b.csv"; b.write_text(FIXTURE.replace("p1", "p2"))
+    sampler, n = resolve_puzzle_boards({"puzzle_boards": 2, "num_envs": 4,
+                                        "puzzle_train_files": [{"file": str(a), "weight": 0.5},
+                                                               {"file": str(b), "weight": 0.5}]})
+    assert n == 2 and isinstance(sampler, MixedSampler)
+    assert sampler.sample().startswith("6k1/")
+
+
+def test_named_eval_sets_prefix_keys(tmp_path):
+    from src.entrypoints.train import resolve_eval_fn
+    from src.model.chess_model import ChessPolicyProbs
+    a = tmp_path / "a.csv"; a.write_text(FIXTURE)
+    fn = resolve_eval_fn({"puzzle_eval_files": {"lichess": str(a), "selfplay": str(a)}})
+    m = ChessPolicyProbs(num_filters=8)
+    out = fn(m, m, oriented=True)
+    assert {"lichess_top1", "lichess_mate_prob", "lichess_count", "selfplay_top1"} <= set(out)
+    assert out["lichess_count"] == 1

@@ -24,6 +24,9 @@ FIELDS = ["puzzle_id", "fen", "mating_moves", "rating"]
 
 def download(url: str, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and dest.stat().st_size > 300_000_000:
+        print(f"using existing {dest} (delete it to re-download)")
+        return dest
     # curl resumes a partial file (-C -) and retries; the dump is ~300 MB.
     print(f"downloading {url} -> {dest} (resumes if partial)")
     subprocess.run(
@@ -84,6 +87,8 @@ def main() -> None:
     ap.add_argument("--eval", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dump", type=Path, default=RAW_DIR / "lichess_db_puzzle.csv.zst")
+    ap.add_argument("--keep-eval", type=Path, default=None,
+                    help="existing held-out file to keep unchanged; its ids are excluded from train")
     args = ap.parse_args()
 
     download(DUMP_URL, args.dump)
@@ -97,6 +102,18 @@ def main() -> None:
     print(f"scanned {seen} puzzles, kept {len(rows)} mate-in-one")
 
     random.Random(args.seed).shuffle(rows)
+    if args.keep_eval:
+        # Same seed and shuffle as before: the held-out rows sit at positions
+        # [old_train, old_train + eval) of this order. Drop them by id and take the
+        # first `train` of the rest, so the old train rows stay a prefix.
+        with open(args.keep_eval, newline="") as fh:
+            keep_ids = {r["puzzle_id"] for r in csv.DictReader(fh)}
+        rows = [r for r in rows if r["puzzle_id"] not in keep_ids]
+        if len(rows) < args.train:
+            raise SystemExit(f"only {len(rows)} usable puzzles, need {args.train}")
+        write_csv(OUT_DIR / "mate_in_1_train.csv", rows[: args.train])
+        print(f"wrote {args.train} train rows to {OUT_DIR}; held-out {args.keep_eval} unchanged")
+        return
     need = args.train + args.eval
     if len(rows) < need:
         raise SystemExit(f"only {len(rows)} usable puzzles, need {need}")

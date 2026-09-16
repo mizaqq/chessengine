@@ -31,13 +31,23 @@ shaping_scale: 0.2
 # opening. 0 = today's training, 1 = no board ever sees an opening. 0.5 chosen by
 # the owner 2026-09-16. Puzzle files: scripts/prepare_puzzles.py (Lichess DB, CC0).
 puzzle_fraction: 0.5
-puzzle_train_file: data/puzzles/mate_in_1_train.csv
+# Explicit board count wins over the fraction. 4 of 12 chosen by the owner 2026-09-16.
+puzzle_boards: 4
+# Weighted mix of puzzle sources (owner's decision 2026-09-16): Lichess positions
+# (human games, the target distribution) and positions harvested from the models'
+# own games (scripts/harvest_positions.py, refreshed from the newest checkpoint
+# before each run) so the start states track what the models actually reach.
+puzzle_train_files:
+  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.5}
+  - {file: data/puzzles/selfplay_mate_in_1_train.csv, weight: 0.5}
 # Terminal reward for a missed mate on a puzzle board. 0 (default) keeps the value
 # head honest about still-winning positions; try negative values as an experiment.
 puzzle_miss_reward: 0.0
-# Held-out mate-in-one set: top-1 accuracy and mating-move probability, evaluated
-# every eval_interval updates and at the end. Unset puzzle_eval_file to skip.
-puzzle_eval_file: data/puzzles/mate_in_1_eval.csv
+# Held-out mate-in-one sets, reported as <name>_top1 / <name>_mate_prob every
+# eval_interval updates and at the end. Remove the block to skip evaluation.
+puzzle_eval_files:
+  lichess: data/puzzles/mate_in_1_eval.csv
+  selfplay: data/puzzles/selfplay_mate_in_1_eval.csv
 eval_interval: 50
 
 terminal_rewards:

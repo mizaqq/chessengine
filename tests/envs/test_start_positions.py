@@ -46,3 +46,31 @@ def test_with_seed_changes_sequence():
 def test_empty_puzzles_rejected():
     with pytest.raises(ValueError):
         StartPositionSampler([], seed=0)
+
+
+def test_mixed_sampler_equal_weights():
+    from src.envs.start_positions import MixedSampler
+    a = [Puzzle("a", "fenA", [], 0)]
+    b = [Puzzle("b", "fenB", [], 0)]
+    s = MixedSampler([(a, 0.5), (b, 0.5)], seed=0)
+    draws = [s.sample() for _ in range(1000)]
+    assert 400 < draws.count("fenA") < 600
+
+
+def test_mixed_sampler_zero_weight_and_determinism():
+    from src.envs.start_positions import MixedSampler
+    a = [Puzzle("a", "fenA", [], 0)]
+    b = [Puzzle("b", "fenB", [], 0)]
+    s = MixedSampler([(a, 1.0), (b, 0.0)], seed=3)
+    assert all(s.sample() == "fenA" for _ in range(50))
+    x, y = MixedSampler([(a, 1), (b, 1)], seed=5), MixedSampler([(a, 1), (b, 1)], seed=5)
+    assert [x.sample() for _ in range(40)] == [y.sample() for _ in range(40)]
+
+
+def test_mixed_sampler_rejects_bad_weights():
+    from src.envs.start_positions import MixedSampler
+    a = [Puzzle("a", "fenA", [], 0)]
+    with pytest.raises(ValueError):
+        MixedSampler([(a, -1.0)])
+    with pytest.raises(ValueError):
+        MixedSampler([([], 1.0)])
