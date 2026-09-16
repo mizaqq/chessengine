@@ -68,8 +68,12 @@ sides want opposite things; that is the intended averaging, not a bug.
 - [Orientation bug silently degrades black's play] -> hand-traceable unit tests
   on the transform plus the legal-mask invariance test; black-to-move puzzle
   accuracy reported separately in the first evaluation.
-- [Colour asymmetry cause hidden if it was a bug] -> seed-1 run result recorded
-  here before apply: <fill in>. If systematic, inspect before merging.
+- [Colour asymmetry cause hidden if it was a bug] -> seed-1 run (2026-09-16):
+  white 5 / black 3 decisive, so the 6/24 split was the seed (a weaker white
+  network), not a colour bug. Nothing to inspect before merging. Seed 1 also
+  showed no in-game transfer (mate rate 4.7%, 25/40 games hit the 300-ply cap)
+  despite held-out top-1 0.364, so single-seed in-game numbers are noisy; the
+  shared-network comparison must report two seeds.
 - [BatchNorm statistics now mix both colours] -> intended; note in learning
   notes that the small-batch BN caveat (record: notes "Where the time goes")
   still applies.

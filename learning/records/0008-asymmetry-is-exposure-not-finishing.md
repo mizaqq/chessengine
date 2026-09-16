@@ -16,3 +16,11 @@ per-colour analysis in conversation.
 "one network is weaker" and "systematic colour bug" are indistinguishable; the
 discriminating experiment is a second training seed (running at time of
 writing). A metric that is not split by side can hide a 5x asymmetry.
+
+**Verdict (seed-1 run, later the same day):** white 5, black 3 decisive games.
+The asymmetry was the seed: one of two independently initialised networks was
+weaker, not a colour bug. Second finding from the same run: held-out top-1 0.364
+(same as seed 0) but in-game mate rate 4.7% and 25 of 40 games hit the 300-ply
+cap, so the in-game transfer seen for seed 0 (18%) did not reproduce. Puzzle
+skill transfers to real games unreliably at this budget; one seed is not a
+result.
