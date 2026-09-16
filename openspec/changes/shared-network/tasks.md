@@ -16,8 +16,8 @@
 
 ## 4. Measure
 
-- [ ] 4.1 Run 500 updates, seed 0, 6 puzzle boards, lr 3e-4 -> `experiments/shared-network/seed0/`; record run.json, held-out curve per colour, wall-clock
-- [ ] 4.2 40 sampled games (one training seed, owner's decision 2026-09-16 given the time cost; caveat recorded): mate-in-one rate, decisive rate, white/black split; compare with `frac05-onemove` and with the predictions in proposal.md
+- [x] 4.1 Run 500 updates, seed 0, 6 puzzle boards, lr 3e-4 -> `experiments/shared-network/seed0/`; record run.json, held-out curve per colour, wall-clock
+- [x] 4.2 40 sampled games (one training seed, owner's decision 2026-09-16 given the time cost; caveat recorded): mate-in-one rate, decisive rate, white/black split; compare with `frac05-onemove` and with the predictions in proposal.md
 
 ## 5. Record
 

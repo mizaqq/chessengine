@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "unfinished": 27,
+  "draw": 7,
+  "black_win": 3,
+  "white_win": 3
+ },
+ "draw_rate": 0.175,
+ "decisive_rate": 0.15,
+ "mate_in_one_opportunities": 121,
+ "mate_in_one_found": 6,
+ "mate_in_one_rate": 0.049586776859504134,
+ "mean_plies": 254.325,
+ "checkpoints": {
+  "model": "experiments/shared-network/seed0/model_20260916105921_episodes_500.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
