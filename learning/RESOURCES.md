@@ -59,6 +59,23 @@ reach for it. Prune anything that turns out shallow or wrong.
   `src/model/orientation.py`. OpenSpiel's move ids are already mover-relative
   (verified 2026-09-16), its observation planes are absolute.
 
+- [Paper: "Mastering the game of Go without human knowledge" — Silver et al. (Nature 550, 2017), unformatted manuscript](https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf)
+  Read 2026-09-16 (pp. 3-6, 24-27). Search: each edge stores {N, W, Q, P};
+  select a = argmax Q + U with U = c_puct * P * sqrt(sum_b N(s,b)) / (1 + N(s,a));
+  leaf expanded and evaluated by the network once, edges initialised N=W=Q=0,
+  P=p_a; backup N += 1, W += v, Q = W/N; play pi(a) proportional to N^(1/tau),
+  tau = 1 for the first 30 moves then -> 0; root prior noise P = (1-eps) p +
+  eps eta, eta ~ Dir(0.03), eps = 0.25; subtree reused after the played move.
+  Training: loss l = (z - v)^2 - pi^T log p + c||theta||^2 (eq. 1), c = 1e-4,
+  cross-entropy and MSE weighted equally because rewards are unit scaled;
+  1,600 simulations per move; resignation when root and best child value below
+  a threshold tuned to <5% false positives. MCTS is "a powerful policy
+  improvement operator" and self-play with search "a powerful policy evaluation
+  operator" (p. 3). Raw network without search reached 3,055 Elo vs 5,185 with
+  search (p. 12). Use for: the search-in-the-loop change; AlphaZero (above)
+  inherits these parameters except where it says otherwise (800 simulations,
+  Dir alpha 0.3 for chess, lr 0.2 dropped 3x, max game length -> draw).
+
 - [Paper: "Reverse Curriculum Generation for Reinforcement Learning" — Florensa et al. (CoRL 2017)](https://arxiv.org/abs/1707.05300)
   Abstract: for goal-oriented sparse-reward tasks, start the agent near the goal and
   widen the start-state distribution as it succeeds; needs only one goal state, no
@@ -89,4 +106,3 @@ Sources still needed, ordered by roadmap priority:
 - Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
 - Supervised pre-training on expert moves before RL (AlphaGo, Silver et al. 2016, Nature 529) — fetch the paper body before running the comparison arm
 - Fictitious self-play and opponent sampling (roadmap/05_opponent_sampling.md §1)
-- MCTS combined with a learned policy/value network (roadmap/03_algorithm.md §2)
