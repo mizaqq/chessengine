@@ -67,6 +67,13 @@ eval_interval: 50
 # vs PPO's 0.42-0.44 from the same plies.
 algorithm: ppo
 
+# Mid-game start boards (decided 2026-09-16): the boards after the puzzle boards
+# start full games from human positions at plies 20-60 (data/games/midgame_starts.csv,
+# built by scripts/prepare_games.py). 0 = every game board starts from the opening.
+# The owner chose 4 of the 8 game boards for the run from the pretrained network.
+midgame_boards: 0
+game_start_file: data/games/midgame_starts.csv
+
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").
 # Training games ran 200-220 plies into repetition draws; 120 is a first guess.

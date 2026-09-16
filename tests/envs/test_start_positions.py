@@ -1,6 +1,6 @@
 import pytest
 
-from src.envs.start_positions import Puzzle, StartPositionSampler, load_puzzles
+from src.envs.start_positions import FenSampler, Puzzle, StartPositionSampler, load_fens, load_puzzles
 
 FIXTURE = """puzzle_id,fen,mating_moves,rating
 p1,7k/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1,a1a8,600
@@ -82,3 +82,14 @@ def test_mixed_sampler_rejects_bad_weights():
         MixedSampler([(a, -1.0)])
     with pytest.raises(ValueError):
         MixedSampler([([], 1.0)])
+
+
+def test_fen_sampler_and_loader(tmp_path):
+    path = tmp_path / "mid.csv"; path.write_text("fen\nfenA\nfenB\n")
+    fens = load_fens(path)
+    assert fens == ["fenA", "fenB"]
+    s = FenSampler(fens, seed=3)
+    assert all(s.sample() in fens for _ in range(20))
+    assert [s.with_seed(1).sample() for _ in range(10)] == [FenSampler(fens, 1).sample() for _ in range(10)]
+    with pytest.raises(ValueError):
+        FenSampler([])

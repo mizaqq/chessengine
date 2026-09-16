@@ -2,7 +2,7 @@ import torch
 
 from src.envs.open_spiel_env import OpenSpielEnv
 from src.envs.open_spiel_vector_env import OpenSpielVectorEnv, _material_np
-from src.envs.start_positions import Puzzle, StartPositionSampler
+from src.envs.start_positions import FenSampler, Puzzle, StartPositionSampler
 
 ROOK_MATE = "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1"   # Ra8# available, white +5
 BLACK_MATE = "r5k1/5ppp/8/8/8/8/5PPP/6K1 b - - 0 1"  # Ra1# available, black to move
@@ -222,5 +222,46 @@ def test_async_env_puzzle_boards_and_auto_reset():
         assert step.info["puzzle_boards"] == {0: True, 1: True}
         assert step.info["puzzle_depth"] == {0: 1, 1: 1}
         assert step.material.tolist()[:2] == [5.0, 5.0]
+    finally:
+        env.close()
+
+
+# --- mid-game boards -------------------------------------------------------------------
+
+MID_FEN = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
+
+
+def test_midgame_board_starts_from_sampled_fen_and_is_not_a_puzzle():
+    env = OpenSpielVectorEnv(3, StartPositionSampler(PUZZLES, seed=0), num_puzzle_envs=1, max_plies=2,
+                             game_start_sampler=FenSampler([MID_FEN], seed=0), num_midgame_envs=1)
+    step = env.reset()
+    assert env.envs[1].env.get_state.to_string().split(" ")[0] == MID_FEN.split(" ")[0]
+    assert env.envs[1].is_puzzle is False and env.envs[2].env.get_state.to_string().startswith("rnbqkbnr/pppppppp")
+    (mate,) = _winning_terminal_actions(env.envs[0])
+    a1 = int((step.legal_actions_mask[1] == 1).nonzero()[0]); a2 = int((step.legal_actions_mask[2] == 1).nonzero()[0])
+    step = env.step(torch.tensor([mate, a1, a2]))
+    a1 = int((step.legal_actions_mask[1] == 1).nonzero()[0]); a2 = int((step.legal_actions_mask[2] == 1).nonzero()[0])
+    step = env.step(torch.tensor([mate, a1, a2]))            # ply cap 2 -> both game boards draw
+    assert step.info["game_results"].get(1) == "draw" and step.info["puzzle_boards"].get(1) is False
+    assert env.envs[1].env.get_state.to_string().split(" ")[0] == MID_FEN.split(" ")[0]   # reset to a mid-game FEN again
+
+
+def test_midgame_boards_validation():
+    import pytest
+    with pytest.raises(ValueError):
+        OpenSpielVectorEnv(2, None, 0, None, None, 1)
+    with pytest.raises(ValueError):
+        OpenSpielVectorEnv(2, StartPositionSampler(PUZZLES), 2, None, FenSampler([MID_FEN]), 1)
+
+
+def test_async_midgame_board():
+    from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
+    env = OpenSpielAsyncVectorEnv(2, None, 0, None, FenSampler([MID_FEN], seed=0), 1)
+    try:
+        step = env.reset()
+        assert step.material.tolist() == [0.0, 0.0]
+        assert (step.current_player == 1).all()
+        # mid-game FEN has 3 pieces developed: its legal-move count differs from the opening's 20
+        assert int(step.legal_actions_mask[0].sum()) != 20 and int(step.legal_actions_mask[1].sum()) == 20
     finally:
         env.close()

@@ -8,7 +8,7 @@ from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
 from src.model.chess_model import ChessPolicyProbs
 from src.model.training import run_chess_training, A2C_PRESET, PPO_PRESET
-from src.envs.start_positions import MixedSampler, StartPositionSampler, load_puzzles
+from src.envs.start_positions import FenSampler, MixedSampler, StartPositionSampler, load_fens, load_puzzles
 from src.eval.puzzles import evaluate_mate_in_one
 
 
@@ -126,6 +126,22 @@ def resolve_eval_fn(config: Dict[str, Any]):
     return lambda white, black, oriented=False: evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
 
 
+def resolve_midgame_boards(config: Dict[str, Any], num_puzzle_envs: int):
+    """Return (FenSampler or None, num_midgame_envs). `midgame_boards` game boards
+    start from FENs in `game_start_file` (mid-game human positions); they follow
+    the puzzle boards and must fit within num_envs."""
+    n = int(config.get("midgame_boards", 0) or 0)
+    if n == 0:
+        return None, 0
+    num_envs = int(config.get("num_envs", 12))
+    if n < 0 or num_puzzle_envs + n > num_envs:
+        raise ValueError(f"midgame_boards must be in [0, {num_envs - num_puzzle_envs}], got {n}")
+    path = config.get("game_start_file")
+    if not path:
+        raise ValueError("midgame_boards > 0 requires game_start_file")
+    return FenSampler(load_fens(path), seed=int(config.get("seed", 42)) + 1000), n
+
+
 def resolve_max_plies(config: Dict[str, Any]):
     """`max_plies`: game boards end as a draw after this many plies (AlphaZero
     terminated over-long games as draws); null/absent = no cap."""
@@ -154,11 +170,14 @@ def set_seed(seed: int):
     np.random.seed(seed)
 
 
-def _create_envs(env_type: str, num_envs: int, start_sampler=None, num_puzzle_envs=0, max_plies=None):
+def _create_envs(env_type: str, num_envs: int, start_sampler=None, num_puzzle_envs=0, max_plies=None,
+                 game_start_sampler=None, num_midgame_envs=0):
     if env_type == "async":
-        return OpenSpielAsyncVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies)
+        return OpenSpielAsyncVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies,
+                                       game_start_sampler, num_midgame_envs)
     elif env_type == "sync":
-        return OpenSpielVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies)
+        return OpenSpielVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies,
+                                  game_start_sampler, num_midgame_envs)
     else:
         raise ValueError(f"Unknown env_type: {env_type}")
 
@@ -187,10 +206,12 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     log_interval = int(config.get("log_interval", 10))
     algorithm = resolve_algorithm(config)
     max_plies = resolve_max_plies(config)
+    game_start_sampler, num_midgame_envs = resolve_midgame_boards(config, num_puzzle_envs)
 
     set_seed(seed)
 
-    envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs, max_plies)
+    envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs, max_plies,
+                        game_start_sampler, num_midgame_envs)
     shared = bool(config.get("shared_network", True))
     init_from = config.get("init_from")
     if init_from:

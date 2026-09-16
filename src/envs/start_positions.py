@@ -85,3 +85,27 @@ class MixedSampler:
 
     def with_seed(self, seed: int) -> "MixedSampler":
         return MixedSampler(self.sources, seed)
+
+
+def load_fens(path) -> List[str]:
+    """CSV with a `fen` column (scripts/prepare_games.py writes midgame_starts.csv)."""
+    with open(Path(path), newline="") as fh:
+        return [row["fen"] for row in csv.DictReader(fh)]
+
+
+class FenSampler:
+    """Deterministic stream of start FENs for mid-game boards (full games, not
+    puzzles); same interface as the puzzle samplers."""
+
+    def __init__(self, fens: List[str], seed: int = 0):
+        if not fens:
+            raise ValueError("mid-game boards require a non-empty FEN list")
+        self.fens = list(fens)
+        self.seed = seed
+        self._rng = random.Random(seed)
+
+    def sample(self) -> str:
+        return self._rng.choice(self.fens)
+
+    def with_seed(self, seed: int) -> "FenSampler":
+        return FenSampler(self.fens, seed)

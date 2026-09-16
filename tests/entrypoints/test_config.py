@@ -171,3 +171,19 @@ def test_max_plies_default_none_and_values():
     assert resolve_max_plies({"max_plies": 120}) == 120
     with pytest.raises(ValueError):
         resolve_max_plies({"max_plies": 1})
+
+
+# --- mid-game boards ----------------------------------------------------------------
+
+from src.entrypoints.train import resolve_midgame_boards  # noqa: E402
+
+
+def test_midgame_boards_resolver(tmp_path):
+    assert resolve_midgame_boards({}, 4) == (None, 0)
+    path = tmp_path / "mid.csv"; path.write_text("fen\nrnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n")
+    sampler, n = resolve_midgame_boards({"midgame_boards": 4, "game_start_file": str(path), "num_envs": 12}, 4)
+    assert n == 4 and sampler.sample().startswith("rnbqkbnr")
+    with pytest.raises(ValueError):
+        resolve_midgame_boards({"midgame_boards": 9, "game_start_file": str(path), "num_envs": 12}, 4)
+    with pytest.raises(ValueError):
+        resolve_midgame_boards({"midgame_boards": 2}, 4)

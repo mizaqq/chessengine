@@ -24,6 +24,8 @@ class OpenSpielVectorEnv:
         start_sampler: StartPositionSampler | None = None,
         num_puzzle_envs: int = 0,
         max_plies: int | None = None,
+        game_start_sampler=None,
+        num_midgame_envs: int = 0,
     ):
         self.num_envs = num_envs
         self.envs = [OpenSpielEnv() for _ in range(num_envs)]
@@ -36,15 +38,28 @@ class OpenSpielVectorEnv:
         self.num_puzzle_envs = num_puzzle_envs
         self.max_plies = max_plies          # game boards end as a draw at this ply count
         self.puzzle_depth: dict[int, int] = {}
+        # Boards [num_puzzle_envs, num_puzzle_envs + num_midgame_envs) start full games
+        # from sampled mid-game FENs (start-state curriculum for whole games).
+        if num_midgame_envs > 0 and game_start_sampler is None:
+            raise ValueError("num_midgame_envs > 0 requires a game_start_sampler")
+        if num_puzzle_envs + num_midgame_envs > num_envs:
+            raise ValueError("num_puzzle_envs + num_midgame_envs must not exceed num_envs")
+        self.game_start_sampler = game_start_sampler
+        self.num_midgame_envs = num_midgame_envs
 
     def is_puzzle_env(self, i: int) -> bool:
         return i < self.num_puzzle_envs
+
+    def is_midgame_env(self, i: int) -> bool:
+        return self.num_puzzle_envs <= i < self.num_puzzle_envs + self.num_midgame_envs
 
     def _reset_env(self, i: int) -> None:
         if self.is_puzzle_env(i):
             p = self.start_sampler.sample()
             self.puzzle_depth[i] = p.mate_in
             self.envs[i].reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves)
+        elif self.is_midgame_env(i):
+            self.envs[i].reset(self.game_start_sampler.sample(), max_plies=self.max_plies)
         else:
             self.envs[i].reset(max_plies=self.max_plies)
 

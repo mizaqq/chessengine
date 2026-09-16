@@ -16,8 +16,9 @@ def _material_np(state: np.ndarray) -> float:
     return float(white_scores - black_scores)
 
 
-def worker(remote, parent_remote, start_sampler=None, max_plies=None):
-    """`start_sampler` present means this board is a puzzle board; `max_plies`
+def worker(remote, parent_remote, start_sampler=None, max_plies=None, game_start_sampler=None):
+    """`start_sampler` present means this board is a puzzle board; `game_start_sampler`
+    present means a mid-game board (full games from sampled FENs); `max_plies`
     caps game boards (ended as a draw)."""
     parent_remote.close()
     env = OpenSpielEnv()
@@ -28,6 +29,8 @@ def worker(remote, parent_remote, start_sampler=None, max_plies=None):
             p = start_sampler.sample()
             depth["value"] = p.mate_in
             env.reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves)
+        elif game_start_sampler is not None:
+            env.reset(game_start_sampler.sample(), max_plies=max_plies)
         else:
             env.reset(max_plies=max_plies)
 
@@ -76,6 +79,8 @@ class OpenSpielAsyncVectorEnv:
         start_sampler: StartPositionSampler | None = None,
         num_puzzle_envs: int = 0,
         max_plies: int | None = None,
+        game_start_sampler=None,
+        num_midgame_envs: int = 0,
     ):
         self.num_envs = num_envs
         if num_puzzle_envs > 0 and start_sampler is None:
@@ -83,6 +88,11 @@ class OpenSpielAsyncVectorEnv:
         if not 0 <= num_puzzle_envs <= num_envs:
             raise ValueError(f"num_puzzle_envs must be in [0, {num_envs}], got {num_puzzle_envs}")
         self.num_puzzle_envs = num_puzzle_envs
+        if num_midgame_envs > 0 and game_start_sampler is None:
+            raise ValueError("num_midgame_envs > 0 requires a game_start_sampler")
+        if num_puzzle_envs + num_midgame_envs > num_envs:
+            raise ValueError("num_puzzle_envs + num_midgame_envs must not exceed num_envs")
+        self.num_midgame_envs = num_midgame_envs
         self.ctx = mp.get_context("fork")
         self.remotes, self.work_remotes = zip(
             *[self.ctx.Pipe() for _ in range(num_envs)]
@@ -92,7 +102,9 @@ class OpenSpielAsyncVectorEnv:
             # Each worker owns a sampler with its own seed so auto-reset needs no
             # round trip to the parent and runs are reproducible.
             sampler = start_sampler.with_seed(start_sampler.seed + i) if i < num_puzzle_envs else None
-            p = self.ctx.Process(target=worker, args=(work_remote, remote, sampler, max_plies))
+            midgame = (game_start_sampler.with_seed(game_start_sampler.seed + i)
+                       if num_puzzle_envs <= i < num_puzzle_envs + num_midgame_envs else None)
+            p = self.ctx.Process(target=worker, args=(work_remote, remote, sampler, max_plies, midgame))
             p.daemon = True
             p.start()
             self.processes.append(p)
