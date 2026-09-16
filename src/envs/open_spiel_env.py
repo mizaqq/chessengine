@@ -11,6 +11,8 @@ class OpenSpielEnv:
     def __init__(self):
         self.env = rl_environment.Environment("chess")
         self.env.reset()
+        self.one_move = False   # puzzle episode: ends after the mover's first move
+        self.plies = 0
         self.rewards_dict = {
             chess.PAWN: 1,
             chess.KNIGHT: 3,
@@ -19,12 +21,16 @@ class OpenSpielEnv:
             chess.QUEEN: 9,
         }
 
-    def reset(self, fen: str | None = None):
+    def reset(self, fen: str | None = None, one_move: bool = False):
         """Start a new game from the opening, or from `fen` when given.
 
         OpenSpiel's chess game has no FEN parameter, so a custom start is built
-        with `new_initial_state(fen)` and installed with `set_state`.
+        with `new_initial_state(fen)` and installed with `set_state`. With
+        `one_move=True` the episode ends after the first ply (puzzle episode): a
+        mate gives the normal result, anything else the result "puzzle_miss".
         """
+        self.one_move = one_move
+        self.plies = 0
         time_step = self.env.reset()
         if fen is None:
             return time_step
@@ -35,6 +41,7 @@ class OpenSpielEnv:
     def step(self, action):
         if not isinstance(action, list):
             action = [action]
+        self.plies += 1
         return self.env.step(action)
 
     def get_current_player(self):
@@ -59,13 +66,18 @@ class OpenSpielEnv:
         mask[legal_actions] = 1.0
         return mask
 
-    def is_done(self):
+    def is_terminal(self):
         return self.env.get_time_step().last()
 
+    def is_done(self):
+        return self.is_terminal() or (self.one_move and self.plies >= 1)
+
     def game_result(self):
-        """Return game result string or None if game is not over."""
+        """Return "white_win" | "black_win" | "draw" | "puzzle_miss", or None if not over."""
         if not self.is_done():
             return None
+        if not self.is_terminal():
+            return "puzzle_miss"
         rewards = self.env.get_time_step().rewards
         if rewards[1] > 0:
             return "white_win"

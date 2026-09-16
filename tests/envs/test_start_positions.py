@@ -26,35 +26,23 @@ def test_load_puzzles(tmp_path):
     assert puzzles[1].rating == 650
 
 
-def test_fraction_zero_always_opening():
-    s = StartPositionSampler(PUZZLES, 0.0, seed=1)
-    assert all(s.sample() is None for _ in range(50))
-
-
-def test_fraction_one_always_puzzle():
-    s = StartPositionSampler(PUZZLES, 1.0, seed=1)
-    fens = [s.sample() for _ in range(50)]
-    assert all(f in {"fen1", "fen2", "fen3"} for f in fens)
+def test_sampler_always_returns_a_puzzle():
+    s = StartPositionSampler(PUZZLES, seed=1)
+    assert all(s.sample() in {"fen1", "fen2", "fen3"} for _ in range(50))
 
 
 def test_same_seed_same_sequence():
-    a = StartPositionSampler(PUZZLES, 0.5, seed=7)
-    b = StartPositionSampler(PUZZLES, 0.5, seed=7)
+    a = StartPositionSampler(PUZZLES, seed=7)
+    b = StartPositionSampler(PUZZLES, seed=7)
     assert [a.sample() for _ in range(30)] == [b.sample() for _ in range(30)]
 
 
-def test_fraction_half_mixes():
-    s = StartPositionSampler(PUZZLES, 0.5, seed=3)
-    draws = [s.sample() for _ in range(200)]
-    n_puzzle = sum(d is not None for d in draws)
-    assert 60 < n_puzzle < 140
+def test_with_seed_changes_sequence():
+    a = StartPositionSampler(PUZZLES, seed=7)
+    b = a.with_seed(8)
+    assert [a.sample() for _ in range(30)] != [b.sample() for _ in range(30)]
 
 
-def test_out_of_range_fraction():
-    with pytest.raises(ValueError, match=r"\[0, 1\]"):
-        StartPositionSampler(PUZZLES, 1.5)
-
-
-def test_fraction_without_puzzles():
+def test_empty_puzzles_rejected():
     with pytest.raises(ValueError):
-        StartPositionSampler([], 0.5)
+        StartPositionSampler([], seed=0)

@@ -1,8 +1,8 @@
 """Start positions for training games: puzzle loading and the mixing sampler.
 
-A `StartPositionSampler` decides, on every reset, whether a board starts from the
-opening (returns None) or from a training puzzle (returns its FEN). The fraction is
-fixed; the sampler is deterministic for a given seed.
+The first `num_puzzle_envs` boards of a vectorized env are puzzle boards: every
+episode starts from a training puzzle drawn by a `StartPositionSampler` and ends
+after the mover's first move. The other boards play normal games from the opening.
 """
 import csv
 import random
@@ -33,25 +33,18 @@ def load_puzzles(path) -> List[Puzzle]:
 
 
 class StartPositionSampler:
-    """Return a puzzle FEN with probability `fraction`, else None (opening)."""
+    """Deterministic stream of training puzzle FENs for the puzzle boards."""
 
-    def __init__(self, puzzles: List[Puzzle], fraction: float, seed: int = 0):
-        if not 0.0 <= fraction <= 1.0:
-            raise ValueError(f"puzzle_fraction must be in [0, 1], got {fraction}")
-        if fraction > 0 and not puzzles:
-            raise ValueError("puzzle_fraction > 0 requires a non-empty puzzle set")
+    def __init__(self, puzzles: List[Puzzle], seed: int = 0):
+        if not puzzles:
+            raise ValueError("puzzle boards require a non-empty puzzle set")
         self.puzzles = list(puzzles)
-        self.fraction = fraction
         self.seed = seed
         self._rng = random.Random(seed)
 
-    def sample(self) -> Optional[str]:
-        if self.fraction <= 0.0:
-            return None
-        if self.fraction < 1.0 and self._rng.random() >= self.fraction:
-            return None
+    def sample(self) -> str:
         return self._rng.choice(self.puzzles).fen
 
     def with_seed(self, seed: int) -> "StartPositionSampler":
         """Copy with a different seed (one per worker in the async env)."""
-        return StartPositionSampler(self.puzzles, self.fraction, seed)
+        return StartPositionSampler(self.puzzles, seed)

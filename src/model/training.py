@@ -16,10 +16,25 @@ RESULT_TO_REWARD = {
 }
 
 
-def _precompute_terminal_rewards(info, num_envs, terminal_rewards):
+def _precompute_terminal_rewards(info, num_envs, terminal_rewards, players=None):
+    """Terminal reward per side for boards whose episode ended this step.
+
+    `puzzle_miss` (one-move puzzle episode without a mate) pays the mover
+    `terminal_rewards["puzzle_miss"]` (default 0) and the other side 0; `players`
+    is the side that moved on each board this step.
+    """
     tr_white = torch.zeros(num_envs)
     tr_black = torch.zeros(num_envs)
+    miss_reward = terminal_rewards.get("puzzle_miss", 0.0)
     for env_idx, result in info.get("game_results", {}).items():
+        if result == "puzzle_miss":
+            if players is None:
+                raise ValueError("puzzle_miss requires the players tensor")
+            if int(players[env_idx]) == WHITE:
+                tr_white[env_idx] = miss_reward
+            else:
+                tr_black[env_idx] = miss_reward
+            continue
         mapping = RESULT_TO_REWARD[result]
         tr_white[env_idx] = terminal_rewards[mapping["white"]]
         tr_black[env_idx] = terminal_rewards[mapping["black"]]
@@ -86,11 +101,16 @@ def _collect_rollout(
         env_step = envs.step(actions)
 
         tr_white, tr_black = _precompute_terminal_rewards(
-            env_step.info, num_envs, terminal_rewards
+            env_step.info, num_envs, terminal_rewards, players
         )
 
         if "game_results" in env_step.info:
+            puzzle_boards = env_step.info.get("puzzle_boards", {})
             for env_idx, result in env_step.info["game_results"].items():
+                if puzzle_boards.get(env_idx, False):
+                    mover_won = (result == "white_win") == (int(players[env_idx]) == WHITE)
+                    metrics.add_puzzle_result(solved=result != "puzzle_miss" and mover_won)
+                    continue
                 metrics.add_terminal_return(tr_white[env_idx].item())
                 if result == "white_win":
                     metrics.add_terminal_result(white_win=True)

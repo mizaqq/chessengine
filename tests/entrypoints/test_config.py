@@ -47,28 +47,31 @@ p1,6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1,a1a8,600
 """
 
 
-def test_puzzle_fraction_default_zero_gives_no_sampler():
-    from src.entrypoints.train import resolve_start_sampler
-    assert resolve_start_sampler({}) is None
+def test_puzzle_fraction_default_zero_gives_no_boards():
+    from src.entrypoints.train import resolve_puzzle_boards
+    assert resolve_puzzle_boards({}) == (None, 0)
 
 
 def test_puzzle_fraction_out_of_range():
-    from src.entrypoints.train import resolve_start_sampler
+    from src.entrypoints.train import resolve_puzzle_boards
     with pytest.raises(ValueError, match=r"\[0, 1\]"):
-        resolve_start_sampler({"puzzle_fraction": 1.5})
+        resolve_puzzle_boards({"puzzle_fraction": 1.5})
 
 
 def test_puzzle_fraction_without_file():
-    from src.entrypoints.train import resolve_start_sampler
+    from src.entrypoints.train import resolve_puzzle_boards
     with pytest.raises(ValueError, match="puzzle_train_file"):
-        resolve_start_sampler({"puzzle_fraction": 0.5})
+        resolve_puzzle_boards({"puzzle_fraction": 0.5})
 
 
-def test_puzzle_fraction_with_file_builds_sampler(tmp_path):
-    from src.entrypoints.train import resolve_start_sampler
+def test_puzzle_fraction_rounds_to_board_count(tmp_path):
+    from src.entrypoints.train import resolve_puzzle_boards
     path = tmp_path / "p.csv"
     path.write_text(FIXTURE)
-    sampler = resolve_start_sampler({"puzzle_fraction": 1.0, "puzzle_train_file": str(path), "seed": 3})
+    sampler, n = resolve_puzzle_boards(
+        {"puzzle_fraction": 0.5, "num_envs": 12, "puzzle_train_file": str(path), "seed": 3}
+    )
+    assert n == 6
     assert sampler.sample().startswith("6k1/")
 
 

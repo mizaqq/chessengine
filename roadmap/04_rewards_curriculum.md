@@ -21,7 +21,15 @@ Prevents the agent from becoming a "materialist" that refuses to sacrifice piece
 
 ## 2. Endgame Curriculum (Mid-Term) — evidence 2026-09-15: models miss 96% of mates-in-one; see roadmap/06 §0
 
-**Current State:**
+**Status 2026-09-16:** first step implemented as change `mate-in-one-curriculum`:
+with probability `puzzle_fraction` (0.5) a game starts from a Lichess mate-in-one
+puzzle (reverse curriculum by start state, Florensa et al. 2017; Salimans & Chen
+2018). Held-out puzzle metrics in `src/eval/puzzles.py`. Results in
+`experiments/mate-in-one-curriculum/`. Next widening: `mateIn2`, then an adaptive
+fraction. The generated-endgame plan below remains the alternative source of
+positions.
+
+**Current State (before 2026-09-16):**
 Training starts from the standard initial chess position.
 
 **Proposal:**

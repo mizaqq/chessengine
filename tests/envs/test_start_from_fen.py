@@ -6,18 +6,22 @@ from src.envs.start_positions import Puzzle, StartPositionSampler
 
 ROOK_MATE = "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1"   # Ra8# available, white +5
 BLACK_MATE = "r5k1/5ppp/8/8/8/8/5PPP/6K1 b - - 0 1"  # Ra1# available, black to move
+PUZZLES = [Puzzle("p1", ROOK_MATE, ["a1a8"], 600)]
 
 
 def _winning_terminal_actions(env: OpenSpielEnv):
     state = env.env.get_state
     player = state.current_player()
-    out = []
-    for a in state.legal_actions():
-        child = state.child(a)
-        if child.is_terminal() and child.returns()[player] > 0:
-            out.append(a)
-    return out
+    return [a for a in state.legal_actions()
+            if state.child(a).is_terminal() and state.child(a).returns()[player] > 0]
 
+
+def _non_mating_action(env: OpenSpielEnv):
+    mates = set(_winning_terminal_actions(env))
+    return next(a for a in env.env.get_state.legal_actions() if a not in mates)
+
+
+# --- single env: reset from FEN -------------------------------------------------
 
 def test_reset_from_rook_mate_position():
     env = OpenSpielEnv()
@@ -38,11 +42,12 @@ def test_reset_from_fen_black_to_move():
 
 def test_reset_without_fen_is_opening():
     env = OpenSpielEnv()
-    env.reset(ROOK_MATE)
+    env.reset(ROOK_MATE, one_move=True)
     env.reset()
     assert env.get_current_player() == 1
     assert _material_np(env.state()) == 0.0
     assert env.get_legal_actions().sum() == 20
+    assert not env.one_move
 
 
 def test_playing_the_mate_ends_the_game_as_white_win():
@@ -54,44 +59,94 @@ def test_playing_the_mate_ends_the_game_as_white_win():
     assert env.game_result() == "white_win"
 
 
-PUZZLES = [Puzzle("p1", ROOK_MATE, ["a1a8"], 600)]
+# --- single env: one-move puzzle episodes -----------------------------------------
+
+def test_one_move_episode_mate_found():
+    env = OpenSpielEnv()
+    env.reset(ROOK_MATE, one_move=True)
+    (mate,) = _winning_terminal_actions(env)
+    env.step(mate)
+    assert env.is_done() and env.game_result() == "white_win"
 
 
-def test_vector_env_fraction_one_starts_from_puzzles():
-    env = OpenSpielVectorEnv(4, StartPositionSampler(PUZZLES, 1.0, seed=0))
+def test_one_move_episode_mate_missed():
+    env = OpenSpielEnv()
+    env.reset(ROOK_MATE, one_move=True)
+    env.step(_non_mating_action(env))
+    assert env.is_done()
+    assert not env.is_terminal()
+    assert env.game_result() == "puzzle_miss"
+
+
+def test_opening_board_non_mating_move_continues():
+    env = OpenSpielEnv()
+    env.reset(ROOK_MATE)  # no one_move
+    env.step(_non_mating_action(env))
+    assert not env.is_done()
+    assert env.game_result() is None
+
+
+# --- sync vector env: puzzle boards ------------------------------------------------
+
+def test_vector_env_two_of_four_puzzle_boards():
+    env = OpenSpielVectorEnv(4, StartPositionSampler(PUZZLES, seed=0), num_puzzle_envs=2)
     step = env.reset()
-    assert (step.material == 5.0).all()
+    assert step.material.tolist() == [5.0, 5.0, 0.0, 0.0]
     assert (step.current_player == 1).all()
 
 
-def test_vector_env_fraction_zero_is_opening():
-    env = OpenSpielVectorEnv(2, StartPositionSampler(PUZZLES, 0.0, seed=0))
+def test_vector_env_zero_puzzle_boards_is_opening():
+    env = OpenSpielVectorEnv(2, None, num_puzzle_envs=0)
     step = env.reset()
     assert (step.material == 0.0).all()
 
 
-def test_vector_env_auto_reset_uses_sampler():
-    env = OpenSpielVectorEnv(1, StartPositionSampler(PUZZLES, 1.0, seed=0))
+def test_vector_env_puzzle_board_auto_resets_after_miss_and_mate():
+    env = OpenSpielVectorEnv(2, StartPositionSampler(PUZZLES, seed=0), num_puzzle_envs=2)
     env.reset()
     (mate,) = _winning_terminal_actions(env.envs[0])
-    step = env.step(torch.tensor([mate]))
-    assert step.done[0]
-    assert step.info["game_results"][0] == "white_win"
-    assert step.material[0] == 5.0  # new game started from the puzzle again
+    miss = _non_mating_action(env.envs[1])
+    step = env.step(torch.tensor([mate, miss]))
+    assert step.done.tolist() == [True, True]
+    assert step.info["game_results"] == {0: "white_win", 1: "puzzle_miss"}
+    assert step.info["puzzle_boards"] == {0: True, 1: True}
+    assert (step.material == 5.0).all()  # both boards on a new puzzle
 
 
-def test_async_env_fraction_one_and_auto_reset():
+def test_vector_env_opening_board_flagged_false_on_game_end():
+    # Board 1 is an opening board; force it into the rook-mate position to end a game.
+    env = OpenSpielVectorEnv(2, StartPositionSampler(PUZZLES, seed=0), num_puzzle_envs=1)
+    env.reset()
+    env.envs[1].reset(ROOK_MATE)
+    (mate,) = _winning_terminal_actions(env.envs[1])
+    step = env.step(torch.tensor([mate, mate]))
+    assert step.info["puzzle_boards"] == {0: True, 1: False}
+    assert step.material.tolist() == [5.0, 0.0]
+
+
+def test_vector_env_rejects_puzzle_boards_without_sampler():
+    import pytest
+    with pytest.raises(ValueError):
+        OpenSpielVectorEnv(2, None, num_puzzle_envs=1)
+
+
+# --- async vector env ------------------------------------------------------------------
+
+def test_async_env_puzzle_boards_and_auto_reset():
     from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
-    env = OpenSpielAsyncVectorEnv(2, StartPositionSampler(PUZZLES, 1.0, seed=0))
+    env = OpenSpielAsyncVectorEnv(3, StartPositionSampler(PUZZLES, seed=0), num_puzzle_envs=2)
     try:
         step = env.reset()
-        assert (step.material == 5.0).all()
+        assert step.material.tolist() == [5.0, 5.0, 0.0]
         probe = OpenSpielEnv()
         probe.reset(ROOK_MATE)
         (mate,) = _winning_terminal_actions(probe)
-        step = env.step(torch.tensor([mate, mate]))
-        assert step.done.all()
-        assert step.info["game_results"] == {0: "white_win", 1: "white_win"}
-        assert (step.material == 5.0).all()
+        miss = _non_mating_action(probe)
+        opening_move = int((step.legal_actions_mask[2] == 1).nonzero()[0])
+        step = env.step(torch.tensor([mate, miss, opening_move]))
+        assert step.done.tolist() == [True, True, False]
+        assert step.info["game_results"] == {0: "white_win", 1: "puzzle_miss"}
+        assert step.info["puzzle_boards"] == {0: True, 1: True}
+        assert step.material.tolist()[:2] == [5.0, 5.0]
     finally:
         env.close()

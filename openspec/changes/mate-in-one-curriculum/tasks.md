@@ -18,13 +18,22 @@
 - [x] 3.2 Training loop: optional `eval_fn` and `eval_interval` in `run_chess_training`; metrics merged into the log entry at each interval and at the end; test with a counting stub over 120 updates of a tiny run (calls at 50, 100, 120)
 - [x] 3.3 Wire `puzzle_eval_file` and `eval_interval` in `train.py` and `train_default.yaml`; smoke test with a 2-update run and a 3-row eval file
 
+## 3b. Revision after run 1: one-move puzzle episodes on fixed boards
+
+- [x] 3b.1 `OpenSpielEnv.reset(fen, one_move=True)`: episode ends after one ply; `game_result()` returns `puzzle_miss` when not terminal; tests for mate found, mate missed, opening unaffected
+- [x] 3b.2 Sampler always returns a puzzle; sync and async vector envs take `num_puzzle_envs`, first boards are puzzle boards with auto-reset to a new puzzle; `info["puzzle_boards"]` marks their finished episodes; tests for the two-of-four and auto-reset scenarios
+- [x] 3b.3 Training: `puzzle_miss` terminal rewards (mover gets `puzzle_miss_reward`, other 0); metrics `puzzle_attempts` / `puzzle_solved_rate`, opening-only game rates; tests for the reward mapping and the split window
+- [x] 3b.4 Config: `num_puzzle_envs = round(puzzle_fraction * num_envs)`, `puzzle_miss_reward` default 0; smoke test with 1 puzzle board of 2
+
 ## 4. Measure
 
-- [ ] 4.1 Evaluate the scale-0.2 checkpoints on the held-out set; record the baseline numbers in `experiments/mate-in-one-curriculum/baseline.json`
-- [ ] 4.2 Run 500 updates, seed 0, scale 0.2, `puzzle_fraction` 0.5, saving to `experiments/mate-in-one-curriculum/frac05/`; record `run.json` with the puzzle curve, draw rate and wall-clock
+- [x] 4.0 Run 1 (mixing by reset): puzzle top-1 flat 0.04-0.08 vs 0.074 baseline, 423 games / 90k plies, games eval 2/157; recorded in `experiments/mate-in-one-curriculum/frac05/`
+
+- [x] 4.1 Evaluate the scale-0.2 checkpoints on the held-out set; record the baseline numbers in `experiments/mate-in-one-curriculum/baseline.json`
+- [ ] 4.2 Run 2: 500 updates, seed 0, scale 0.2, `puzzle_fraction` 0.5, saving to `experiments/mate-in-one-curriculum/frac05-onemove/`; record `run.json` with the puzzle curve, draw rate and wall-clock
 - [ ] 4.3 Play 40 sampled games from the opening with the new checkpoints; record in-game mate-in-one rate and draw rate next to the 3.7% / 76% baseline; compare with the predictions in proposal.md in conversation
 
 ## 5. Record
 
-- [ ] 5.1 README config table and roadmap 04/06 updated; `learning/RESOURCES.md` gains Florensa et al. 2017, Salimans & Chen 2018, Lichess puzzle DB
+- [x] 5.1 README config table and roadmap 04/06 updated; `learning/RESOURCES.md` gains Florensa et al. 2017, Salimans & Chen 2018, Lichess puzzle DB
 - [ ] 5.2 Comprehension check with owner (CLAUDE.md "Trace by hand" on the sampler and returns for a one-move puzzle episode, and "Diagnose from symptoms" on the puzzle curve), code pasted inline; outcome goes to `learning/records/`

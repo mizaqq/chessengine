@@ -1,6 +1,6 @@
 """Evaluate saved checkpoints on the held-out mate-in-one set.
 
-Usage: python scripts/eval_checkpoint_puzzles.py <ckpt_dir> [--eval data/puzzles/mate_in_1_eval.csv] [--out baseline.json]
+Usage: python -m scripts.eval_checkpoint_puzzles <ckpt_dir> [--eval data/puzzles/mate_in_1_eval.csv] [--out baseline.json]
 Picks the newest white_/black_ checkpoint pair in <ckpt_dir>.
 """
 import argparse

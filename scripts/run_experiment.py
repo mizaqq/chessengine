@@ -1,6 +1,6 @@
 """Run training from a YAML config with overrides; save checkpoints and run.json.
 
-Usage: python scripts/run_experiment.py --out experiments/<name>/<arm> [--config ...] [--set key=value ...]
+Usage: python -m scripts.run_experiment --out experiments/<name>/<arm> [--config ...] [--set key=value ...]
 """
 import argparse
 import json

@@ -9,7 +9,8 @@ Two separate `ChessPolicyProbs` models (white and black) train against each othe
 ```
 src/
 ├── core/           # Data types (EnvStep, StepRecord)
-├── envs/           # Vectorized environment wrappers (sync + async)
+├── envs/           # Vectorized environment wrappers (sync + async), start-position sampler
+├── eval/           # Held-out puzzle evaluation
 ├── model/          # Neural network + training loop + returns
 ├── training/       # Metrics aggregation
 ├── losses/         # Loss composition
@@ -211,6 +212,10 @@ class MyCustomEnv:
 | `terminal_rewards.draw` | float | -0.5 | Reward for drawing |
 | `shaping` | str | potential | `potential` (material shaping) or `none` (outcome only) |
 | `shaping_scale` | float | 0.2 | Multiplier on the shaping term (>= 0) |
+| `puzzle_fraction` | float | 0.0 (default yaml: 0.5) | Probability a reset starts from a training mate-in-one puzzle instead of the opening |
+| `puzzle_train_file` | str | – | CSV of training puzzles (required when `puzzle_fraction` > 0) |
+| `puzzle_eval_file` | str | – | CSV of held-out puzzles; enables `puzzle_top1` / `puzzle_mate_prob` in the logs |
+| `eval_interval` | int | 50 | Updates between held-out puzzle evaluations (also runs at the end) |
 
 CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed S] [--env-type sync|async] [--save-dir DIR]`. With `--save-dir`, both models are written as `<color>_model_<timestamp>_episodes_<N>.pth`.
 | `lr_decay_interval` | int | 100 | LR decay interval (episodes) |
@@ -227,6 +232,8 @@ The training loop (`src/model/training.py`) runs a player-agnostic A2C:
 3. **Backpropagation** — per-model loss: `policy_loss + value_loss - entropy_coef * normalized_entropy`
 
 **Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) are clamped to avoid division by zero.
+
+**Start-position curriculum**: with probability `puzzle_fraction` a board resets into a Lichess mate-in-one position (side to move has a mate) instead of the opening, so the sparse outcome reward is one move away (reverse curriculum by start state; Florensa et al. 2017, Salimans & Chen 2018). Build the puzzle files with `python -m scripts.prepare_puzzles` (downloads the CC0 dump to `data/raw/`). Evaluate checkpoints with `python -m scripts.eval_checkpoint_puzzles <ckpt_dir>` and in-game with `python -m scripts.eval_games <ckpt_dir>`.
 
 **Reward signal**: configurable terminal rewards on game end, plus potential-based material shaping (Ng, Harada & Russell 1999): each own move receives `shaping_scale * (gamma * material(next own position) - material(this position))` from the mover's perspective, with the terminal position counting as 0. Shaping sums to zero over a complete game, so only the outcome is net reward; `shaping: none` disables it.
 

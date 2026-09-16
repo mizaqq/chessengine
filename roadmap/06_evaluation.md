@@ -11,6 +11,13 @@ draw rate. Add to the metrics watched in every algorithm/curriculum change.
 Evaluation must sample (low temperature), not argmax: greedy play loops into
 threefold repetition.
 
+**Fixed benchmark (2026-09-16):** the in-game rate depends on which positions
+self-play reaches, so the primary metric is now the held-out Lichess set
+(`data/puzzles/mate_in_1_eval.csv`, 2,000 positions): top-1 accuracy and mean
+mating-move probability, `scripts/eval_checkpoint_puzzles.py`. Scale-0.2
+checkpoints: top-1 7.35%, probability 0.065. In-game rate stays as the transfer
+check (`scripts/eval_games.py`). This supersedes §2 below.
+
 ## 1. Stockfish Evaluation Script (Immediate Priority)
 
 **Current State:**

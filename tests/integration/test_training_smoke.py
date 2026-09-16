@@ -38,14 +38,16 @@ def test_training_smoke_with_puzzle_curriculum_and_eval(tmp_path):
         "steps_per_update": 2,
         "seed": 1,
         "env_type": "sync",
-        "puzzle_fraction": 1.0,
+        "puzzle_fraction": 0.5,
         "puzzle_train_file": str(path),
         "puzzle_eval_file": str(path),
         "eval_interval": 1,
+        "log_interval": 1,
     }
     result = run_training_from_config(config)
     logs = result["logs"]
     assert [e["episode"] for e in logs] == [1, 2]
+    assert logs[-1]["puzzle_attempts"] >= 1  # one puzzle board, one attempt per ply
     for entry in logs:
         assert entry["puzzle_count"] == 3
         assert 0.0 <= entry["puzzle_top1"] <= 1.0

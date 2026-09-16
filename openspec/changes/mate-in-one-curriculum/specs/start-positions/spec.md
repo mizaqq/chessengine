@@ -19,35 +19,66 @@ from that position. Without a FEN the game SHALL start from the standard opening
 - **WHEN** an environment is reset without a FEN
 - **THEN** the position is the standard opening with material 0 and white to move
 
-### Requirement: Mixed start positions during training
-A vectorized environment SHALL take a start-position sampler. On every reset,
-including automatic reset after a game ends, each env SHALL start from the sampler's
-position when it returns one and from the opening otherwise. The sampler SHALL
-return a training puzzle position with probability `puzzle_fraction` and nothing
-otherwise, and SHALL be deterministic for a given seed.
+### Requirement: Puzzle boards during training
+A vectorized environment SHALL take a number of puzzle boards. Those boards SHALL
+start every episode, including after automatic reset, from a training puzzle drawn
+by a seeded sampler; the remaining boards SHALL start from the opening. The sampler
+SHALL be deterministic for a given seed. (Revised 2026-09-16: mixing by reset was
+replaced by assignment by board because a one-ply puzzle episode next to a 200-ply
+game left about one percent of plies on puzzles.)
 
-#### Scenario: fraction 1
-- **WHEN** `puzzle_fraction` is 1.0 and 4 envs are reset
-- **THEN** all 4 envs start from puzzle positions (none has material 0 with the
-  opening layout)
+#### Scenario: two of four boards
+- **WHEN** 4 boards are created with 2 puzzle boards
+- **THEN** boards 0 and 1 start from puzzle positions and boards 2 and 3 from the
+  opening (material 0)
 
-#### Scenario: fraction 0
-- **WHEN** `puzzle_fraction` is 0.0
-- **THEN** every reset starts from the opening, identical to today's behaviour
-
-#### Scenario: auto-reset uses the sampler
-- **WHEN** `puzzle_fraction` is 1.0 and a game in env 0 ends
-- **THEN** the position returned for env 0 is a puzzle position, not the opening
+#### Scenario: no puzzle boards
+- **WHEN** 0 puzzle boards are requested
+- **THEN** every board starts from the opening, identical to the behaviour before
+  this change
 
 #### Scenario: same seed, same starts
 - **WHEN** two samplers are built with the same seed and puzzle set
 - **THEN** they return the same sequence of positions
 
+### Requirement: One-move puzzle episodes
+A puzzle episode SHALL end after the mover's first move. If that move ends the game
+the normal result applies. Otherwise the episode SHALL end with result
+`puzzle_miss`; the mover SHALL receive `puzzle_miss_reward` (default 0) as terminal
+reward and the other side 0. The board SHALL then reset to a new puzzle.
+
+#### Scenario: mate found
+- **WHEN** white plays Ra8# on a puzzle board
+- **THEN** the board reports done with result `white_win` and white's terminal
+  reward is the win reward
+
+#### Scenario: mate missed
+- **WHEN** white plays a non-mating move on a puzzle board
+- **THEN** the board reports done with result `puzzle_miss`, white's terminal
+  reward is `puzzle_miss_reward`, black's is 0, and the next position is a new
+  puzzle
+
+#### Scenario: opening board is unaffected
+- **WHEN** a non-puzzle board plays a non-mating move
+- **THEN** the game continues as before
+
+### Requirement: Training metrics split by source
+Puzzle episodes SHALL be counted as puzzle attempts and puzzle solves, and SHALL
+NOT be counted in the win, draw and loss rates of the windowed summary, which cover
+opening games only.
+
+#### Scenario: window with puzzle and opening games
+- **WHEN** a window contains 30 puzzle attempts of which 3 were mates, and 2
+  opening games that were drawn
+- **THEN** the summary reports puzzle_attempts 30, puzzle_solved_rate 0.1,
+  total_games 2 and draw_rate 1.0
+
 ### Requirement: Puzzle fraction configuration
 `puzzle_fraction` SHALL be a number in [0, 1], default 0.0 so existing configs are
 unchanged, and out-of-range values SHALL be rejected with an error naming the
-accepted range. When the fraction is above 0 a training puzzle file SHALL be
-required.
+accepted range. The number of puzzle boards SHALL be `round(puzzle_fraction *
+num_envs)`. When the fraction is above 0 a training puzzle file SHALL be required.
+`puzzle_miss_reward` SHALL default to 0.
 
 #### Scenario: out of range
 - **WHEN** a config sets `puzzle_fraction: 1.5`

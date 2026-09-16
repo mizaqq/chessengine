@@ -1,0 +1,8 @@
+{
+ "puzzle_top1": 0.0735,
+ "puzzle_mate_prob": 0.06526493303102429,
+ "puzzle_count": 2000,
+ "white_ckpt": "experiments/potential-based-shaping/scale02/white_model_20260915161133_episodes_500.pth",
+ "black_ckpt": "experiments/potential-based-shaping/scale02/black_model_20260915161133_episodes_500.pth",
+ "eval_file": "data/puzzles/mate_in_1_eval.csv"
+}

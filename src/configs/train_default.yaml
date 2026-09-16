@@ -19,13 +19,17 @@ shaping: potential
 # decisive games rose 13% -> 24%. Revisit with more seeds.
 shaping_scale: 0.2
 
-# Start-position curriculum (Florensa et al. 2017; Salimans & Chen 2018). With
-# probability puzzle_fraction a reset starts from a training mate-in-one puzzle
-# instead of the opening: 0 = today's training, 1 = never sees an opening.
-# 0.5 chosen by the owner 2026-09-16. Puzzle files come from
-# scripts/prepare_puzzles.py (Lichess puzzle DB, CC0).
+# Start-position curriculum (Florensa et al. 2017; Salimans & Chen 2018).
+# round(puzzle_fraction * num_envs) boards play one-move puzzle episodes from
+# Lichess mate-in-one positions (mate = win, anything else = "puzzle_miss" paying
+# the mover puzzle_miss_reward); the other boards play full games from the
+# opening. 0 = today's training, 1 = no board ever sees an opening. 0.5 chosen by
+# the owner 2026-09-16. Puzzle files: scripts/prepare_puzzles.py (Lichess DB, CC0).
 puzzle_fraction: 0.5
 puzzle_train_file: data/puzzles/mate_in_1_train.csv
+# Terminal reward for a missed mate on a puzzle board. 0 (default) keeps the value
+# head honest about still-winning positions; try negative values as an experiment.
+puzzle_miss_reward: 0.0
 # Held-out mate-in-one set: top-1 accuracy and mating-move probability, evaluated
 # every eval_interval updates and at the end. Unset puzzle_eval_file to skip.
 puzzle_eval_file: data/puzzles/mate_in_1_eval.csv

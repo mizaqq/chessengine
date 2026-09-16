@@ -4,7 +4,7 @@ Lichess stores the FEN *before* the opponent's move; the solution starts with th
 second move. We apply the first move so the stored FEN is the position where the
 side to move has a mate in one, and store every checkmating move (UCI) from there.
 
-Usage: python scripts/prepare_puzzles.py [--train 20000] [--eval 2000] [--seed 0]
+Usage: python -m scripts.prepare_puzzles [--train 20000] [--eval 2000] [--seed 0]
 """
 import argparse
 import csv

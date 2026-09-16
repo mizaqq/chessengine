@@ -23,6 +23,8 @@ class MetricsAggregator:
         self._entropy_count = 0
         self._terminal_return_sum = 0.0
         self._terminal_return_count = 0
+        self.puzzle_attempts = 0
+        self.puzzle_solved = 0
 
     def add_step(self, empty_masks: int = 0, illegal_samples: int = 0):
         self.episode_empty_masks += empty_masks
@@ -37,6 +39,11 @@ class MetricsAggregator:
             self.black_wins += 1
         elif draw:
             self.draws += 1
+
+    def add_puzzle_result(self, solved: bool):
+        """Record a finished one-move puzzle episode (kept out of the game rates)."""
+        self.puzzle_attempts += 1
+        self.puzzle_solved += int(solved)
 
     def add_terminal_return(self, white_view_return: float):
         """Record the unshaped terminal reward (white view) of a finished game."""
@@ -63,6 +70,10 @@ class MetricsAggregator:
             "draw_rate": self.draws / total_games if total_games > 0 else 0.0,
             "mean_entropy_raw": self._entropy_raw_sum / max(self._entropy_count, 1),
             "mean_entropy_normalized": self._entropy_norm_sum / max(self._entropy_count, 1),
+            "puzzle_attempts": self.puzzle_attempts,
+            "puzzle_solved_rate": (
+                self.puzzle_solved / self.puzzle_attempts if self.puzzle_attempts > 0 else None
+            ),
             "mean_terminal_return": (
                 self._terminal_return_sum / self._terminal_return_count
                 if self._terminal_return_count > 0

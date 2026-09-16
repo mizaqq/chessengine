@@ -1,4 +1,4 @@
-"""Benchmark sync vs async environments over 1000 episodes."""
+"""Benchmark sync vs async environments over 100 episodes."""
 import time
 import json
 import torch
@@ -6,7 +6,7 @@ from src.entrypoints.train import run_training_from_config
 
 BASE_CONFIG = {
     "num_envs": 12,
-    "max_updates": 1000,
+    "max_updates": 100,
     "steps_per_update": 15,
     "learning_rate": 1e-4,
     "seed": 42,
@@ -21,7 +21,7 @@ BASE_CONFIG = {
 def run_benchmark(env_type: str):
     config = {**BASE_CONFIG, "env_type": env_type}
     print(f"\n{'='*60}")
-    print(f"  Running {env_type.upper()} — 1000 episodes, 12 envs, 15 steps/update")
+    print(f"  Running {env_type.upper()} — 100 episodes, 12 envs, 15 steps/update")
     print(f"{'='*60}")
 
     t0 = time.time()
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     same_seed_match = loss_diff < 0.01
     print(f"  Same-seed match: {'YES' if same_seed_match else 'NO — expected due to multiprocessing nondeterminism'}")
 
-    with open("benchmark_results.json", "w") as f:
+    with open("experiments/benchmark_sync_vs_async.json", "w") as f:
         json.dump({
             "sync": {"losses": sync_run["losses"], "logs": sync_run["logs"], **sync_stats},
             "async": {"losses": async_run["losses"], "logs": async_run["logs"], **async_stats},

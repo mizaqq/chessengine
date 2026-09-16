@@ -1,6 +1,6 @@
 """Play sampled games from the opening and report mate-in-one rate and results.
 
-Usage: python scripts/eval_games.py <ckpt_dir> [--games 40] [--seed 0] [--out games.json]
+Usage: python -m scripts.eval_games <ckpt_dir> [--games 40] [--seed 0] [--out games.json]
 Mate-in-one rate: over all positions where the mover had a mating move available,
 the share where it played one. Both sides sample from the policy.
 """

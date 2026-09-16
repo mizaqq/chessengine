@@ -33,22 +33,24 @@ def resolve_shaping(config: Dict[str, Any]) -> float:
     return 0.0 if mode == "none" else scale
 
 
-def resolve_start_sampler(config: Dict[str, Any]):
-    """Build the start-position sampler from `puzzle_fraction` / `puzzle_train_file`.
+def resolve_puzzle_boards(config: Dict[str, Any]):
+    """Return (sampler, num_puzzle_envs) from `puzzle_fraction` / `puzzle_train_file`.
 
-    `puzzle_fraction` (default 0.0) is the probability that a reset starts from a
-    training puzzle instead of the opening; 0 keeps today's behaviour, 1 never shows
-    an opening. Returns None when the fraction is 0.
+    `puzzle_fraction` (default 0.0) is the share of boards that play one-move
+    puzzle episodes instead of full games: num_puzzle_envs = round(fraction *
+    num_envs). 0 keeps today's behaviour, 1 means no board ever sees an opening.
     """
     fraction = float(config.get("puzzle_fraction", 0.0))
     if not 0.0 <= fraction <= 1.0:
         raise ValueError(f"puzzle_fraction must be in [0, 1], got {fraction}")
-    if fraction == 0.0:
-        return None
+    num_envs = int(config.get("num_envs", 12))
+    num_puzzle_envs = int(round(fraction * num_envs))
+    if num_puzzle_envs == 0:
+        return None, 0
     path = config.get("puzzle_train_file")
     if not path:
         raise ValueError("puzzle_fraction > 0 requires puzzle_train_file")
-    return StartPositionSampler(load_puzzles(path), fraction, seed=int(config.get("seed", 42)))
+    return StartPositionSampler(load_puzzles(path), seed=int(config.get("seed", 42))), num_puzzle_envs
 
 
 def resolve_eval_fn(config: Dict[str, Any]):
@@ -86,11 +88,11 @@ def set_seed(seed: int):
     np.random.seed(seed)
 
 
-def _create_envs(env_type: str, num_envs: int, start_sampler=None):
+def _create_envs(env_type: str, num_envs: int, start_sampler=None, num_puzzle_envs=0):
     if env_type == "async":
-        return OpenSpielAsyncVectorEnv(num_envs, start_sampler)
+        return OpenSpielAsyncVectorEnv(num_envs, start_sampler, num_puzzle_envs)
     elif env_type == "sync":
-        return OpenSpielVectorEnv(num_envs, start_sampler)
+        return OpenSpielVectorEnv(num_envs, start_sampler, num_puzzle_envs)
     else:
         raise ValueError(f"Unknown env_type: {env_type}")
 
@@ -108,14 +110,15 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     entropy_coef = config.get("entropy_coef", 0.01)
     grad_clip = config.get("grad_clip", 1.0)
     shaping_scale = resolve_shaping(config)
-    start_sampler = resolve_start_sampler(config)
+    start_sampler, num_puzzle_envs = resolve_puzzle_boards(config)
+    terminal_rewards = {**terminal_rewards, "puzzle_miss": float(config.get("puzzle_miss_reward", 0.0))}
     eval_fn = resolve_eval_fn(config)
     eval_interval = resolve_eval_interval(config)
     log_interval = int(config.get("log_interval", 10))
 
     set_seed(seed)
 
-    envs = _create_envs(env_type, num_envs, start_sampler)
+    envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs)
     white_model = ChessPolicyProbs()
     black_model = ChessPolicyProbs()
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)

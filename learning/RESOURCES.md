@@ -50,6 +50,24 @@ reach for it. Prune anything that turns out shallow or wrong.
   outcome-only reference point. The exact reward formulation (game outcome only) is
   in the paper body; verify there before quoting numbers.
 
+- [Paper: "Reverse Curriculum Generation for Reinforcement Learning" — Florensa et al. (CoRL 2017)](https://arxiv.org/abs/1707.05300)
+  Abstract: for goal-oriented sparse-reward tasks, start the agent near the goal and
+  widen the start-state distribution as it succeeds; needs only one goal state, no
+  demonstrations or shaped reward; the curriculum adapts to performance. Use for:
+  why puzzle start positions help, and the later adaptive `puzzle_fraction`.
+
+- [Paper: "Learning Montezuma's Revenge from a Single Demonstration" — Salimans & Chen (2018)](https://arxiv.org/abs/1812.03381)
+  Abstract: resetting episodes to states along a demonstration turns exploration cost
+  that scales exponentially in the number of steps between rewards into roughly
+  quadratic. Use for: the argument that a mate hundreds of moves from the opening
+  is unreachable by random play, one move away it is not.
+
+- [Data: Lichess puzzle database (CC0)](https://database.lichess.org/#puzzles)
+  6.1M rated puzzles as CSV with FEN, UCI moves, rating and themes. FEN is the
+  position *before* the opponent's move; the solution starts at move two. Theme
+  `mateIn1` gave 898,211 puzzles on 2026-09-16; we use 20,000 train / 2,000
+  held-out, converted by `scripts/prepare_puzzles.py`.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
@@ -60,5 +78,6 @@ Sources still needed, ordered by roadmap priority:
 
 - Engine-based evaluation of learned policies (roadmap/06_evaluation.md §1)
 - Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
+- Supervised pre-training on expert moves before RL (AlphaGo, Silver et al. 2016, Nature 529) — fetch the paper body before running the comparison arm
 - Fictitious self-play and opponent sampling (roadmap/05_opponent_sampling.md §1)
 - MCTS combined with a learned policy/value network (roadmap/03_algorithm.md §2)

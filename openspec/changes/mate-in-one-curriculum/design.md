@@ -55,6 +55,22 @@ compressed and CC0. The script downloads it to a gitignored `data/raw/`, filters
 two CSVs (a few MB) are committed so runs are reproducible without the download.
 Reading `.zst` needs the `zstandard` package (dev dependency).
 
+**D8 (revision after run 1, 2026-09-16). One-move puzzle episodes, boards not
+resets.** Run 1 (`frac05/run.json`) showed flat puzzle accuracy: a missed mate
+turned into a 200-ply game, so the run made about 200 attempts in total. Resets
+near the reward only help when the episode ends soon after the attempt (the
+implicit assumption in Salimans & Chen 2018). Fix: a puzzle board ends its episode
+after the mover's move (mate: normal result; else `puzzle_miss`), and puzzle
+boards are a fixed subset (`round(puzzle_fraction * num_envs)`) so the share of
+plies on puzzles equals the fraction. A miss is a terminal with
+`puzzle_miss_reward` (default 0): a penalty would widen the mate/miss gap the
+gradient already sees, but would teach the value head that a still-winning
+position is a loss; the knob exists so the owner can test that as an experiment.
+Alternative "replay the puzzle until solved" deferred: with-replacement sampling
+already revisits puzzles, back-to-back replay correlates a batch, and Florensa's
+success-band sampling is the principled version if the curve stalls. Puzzle
+episodes are counted separately in metrics so opening-game rates stay readable.
+
 ## Risks / Trade-offs
 
 - [Puzzle positions are tactical and unbalanced; in-game mate-in-one rate may not

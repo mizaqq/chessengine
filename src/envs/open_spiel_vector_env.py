@@ -18,19 +18,34 @@ def _material_np(state: np.ndarray) -> float:
 class OpenSpielVectorEnv:
     """Vectorized OpenSpiel environment with auto-reset; reports material of each position."""
 
-    def __init__(self, num_envs: int, start_sampler: StartPositionSampler | None = None):
+    def __init__(
+        self,
+        num_envs: int,
+        start_sampler: StartPositionSampler | None = None,
+        num_puzzle_envs: int = 0,
+    ):
         self.num_envs = num_envs
         self.envs = [OpenSpielEnv() for _ in range(num_envs)]
-        # Decides per reset whether a board starts from the opening or a puzzle.
+        if num_puzzle_envs > 0 and start_sampler is None:
+            raise ValueError("num_puzzle_envs > 0 requires a start_sampler")
+        if not 0 <= num_puzzle_envs <= num_envs:
+            raise ValueError(f"num_puzzle_envs must be in [0, {num_envs}], got {num_puzzle_envs}")
+        # Boards [0, num_puzzle_envs) play one-move puzzle episodes; the rest play games.
         self.start_sampler = start_sampler
+        self.num_puzzle_envs = num_puzzle_envs
 
-    def _reset_env(self, env: OpenSpielEnv) -> None:
-        fen = self.start_sampler.sample() if self.start_sampler is not None else None
-        env.reset(fen)
+    def is_puzzle_env(self, i: int) -> bool:
+        return i < self.num_puzzle_envs
+
+    def _reset_env(self, i: int) -> None:
+        if self.is_puzzle_env(i):
+            self.envs[i].reset(self.start_sampler.sample(), one_move=True)
+        else:
+            self.envs[i].reset()
 
     def reset(self) -> EnvStep:
-        for env in self.envs:
-            self._reset_env(env)
+        for i in range(self.num_envs):
+            self._reset_env(i)
 
         states = [env.state() for env in self.envs]
 
@@ -55,6 +70,7 @@ class OpenSpielVectorEnv:
         done = torch.zeros(self.num_envs, dtype=torch.bool)
         terminal_observations: dict[int, np.ndarray] = {}
         game_results: dict[int, str] = {}
+        puzzle_boards: dict[int, bool] = {}
 
         for i, (env, action) in enumerate(zip(self.envs, actions)):
             if not env.is_done():
@@ -64,7 +80,8 @@ class OpenSpielVectorEnv:
                 done[i] = True
                 terminal_observations[i] = env.state().copy()
                 game_results[i] = env.game_result()
-                self._reset_env(env)
+                puzzle_boards[i] = self.is_puzzle_env(i)
+                self._reset_env(i)
 
         states = [env.state() for env in self.envs]
         obs = torch.tensor(np.array(states, dtype=np.float32))
@@ -78,6 +95,7 @@ class OpenSpielVectorEnv:
         if terminal_observations:
             info["terminal_observations"] = terminal_observations
             info["game_results"] = game_results
+            info["puzzle_boards"] = puzzle_boards
 
         return EnvStep(
             obs=obs,

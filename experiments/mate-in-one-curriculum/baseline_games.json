@@ -1,0 +1,18 @@
+{
+ "games": 40,
+ "results": {
+  "white_win": 5,
+  "unfinished": 16,
+  "black_win": 4,
+  "draw": 15
+ },
+ "draw_rate": 0.375,
+ "decisive_rate": 0.225,
+ "mate_in_one_opportunities": 191,
+ "mate_in_one_found": 9,
+ "mate_in_one_rate": 0.04712041884816754,
+ "mean_plies": 233.55,
+ "white_ckpt": "experiments/potential-based-shaping/scale02/white_model_20260915161133_episodes_500.pth",
+ "black_ckpt": "experiments/potential-based-shaping/scale02/black_model_20260915161133_episodes_500.pth",
+ "seed": 0
+}

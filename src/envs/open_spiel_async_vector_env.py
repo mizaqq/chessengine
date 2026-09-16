@@ -17,12 +17,15 @@ def _material_np(state: np.ndarray) -> float:
 
 
 def worker(remote, parent_remote, start_sampler=None):
+    """`start_sampler` present means this board is a puzzle board (one-move episodes)."""
     parent_remote.close()
     env = OpenSpielEnv()
 
     def reset_env():
-        fen = start_sampler.sample() if start_sampler is not None else None
-        env.reset(fen)
+        if start_sampler is not None:
+            env.reset(start_sampler.sample(), one_move=True)
+        else:
+            env.reset()
 
     try:
         while True:
@@ -62,8 +65,18 @@ def worker(remote, parent_remote, start_sampler=None):
 class OpenSpielAsyncVectorEnv:
     """Async vectorized OpenSpiel environment using multiprocessing with EnvStep API."""
 
-    def __init__(self, num_envs: int, start_sampler: StartPositionSampler | None = None):
+    def __init__(
+        self,
+        num_envs: int,
+        start_sampler: StartPositionSampler | None = None,
+        num_puzzle_envs: int = 0,
+    ):
         self.num_envs = num_envs
+        if num_puzzle_envs > 0 and start_sampler is None:
+            raise ValueError("num_puzzle_envs > 0 requires a start_sampler")
+        if not 0 <= num_puzzle_envs <= num_envs:
+            raise ValueError(f"num_puzzle_envs must be in [0, {num_envs}], got {num_puzzle_envs}")
+        self.num_puzzle_envs = num_puzzle_envs
         self.ctx = mp.get_context("fork")
         self.remotes, self.work_remotes = zip(
             *[self.ctx.Pipe() for _ in range(num_envs)]
@@ -72,7 +85,7 @@ class OpenSpielAsyncVectorEnv:
         for i, (work_remote, remote) in enumerate(zip(self.work_remotes, self.remotes)):
             # Each worker owns a sampler with its own seed so auto-reset needs no
             # round trip to the parent and runs are reproducible.
-            sampler = None if start_sampler is None else start_sampler.with_seed(start_sampler.seed + i)
+            sampler = start_sampler.with_seed(start_sampler.seed + i) if i < num_puzzle_envs else None
             p = self.ctx.Process(target=worker, args=(work_remote, remote, sampler))
             p.daemon = True
             p.start()
@@ -116,6 +129,7 @@ class OpenSpielAsyncVectorEnv:
         if terminal_observations:
             info["terminal_observations"] = terminal_observations
             info["game_results"] = game_results
+            info["puzzle_boards"] = {i: i < self.num_puzzle_envs for i in game_results}
 
         return EnvStep(
             obs=torch.tensor(np.stack(obs_list)).float(),
