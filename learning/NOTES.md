@@ -141,6 +141,23 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Under potential shaping a mid-game start charges the start potential and never
   repays it; values shift, policy does not.
 
+## Sparse rewards plateau, then knee (Sep 2026)
+
+- Mate-in-two boards pay only when the first move is the verified forcing move
+  *and* the mate follows against the network's own defence: two right choices
+  out of ~30 each, so a fresh policy succeeds about once in 900 attempts.
+- Observed 2026-09-16: solved rate ~1% for 200 updates (held-out first-move
+  accuracy flat at 0.08), then 0.12 at 300 and 0.23 at 600 (held-out 0.35).
+  Mate-in-one caught up with the single-rung baseline despite half the attempts.
+- Lesson: a curriculum rung that looks dead at a short budget may be one knee
+  away. Either budget for the knee or give the first decision its own signal
+  (partial credit for the forcing move). Salimans & Chen's quadratic-vs-
+  exponential argument is exactly this: each extra decision before the reward
+  multiplies the search.
+- Ply cap at 120 (AlphaZero terminated over-long games as draws): 2.3x more
+  finished games per update; training draws 0.98 (the cap ends most games);
+  evaluation games shorter (186 plies) with fewer mate chances (31 vs ~100).
+
 ## Distribution shift in start states (Sep 2026)
 
 - Same network: 0.43 on Lichess mate-in-one, 0.07 on mate-in-one positions from

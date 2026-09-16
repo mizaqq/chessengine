@@ -1,0 +1,30 @@
+[
+ {
+  "arm": "BOTH",
+  "s/update": 17.509817351897556,
+  "entropy_game": 0.4405673989909701,
+  "puzzle_solved": 0.10895779500430663,
+  "lichess_top1": 0.22,
+  "selfplay_top1": 0.05333333333333334,
+  "draw_rate": 0.8723404255319149,
+  "clip_frac": 0.30566406218567865,
+  "approx_kl": 0.057685814860815254,
+  "in_game_mate": 0.052083333333333336,
+  "opps": 96,
+  "mean_plies": 201.075
+ },
+ {
+  "arm": "LONG",
+  "s/update": 14.476239975293478,
+  "entropy_game": 0.4231766223616432,
+  "puzzle_solved": 0.3220696937697994,
+  "lichess_top1": 0.444,
+  "selfplay_top1": 0.05,
+  "draw_rate": 0.9777777777777777,
+  "clip_frac": 0.19485677132033744,
+  "approx_kl": 0.03880423262685029,
+  "in_game_mate": 0.0967741935483871,
+  "opps": 31,
+  "mean_plies": 186.0
+ }
+]

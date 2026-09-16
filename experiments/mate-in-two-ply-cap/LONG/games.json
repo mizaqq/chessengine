@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 34,
+  "black_win": 1,
+  "white_win": 2,
+  "unfinished": 3
+ },
+ "draw_rate": 0.85,
+ "decisive_rate": 0.075,
+ "mate_in_one_opportunities": 31,
+ "mate_in_one_found": 3,
+ "mate_in_one_rate": 0.0967741935483871,
+ "mean_plies": 186.0,
+ "checkpoints": {
+  "model": "experiments/mate-in-two-ply-cap/LONG/model_20260916205135_episodes_480.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

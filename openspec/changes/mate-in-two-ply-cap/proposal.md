@@ -68,6 +68,38 @@ rate, mean plies). Expect CAP to raise finished games per update and shorten
 evaluation games only if the policy changes; the cap itself does not apply in
 evaluation games.
 
+### Outcome (2026-09-16, BOTH 120 updates + LONG 480 = 600 updates x 64 plies, seed 42)
+
+| update | Lichess m1 top-1 | Lichess m2 top-1 | train solved m1 / m2 | opening entropy | puzzle entropy | games per window | clip / KL |
+|---|---|---|---|---|---|---|---|
+| 50 | 0.10 | 0.07 | 0.07 / 0.01 | 0.55 | 0.50 | 47 | 0.42 / 0.074 |
+| 120 | 0.22 | 0.08 | 0.20 / 0.01 | 0.44 | 0.31 | 47 | 0.31 / 0.058 |
+| 300 | - | - | 0.34 / 0.12 | 0.43 | 0.29 | 48 | 0.29 / 0.068 |
+| 600 | **0.444** | **0.351** | 0.42 / 0.23 | 0.42 | 0.15 | 45 | 0.20 / 0.039 |
+
+Reference: C2 (same config, mate-in-one only, no cap) reached 0.42 at 250 updates.
+40 uncapped evaluation games: mean 186 plies (BOTH at 120: 201; C2: 222), draw
+rate 0.85, decisive 7.5%, 3 mates in 31 chances.
+
+Reading:
+- **The second rung was learned, late.** Mate-in-two solved rate sat at ~1% for
+  200 updates (the reward needs two right choices out of ~30 each), then climbed
+  0.03 -> 0.12 -> 0.23 between updates 200 and 600; held-out first-move accuracy
+  went 0.08 -> 0.35. Mate-in-one caught up with the mate-in-one-only baseline
+  (0.444 vs 0.42) despite half the attempts.
+- **The take-off needed the longer run.** At the owner's standard 120-update
+  budget the rung looked dead. Sparse two-step rewards show a plateau then a
+  knee; the budget rule needs an exception for new curriculum rungs, or partial
+  credit for the verified forcing move so the first decision gets its own signal.
+- **Ply cap**: games finished per window 45-48 vs 19-21 before; training draw
+  rate rose to 0.98 (most games now end by the cap). Evaluation games got shorter
+  (186 plies) and mate chances rarer (31 vs 96-120 opportunities): the policy
+  plays fewer positions where a mate is on the board. In-game mate rate 3/31 is
+  too small a count to read.
+- Opening entropy stayed 0.42-0.55 all run (PPO at 1e-4 holding); puzzle-board
+  entropy fell to 0.15 as the puzzles were learned.
+- Cost 14.5-17.5 s/update.
+
 ## What to understand
 
 - A curriculum rung is "one more decision before the reward"; the defender's
