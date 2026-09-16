@@ -96,7 +96,8 @@ the seed0 + cont-lichess path saw). Configs differ only in the keys named.
 |-----|-----------|------------|---------|
 | A | a2c | 1.0 | today's update, 64-ply rollouts |
 | B | a2c | 0.95 | GAE alone |
-| C | ppo | 0.95 | clipping + 4x4 epochs/minibatches + normalisation on top of GAE |
+| C | ppo | 0.95 | clipping + 4x4 epochs/minibatches + normalisation on top of GAE, lr 3e-4 |
+| C2 | ppo | 0.95 | as C with lr 1e-4: at 3e-4 a fresh update leaves the clip band by minibatch 5 (clip fraction ~0.6), at 1e-4 by minibatch 11 |
 
 Metrics per arm: opening-board and puzzle-board normalised entropy, draw rate and
 mean plies on game boards, puzzle solved rate, Lichess and selfplay held-out

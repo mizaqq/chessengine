@@ -22,13 +22,13 @@ src/
 
 - **`core/types.py`**: `EnvStep` (env output), `StepRecord` (per-step rollout data with per-model fields)
 - **`envs/`**: `OpenSpielVectorEnv` (sync) and `OpenSpielAsyncVectorEnv` (multiprocessing) — duck-typed, same API
-- **`model/training.py`**: Core training loop — rollout collection, returns computation, backpropagation
+- **`model/training.py`**: Core training loop — rollout collection under `no_grad`, GAE, re-evaluation update (A2C or PPO)
 - **`model/chess_model.py`**: `ChessPolicyProbs` — ResNet (10 blocks, 128 filters) with policy + value heads
 - **`model/orientation.py`**: mover-oriented observations for the shared network
 - **`model/checkpoints.py`**: `model_*.pth` (shared) and legacy `white_/black_model_*.pth` loading
-- **`model/returns.py`**: Discounted returns with potential-based material shaping and cross-player done propagation
+- **`model/returns.py`**: GAE advantages/value targets (and the legacy discounted returns) with potential-based material shaping and cross-player done propagation
 - **`training/metrics.py`**: `MetricsAggregator` — windowed stats (win rates, entropy, illegal moves)
-- **`losses/composed_loss.py`**: `total = policy + value - entropy_coef * normalized_entropy`
+- **`losses/composed_loss.py`**: `total = policy + value_coef * value - entropy_coef * normalized_entropy`
 
 ## Installation
 
@@ -181,8 +181,8 @@ class MyCustomEnv:
 │   │   └── open_spiel_async_vector_env.py # Async vectorized (multiprocessing)
 │   ├── model/
 │   │   ├── chess_model.py         # ChessPolicyProbs (ResNet + policy/value heads)
-│   │   ├── training.py            # A2C training loop
-│   │   └── returns.py             # Discounted returns computation
+│   │   ├── training.py            # A2C / PPO training loop
+│   │   └── returns.py             # GAE / discounted returns computation
 │   ├── training/metrics.py        # MetricsAggregator (windowed stats)
 │   ├── losses/composed_loss.py    # Loss composition
 │   ├── entrypoints/train.py       # CLI entry point
@@ -229,17 +229,28 @@ CLI: `python -m src.entrypoints.train --config <yaml> [--max-updates N] [--seed 
 | `lr_decay_factor` | float | 0.5 | LR multiplicative decay factor |
 | `min_lr` | float | 3e-5 | Learning rate floor; must not exceed `learning_rate` |
 | `puzzle_miss_reward` | float | 0.0 | Terminal reward to the mover for a missed mate on a puzzle board |
+| `algorithm` | str | a2c | `a2c` (one unclipped step per rollout, GAE lambda 1) or `ppo` (Schulman et al. 2017 preset) |
+| `gae_lambda` | float | 1.0 / 0.95 | GAE lambda (Schulman et al. 2016); preset default per algorithm |
+| `clip_epsilon` | float | – / 0.2 | PPO ratio clip half-width; null = no clipping |
+| `ppo_epochs` | int | 1 / 4 | Passes over the rollout per update |
+| `ppo_minibatches` | int | 1 / 4 | Shuffled minibatches per pass |
+| `value_coef` | float | 1.0 / 0.5 | Value-loss coefficient (PPO eq. 9, c1) |
+| `normalize_advantage` | bool | false / true | Per-minibatch advantage normalisation (Huang et al. 2022, detail 7) |
 | `seed` | int | 42 | Random seed |
 
 ## Training Loop Details
 
-The training loop (`src/model/training.py`) runs a player-agnostic A2C:
+The training loop (`src/model/training.py`) runs player-agnostic A2C or PPO:
 
-1. **Rollout collection** — steps through vectorized envs, dispatches observations to white/black models based on `current_player`
-2. **Returns computation** — backward pass forming the shaped reward per own move, with cross-player done propagation and terminal rewards
-3. **Backpropagation** — per-model loss: `policy_loss + value_loss - entropy_coef * normalized_entropy`
+1. **Rollout collection** (`no_grad`) — steps through vectorized envs, dispatches observations by `current_player`, stores observation, legal mask, action, old log-prob and old value
+2. **Advantage estimation** — GAE(gamma, lambda) backward walk over each side's own moves with the shaped reward, cross-player done propagation and terminal rewards; lambda 1 is the plain discounted return minus value
+3. **Update** — the network is re-run on the stored observations; `ppo_epochs x ppo_minibatches` steps of `-min(ratio*A, clip(ratio)*A) + value_coef * (V - target)^2 - entropy_coef * normalized_entropy` (Schulman et al. 2017 eq. 7/9). The `a2c` preset is one unclipped step, whose gradient at the sampling parameters is the REINFORCE-with-baseline gradient. Logs carry `mean_policy_loss`, `mean_value_loss`, `mean_clip_fraction` (PPO only) and `mean_approx_kl`.
 
-**Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) are clamped to avoid division by zero.
+**BatchNorm and the PPO ratio**: the network stays in eval mode during training so the re-evaluated probabilities equal the sampled ones; running statistics are refreshed from the rollout once per update (`refresh_norm_stats`). Train-mode statistics alone put half the samples outside the clip band on a fresh network.
+
+`src/configs/train_ppo.yaml` holds the PPO preset with 64-ply rollouts (768 samples per update). Its keys are explicit, so to run an A2C arm start from `train_default.yaml` instead.
+
+**Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) contribute 0.
 
 **Start-position curriculum**: `round(puzzle_fraction * num_envs)` boards play one-move episodes from Lichess mate-in-one positions (mate = win; anything else ends as `puzzle_miss` paying the mover `puzzle_miss_reward`), so the sparse outcome reward is one move away and every ply is an attempt; the other boards play full games. Logs report `puzzle_attempts`, `puzzle_solved_rate`, and entropy split into `_game` / `_puzzle` (reverse curriculum by start state; Florensa et al. 2017, Salimans & Chen 2018). Build the Lichess files with `python -m scripts.prepare_puzzles --train 50000 --keep-eval data/puzzles/mate_in_1_eval.csv` (downloads the CC0 dump to `data/raw/`); harvest positions from a checkpoint's own games with `python -m scripts.harvest_positions <ckpt_dir>`. Evaluate checkpoints with `python -m scripts.eval_checkpoint_puzzles <ckpt_dir>` and in-game with `python -m scripts.eval_games <ckpt_dir>`.
 
