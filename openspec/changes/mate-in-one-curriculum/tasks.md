@@ -30,8 +30,8 @@
 - [x] 4.0 Run 1 (mixing by reset): puzzle top-1 flat 0.04-0.08 vs 0.074 baseline, 423 games / 90k plies, games eval 2/157; recorded in `experiments/mate-in-one-curriculum/frac05/`
 
 - [x] 4.1 Evaluate the scale-0.2 checkpoints on the held-out set; record the baseline numbers in `experiments/mate-in-one-curriculum/baseline.json`
-- [ ] 4.2 Run 2: 500 updates, seed 0, scale 0.2, `puzzle_fraction` 0.5, saving to `experiments/mate-in-one-curriculum/frac05-onemove/`; record `run.json` with the puzzle curve, draw rate and wall-clock
-- [ ] 4.3 Play 40 sampled games from the opening with the new checkpoints; record in-game mate-in-one rate and draw rate next to the 3.7% / 76% baseline; compare with the predictions in proposal.md in conversation
+- [x] 4.2 Run 2: 500 updates, seed 0, scale 0.2, `puzzle_fraction` 0.5, saving to `experiments/mate-in-one-curriculum/frac05-onemove/`; record `run.json` with the puzzle curve, draw rate and wall-clock
+- [x] 4.3 Play 40 sampled games from the opening with the new checkpoints; record in-game mate-in-one rate and draw rate next to the 3.7% / 76% baseline; compare with the predictions in proposal.md in conversation
 
 ## 5. Record
 
