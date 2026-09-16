@@ -33,13 +33,13 @@ shaping_scale: 0.2
 puzzle_fraction: 0.5
 # Explicit board count wins over the fraction. 4 of 12 chosen by the owner 2026-09-16.
 puzzle_boards: 4
-# Weighted mix of puzzle sources (owner's decision 2026-09-16): Lichess positions
-# (human games, the target distribution) and positions harvested from the models'
-# own games (scripts/harvest_positions.py, refreshed from the newest checkpoint
-# before each run) so the start states track what the models actually reach.
+# Puzzle sources with weights. Lichess only (50k human-game positions) is the
+# default after the 2026-09-16 A/B: mixing in positions harvested from the models'
+# own games (scripts/harvest_positions.py) raised accuracy on those positions but
+# lowered Lichess accuracy and did not move the in-game mate rate. To try the mix
+# again, add {file: data/puzzles/selfplay_mate_in_1_train.csv, weight: 0.5}.
 puzzle_train_files:
-  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.5}
-  - {file: data/puzzles/selfplay_mate_in_1_train.csv, weight: 0.5}
+  - {file: data/puzzles/mate_in_1_train.csv, weight: 1.0}
 # Terminal reward for a missed mate on a puzzle board. 0 (default) keeps the value
 # head honest about still-winning positions; try negative values as an experiment.
 puzzle_miss_reward: 0.0

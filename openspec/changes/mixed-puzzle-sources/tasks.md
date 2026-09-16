@@ -21,5 +21,5 @@
 
 ## 4. Record
 
-- [ ] 4.1 README, default yaml, notes, knowledge; RESOURCES note on start-state distribution
-- [ ] 4.2 Comprehension check with owner (CLAUDE.md "Diagnose from symptoms" on the three accuracies; "Explain back" on why train/held-out agreement rules out set size), code and numbers inline; outcome to `learning/records/`
+- [x] 4.1 README, default yaml, notes, knowledge; RESOURCES note on start-state distribution
+- [x] 4.2 Comprehension check with owner (CLAUDE.md "Diagnose from symptoms" on the three accuracies; "Explain back" on why train/held-out agreement rules out set size), code and numbers inline; outcome to `learning/records/`

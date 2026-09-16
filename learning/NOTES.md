@@ -121,6 +121,19 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Under potential shaping a mid-game start charges the start potential and never
   repays it; values shift, policy does not.
 
+## Distribution shift in start states (Sep 2026)
+
+- Same network: 0.43 on Lichess mate-in-one, 0.07 on mate-in-one positions from
+  its own games. Own-game positions are unlike human ones (kings in the centre at
+  move 11, 17 pieces on average).
+- Training on harvested own positions raised own-position accuracy (0.07 -> 0.14),
+  lowered Lichess (0.43 vs 0.49 for the control) and did not change in-game
+  mate finding. A harvest is stale as soon as the network changes; the in-loop
+  buffer was the principled version but was dropped when the A/B came back flat.
+- Mate in one needs no planning but the network learns it as pictures; rare
+  geometries stay hard. One-ply search makes it exact (AlphaZero's simulations).
+- Continuing from a checkpoint (`init_from`) is what makes A/B arms comparable.
+
 ## One network, oriented input (Sep 2026)
 
 - AlphaZero: board oriented to the current player, "my pieces" / "their pieces"

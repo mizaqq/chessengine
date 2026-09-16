@@ -216,7 +216,11 @@ class MyCustomEnv:
 | `shaping_scale` | float | 0.2 | Multiplier on the shaping term (>= 0) |
 | `shared_network` | bool | true | One network for both colours with oriented observations; `false` = two networks |
 | `puzzle_fraction` | float | 0.0 (default yaml: 0.5) | Share of boards that play one-move mate-in-one puzzle episodes; `round(fraction * num_envs)` boards |
-| `puzzle_train_file` | str | – | CSV of training puzzles (required when `puzzle_fraction` > 0) |
+| `puzzle_boards` | int | – | Explicit number of puzzle boards; overrides `puzzle_fraction` (default yaml: 4) |
+| `puzzle_train_file` | str | – | CSV of training puzzles (required when puzzle boards > 0) |
+| `puzzle_train_files` | list | – | Weighted sources `[{file, weight}, ...]`; overrides `puzzle_train_file` |
+| `puzzle_eval_files` | map | – | Named held-out sets `{name: path}`; logs `<name>_top1`, `<name>_mate_prob` |
+| `init_from` | str | – | Checkpoint directory to continue training from (layout must match `shared_network`) |
 | `puzzle_eval_file` | str | – | CSV of held-out puzzles; enables `puzzle_top1` / `puzzle_mate_prob` in the logs |
 | `eval_interval` | int | 50 | Updates between held-out puzzle evaluations (also runs at the end) |
 
@@ -237,7 +241,7 @@ The training loop (`src/model/training.py`) runs a player-agnostic A2C:
 
 **Entropy normalization**: `raw_entropy / log(num_legal_moves)` maps entropy to [0, 1] regardless of position complexity. Forced moves (1 legal action) are clamped to avoid division by zero.
 
-**Start-position curriculum**: `round(puzzle_fraction * num_envs)` boards play one-move episodes from Lichess mate-in-one positions (mate = win; anything else ends as `puzzle_miss` paying the mover `puzzle_miss_reward`), so the sparse outcome reward is one move away and every ply is an attempt; the other boards play full games. Logs report `puzzle_attempts`, `puzzle_solved_rate`, and entropy split into `_game` / `_puzzle` (reverse curriculum by start state; Florensa et al. 2017, Salimans & Chen 2018). Build the puzzle files with `python -m scripts.prepare_puzzles` (downloads the CC0 dump to `data/raw/`). Evaluate checkpoints with `python -m scripts.eval_checkpoint_puzzles <ckpt_dir>` and in-game with `python -m scripts.eval_games <ckpt_dir>`.
+**Start-position curriculum**: `round(puzzle_fraction * num_envs)` boards play one-move episodes from Lichess mate-in-one positions (mate = win; anything else ends as `puzzle_miss` paying the mover `puzzle_miss_reward`), so the sparse outcome reward is one move away and every ply is an attempt; the other boards play full games. Logs report `puzzle_attempts`, `puzzle_solved_rate`, and entropy split into `_game` / `_puzzle` (reverse curriculum by start state; Florensa et al. 2017, Salimans & Chen 2018). Build the Lichess files with `python -m scripts.prepare_puzzles --train 50000 --keep-eval data/puzzles/mate_in_1_eval.csv` (downloads the CC0 dump to `data/raw/`); harvest positions from a checkpoint's own games with `python -m scripts.harvest_positions <ckpt_dir>`. Evaluate checkpoints with `python -m scripts.eval_checkpoint_puzzles <ckpt_dir>` and in-game with `python -m scripts.eval_games <ckpt_dir>`.
 
 **Reward signal**: configurable terminal rewards on game end, plus potential-based material shaping (Ng, Harada & Russell 1999): each own move receives `shaping_scale * (gamma * material(next own position) - material(this position))` from the mover's perspective, with the terminal position counting as 0. Shaping sums to zero over a complete game, so only the outcome is net reward; `shaping: none` disables it.
 
