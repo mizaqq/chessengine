@@ -11,7 +11,7 @@
 
 ## 3. Run and record
 
-- [ ] 3.1 Smoke run (4 updates) confirms pool keys in the log and step time; long run 800 updates from M34 seed 42 in the background with games, finishes, win matrix (prior, M34, new) appended; `experiments/opponent-pool/`.
+- [x] 3.1 Smoke run (4 updates) confirms pool keys in the log and step time; long run 800 updates from M34 seed 42 in the background with games, finishes, win matrix (prior, M34, new) appended; `experiments/opponent-pool/`.
 - [ ] 3.2 Read the run in the morning against the dials in proposal.md; outcome.md; RESOURCES already cites Bansal 2017; NOTES section on opponent sampling; learning record if understanding is demonstrated.
 
 ## 4. Comprehension check with owner
