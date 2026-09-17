@@ -336,3 +336,20 @@ def test_async_env_rejects_finishing_boards():
     cur = FinishCurriculum([_SCHOLAR], depth_start=0, depth_max=0)
     with pytest.raises(ValueError, match="sync"):
         OpenSpielAsyncVectorEnv(2, None, 0, None, None, 0, cur, 1)
+
+
+def test_set_layout_changes_roles_on_next_reset_and_keeps_finished_board_accounting():
+    env, cur = _finish_env(num_envs=3, depth=0)
+    step = env.reset()
+    assert env.is_finish_env(0) and not env.is_finish_env(1)
+    env.set_layout(0, 0)                                    # all three boards become opening boards
+    assert not env.is_finish_env(0)
+    # board 0 still runs its finishing game: its result is still reported as a finish
+    mate = next(iter(env.envs[0].actions_for_uci(["h5f7"])))
+    step = env.step(torch.tensor([mate] + [int(step.legal_actions_mask[i].nonzero()[0]) for i in (1, 2)]))
+    assert step.info["finish_boards"] == {0: True} and cur.reports == [(0, True)]
+    assert env.envs[0].plies == 0 and env.envs[0].max_plies is None   # reset as an opening board
+    b = chess.Board(env.envs[0].env.get_state.to_string())
+    assert b.fen() == chess.STARTING_FEN
+    with pytest.raises(ValueError):
+        env.set_layout(4, 0)

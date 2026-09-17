@@ -81,3 +81,14 @@ depth, and the current curriculum depth.
 #### Scenario: summary
 - **WHEN** an update saw 3 finishing episodes (successes at depths 0 and 2, failure at 2) and 1 capped opening game
 - **THEN** the summary reports finish_attempts 3, finish_success_rate 0.667, finish_success_rate_d0 1.0, finish_success_rate_d2 0.5, and the draw rate counts only the opening game
+
+### Requirement: Scheduled board layout
+`layout_schedule` SHALL be a list of entries `{from_update, finish_boards,
+midgame_boards}` (default empty). From the given update on, the boards after the
+puzzle boards SHALL take the new roles when they next reset; a board still
+playing keeps its game and its result is accounted under the role it started
+with. Entries SHALL be validated like the initial layout.
+
+#### Scenario: hand finishing boards back to the opening
+- **WHEN** the layout is 4 puzzle / 6 finishing / 2 mid-game and the schedule says `{from_update: 200, finish_boards: 4, midgame_boards: 2}`
+- **THEN** from update 200 boards 8-9 start from the opening once their current finishing game ends, and that last finishing game still counts as a finishing result

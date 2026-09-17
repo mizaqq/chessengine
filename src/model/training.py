@@ -377,8 +377,13 @@ def run_chess_training(
     eval_interval=50,
     log_interval=10,
     algorithm=None,
+    layout_schedule=None,
 ):
     """Run A2C or PPO self-play.
+
+    `layout_schedule`: list of {from_update, finish_boards, midgame_boards}; at
+    `from_update` the env's board roles after the puzzle boards are switched
+    (`envs.set_layout`), e.g. to hand finishing boards back to opening play.
 
     `algorithm`: dict of update settings (`epochs`, `minibatches`, `clip_epsilon`,
     `normalize_advantage`, `value_coef`, `gae_lambda`); default `A2C_PRESET`.
@@ -417,7 +422,12 @@ def run_chess_training(
     pbar = tqdm(range(1, episodes + 1))
 
     finish_sampler = getattr(envs, "finish_sampler", None)
+    pending_layouts = sorted(layout_schedule or [], key=lambda d: d["from_update"])
     for episode in pbar:
+        while pending_layouts and episode >= pending_layouts[0]["from_update"]:
+            change = pending_layouts.pop(0)
+            envs.set_layout(int(change["finish_boards"]), int(change["midgame_boards"]))
+            print(f"update {episode}: layout -> finish {change['finish_boards']}, mid-game {change['midgame_boards']}")
         if finish_sampler is not None:
             metrics.set_finish_depth(finish_sampler.current_depth)
         steps_data, env_step = _collect_rollout(

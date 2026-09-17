@@ -97,6 +97,13 @@ finish_cap_margin: 20
 finish_eval_file: data/finishes/finish_eval.csv
 finish_eval_depths: [2, 10, 20]
 finish_eval_games: 100
+# Board roles can change during a run: from `from_update` on, the boards after the
+# puzzle boards take the listed roles when they next reset (the rest start from the
+# opening). Owner's idea 2026-09-17: run the finishing curriculum first, then hand
+# boards back to opening play so the skill is anchored to the full game (Florensa
+# et al. keep sampling the original start distribution). Empty = fixed layout.
+# Example: [{from_update: 200, finish_boards: 4, midgame_boards: 2}]
+layout_schedule: []
 
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").

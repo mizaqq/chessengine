@@ -185,6 +185,26 @@ def resolve_midgame_boards(config: Dict[str, Any], num_puzzle_envs: int):
     return FenSampler(load_fens(path), seed=int(config.get("seed", 42)) + 1000), n
 
 
+def resolve_layout_schedule(config: Dict[str, Any], num_puzzle_envs: int):
+    """`layout_schedule: [{from_update, finish_boards, midgame_boards}, ...]`: board
+    roles after the puzzle boards switch at those updates (boards beyond the three
+    groups start from the opening). Validated against num_envs; empty by default."""
+    schedule = config.get("layout_schedule") or []
+    num_envs = int(config.get("num_envs", 12))
+    out = []
+    for entry in schedule:
+        f, m, u = int(entry.get("finish_boards", 0)), int(entry.get("midgame_boards", 0)), int(entry["from_update"])
+        if u < 1 or f < 0 or m < 0 or num_puzzle_envs + f + m > num_envs:
+            raise ValueError(f"layout_schedule entry {entry} does not fit num_envs={num_envs} "
+                             f"with {num_puzzle_envs} puzzle boards or has from_update < 1")
+        if f > 0 and not config.get("finish_train_file"):
+            raise ValueError("layout_schedule with finish_boards > 0 requires finish_train_file")
+        if m > 0 and not config.get("game_start_file"):
+            raise ValueError("layout_schedule with midgame_boards > 0 requires game_start_file")
+        out.append({"from_update": u, "finish_boards": f, "midgame_boards": m})
+    return out
+
+
 def resolve_max_plies(config: Dict[str, Any]):
     """`max_plies`: game boards end as a draw after this many plies (AlphaZero
     terminated over-long games as draws); null/absent = no cap."""
@@ -251,6 +271,11 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     max_plies = resolve_max_plies(config)
     finish_sampler, num_finish_envs = resolve_finish_boards(config, num_puzzle_envs)
     game_start_sampler, num_midgame_envs = resolve_midgame_boards(config, num_puzzle_envs + num_finish_envs)
+    layout_schedule = resolve_layout_schedule(config, num_puzzle_envs)
+    if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
+        finish_sampler = resolve_finish_boards({**config, "finish_boards": 1}, num_puzzle_envs)[0]
+    if any(e["midgame_boards"] > 0 for e in layout_schedule) and game_start_sampler is None:
+        game_start_sampler = resolve_midgame_boards({**config, "midgame_boards": 1}, num_puzzle_envs)[0]
 
     set_seed(seed)
 
@@ -295,6 +320,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         eval_interval=eval_interval,
         log_interval=log_interval,
         algorithm=algorithm,
+        layout_schedule=layout_schedule,
     )
 
     return {

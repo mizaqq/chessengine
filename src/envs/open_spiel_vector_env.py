@@ -58,6 +58,20 @@ class OpenSpielVectorEnv:
         self.game_start_sampler = game_start_sampler
         self.num_midgame_envs = num_midgame_envs
 
+    def set_layout(self, num_finish_envs: int, num_midgame_envs: int) -> None:
+        """Change the board roles after the puzzle boards; each board takes its new
+        role when it next resets, so no running game is cut. Boards beyond the
+        puzzle, finishing and mid-game boards start from the opening."""
+        if num_finish_envs > 0 and self.finish_sampler is None:
+            raise ValueError("num_finish_envs > 0 requires a finish_sampler")
+        if num_midgame_envs > 0 and self.game_start_sampler is None:
+            raise ValueError("num_midgame_envs > 0 requires a game_start_sampler")
+        if num_finish_envs < 0 or num_midgame_envs < 0 or \
+                self.num_puzzle_envs + num_finish_envs + num_midgame_envs > self.num_envs:
+            raise ValueError("num_puzzle_envs + num_finish_envs + num_midgame_envs must not exceed num_envs")
+        self.num_finish_envs = num_finish_envs
+        self.num_midgame_envs = num_midgame_envs
+
     def is_puzzle_env(self, i: int) -> bool:
         return i < self.num_puzzle_envs
 
@@ -126,13 +140,14 @@ class OpenSpielVectorEnv:
                 puzzle_boards[i] = self.is_puzzle_env(i)
                 if puzzle_boards[i]:
                     puzzle_depth[i] = self.puzzle_depth[i]
-                finish_boards[i] = self.is_finish_env(i)
+                finish_boards[i] = i in self.finish_start
                 if finish_boards[i]:
                     start = self.finish_start[i]
                     won = game_results[i] == ("white_win" if start.winner == WHITE else "black_win")
                     finish_depth[i] = start.depth
                     finish_success[i] = won
                     self.finish_sampler.report(start.depth, won)
+                    del self.finish_start[i]
                 self._reset_env(i)
 
         states = [env.state() for env in self.envs]

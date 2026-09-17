@@ -211,3 +211,17 @@ def test_finish_boards_resolver_and_layout(tmp_path):
         resolve_finish_boards({"num_envs": 12, "finish_boards": 1}, 4)
     with pytest.raises(ValueError, match="advance_rate"):
         resolve_finish_boards({"num_envs": 12, "finish_boards": 1, "finish_train_file": str(f), "finish_advance_rate": 0}, 4)
+
+
+from src.entrypoints.train import resolve_layout_schedule  # noqa: E402
+
+
+def test_layout_schedule_resolver():
+    assert resolve_layout_schedule({}, 4) == []
+    cfg = {"num_envs": 12, "finish_train_file": "f.csv", "game_start_file": "g.csv",
+           "layout_schedule": [{"from_update": 200, "finish_boards": 4, "midgame_boards": 2}]}
+    assert resolve_layout_schedule(cfg, 4) == [{"from_update": 200, "finish_boards": 4, "midgame_boards": 2}]
+    with pytest.raises(ValueError):
+        resolve_layout_schedule({**cfg, "layout_schedule": [{"from_update": 200, "finish_boards": 7, "midgame_boards": 2}]}, 4)
+    with pytest.raises(ValueError, match="finish_train_file"):
+        resolve_layout_schedule({"num_envs": 12, "layout_schedule": [{"from_update": 1, "finish_boards": 1}]}, 4)
