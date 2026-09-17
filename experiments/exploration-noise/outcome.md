@@ -80,3 +80,9 @@ picks were the demonstrated move (the network's own mass plus the 0.25).
 Mechanism confirmed: guided picks are always the good move and always rewarded,
 so nothing random is reinforced; the only cost is a small importance ratio on
 the rarest ones.
+
+Probe after GUIDE: Lichess m1 histogram <0.05 / mid / >0.8 = 0.25 / 0.12 / 0.62
+(CONTROL 0.30 / 0.13 / 0.57): the confident-wrong bucket shrank five points and
+the confident-right bucket grew five, the first arm to move the histogram in the
+wanted direction. Human-mate d0: <0.05 0.47 -> 0.35, top-1 0.46 -> 0.48, value
++0.32 -> +0.49. Own-game m1 <0.05 0.80 -> 0.70, top-1 0.12 -> 0.17.
