@@ -110,3 +110,22 @@ at 600, and CLEAN at 600 matches what the shaped path needed 1,020 updates for
 (FIN3 + CONTROL: 0.653 / 0.571). Still rising at 600 (+1.7 points over the last
 100). This is the unpolluted base: future arms start from CLEAN or its
 continuation, not from the shaped lineage.
+
+# Arm GUIDE_LONG (2026-09-17): 300 more guided updates from GUIDE
+
+Named exception to the standard budget. From GUIDE (m1 0.685, m2 0.605),
+guide_epsilon 0.25, switch to 4 finishing / 2 mid-game / 2 opening at 200.
+
+| Update | m1 | m2 | own-game positions | conversion d2 / d10 / d20 |
+|---|---|---|---|---|
+| 0 (GUIDE) | 0.685 | 0.605 | 0.17 | 0.24 / 0.14 / 0.08 |
+| 100 | 0.691 | 0.602 | 0.18 | 0.25 / 0.13 / 0.09 |
+| 200 | 0.721 | 0.624 | 0.22 | 0.32 / 0.09 / 0.07 |
+| 300 | **0.734** | **0.630** | **0.23** | 0.27 / 0.10 / 0.10 |
+
+Curriculum depth 14 -> 18; puzzle entropy 0.09 (sharp); 74% of guided picks were
+the demonstrated move. Still rising at 300: guidance has not saturated. Total
+over 420 guided updates from CONTROL: m1 +8 points, m2 +6, own-game +11, depth
+6 -> 18. Conversion from 10-20 plies out remains near 0.10: the human line helps
+the attacker start, but the defender is the same network and deviates, after
+which only a rules mate-in-one is demonstrated.
