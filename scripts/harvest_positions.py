@@ -35,7 +35,7 @@ def collect(fens, seen):
         if mates:
             seen.add(fen)
             rows.append({"puzzle_id": f"sp{len(seen):06d}", "fen": fen,
-                         "mating_moves": " ".join(mates), "rating": "0"})
+                         "key_moves": " ".join(mates), "mate_in": "1", "rating": "0"})
     return rows
 
 
