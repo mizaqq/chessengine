@@ -119,6 +119,30 @@ reach for it. Prune anything that turns out shallow or wrong.
   `mateIn1` gave 898,211 puzzles on 2026-09-16; we use 20,000 train / 2,000
   held-out, converted by `scripts/prepare_puzzles.py`.
 
+- [Paper: "Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model" (MuZero) — Schrittwieser et al. (2020)](https://arxiv.org/abs/1911.08265)
+  Abstract read 2026-09-17: learns a model that predicts only "the reward, the
+  action-selection policy, and the value function" and plans with tree search
+  inside that model, "without any knowledge of their underlying dynamics";
+  matched AlphaZero on chess/shogi/Go. Use for: the search-with-learned-model
+  option when a perfect simulator is not available.
+
+- [Paper: "Muesli: Combining Improvements in Policy Optimization" — Hessel et al. (2021)](https://arxiv.org/abs/2104.06159)
+  Abstract read 2026-09-17: regularised policy optimisation with model learning
+  as an auxiliary objective; matches MuZero on Atari "without using deep search";
+  "acts directly with a policy network". Use for: the model-free-at-play middle
+  road between PPO and MuZero.
+
+- [Paper: "Deep Reinforcement Learning from Self-Play in Imperfect-Information Games" (NFSP) — Heinrich & Silver (2016)](https://arxiv.org/abs/1603.01121)
+  Abstract read 2026-09-17: plain self-play RL "diverged" in Leduc poker while
+  NFSP (best-response network + average-policy network) approached a Nash
+  equilibrium; no game model needed. Use for: roadmap 05 opponent sampling.
+
+- [Paper: "Mastering Diverse Domains through World Models" (DreamerV3) — Hafner et al. (2023)](https://arxiv.org/abs/2301.04104)
+  Abstract read 2026-09-17: "learns a model of the environment and improves its
+  behavior by imagining future scenarios"; one configuration across 150+ tasks.
+  Use for: the learned-world-model family, contrast with MuZero (imagined
+  rollouts for policy gradient vs tree search).
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
