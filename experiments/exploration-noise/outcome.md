@@ -133,5 +133,5 @@ which only a rules mate-in-one is demonstrated.
 Probe after GUIDE_LONG: Lichess m1 histogram <0.05 / mid / >0.8 = 0.19 / 0.14 /
 0.67 (CONTROL 0.30 / 0.13 / 0.57; supervised upper bound reached 0.90 top-1).
 Human-mate d0 top-1 0.46 -> 0.58, value +0.32 -> +0.76. Own-game m1 <0.05
-0.80 -> 0.59, top-1 0.12 -> 0.23. 40 sampled games: mate found 16/66 (0.24),
-against 7/100 for the original SL+PPO checkpoint.
+0.80 -> 0.59, top-1 0.12 -> 0.23. 40 sampled games: mate found 8/33 (0.24), 8 decisive,
+against 7/100 and 7 decisive for the original SL+PPO checkpoint (small samples).

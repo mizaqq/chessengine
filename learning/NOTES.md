@@ -214,6 +214,19 @@ PPO's ratio then uses the behaviour log-prob), search as the teacher (finds the
 mate whatever the prior says), supervised targets where labels exist. Business
 analogue: a recommender that never shows an item cannot learn that users want it.
 
+**What actually worked (2026-09-17, evening).** Random Dirichlet noise in the
+behaviour policy flattened the network on every board, even confined to one-move
+puzzle boards (m1 0.653 -> 0.628): with normalised advantages and a clipped ratio,
+random picks get reinforced about as often as punished. Label-guided behaviour,
+the same mixture but with the demonstrator being the puzzle key move, the human
+line on finishing boards, or a rules mate, did the opposite: 420 guided updates
+took m1 0.653 -> 0.734, m2 0.571 -> 0.630, own-game mate positions 0.12 -> 0.23,
+the confident-wrong share 30% -> 19%, the depth curriculum 6 -> 18, with entropy
+unchanged. The label decides what gets tried; the outcome still decides what is
+learned. Also settled the same evening: outcome-only from the pure SL prior beats
+the shaped run at every checkpoint (CLEAN arm), so the base is unpolluted from
+now on. See experiments/exploration-noise/outcome.md.
+
 ## Distribution shift in start states (Sep 2026)
 
 - Same network: 0.43 on Lichess mate-in-one, 0.07 on mate-in-one positions from
