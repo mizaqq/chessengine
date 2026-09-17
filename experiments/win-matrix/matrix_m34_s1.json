@@ -1,0 +1,72 @@
+{
+ "names": [
+  "SL",
+  "CLEAN_GUIDE",
+  "M34_s1"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "CLEAN_GUIDE": "experiments/exploration-noise/CLEAN_GUIDE",
+  "M34_s1": "experiments/exploration-noise/M34_s1"
+ },
+ "games_per_colour": 30,
+ "seed": 2,
+ "table": {
+  "SL": {
+   "CLEAN_GUIDE": 0.6666666666666666,
+   "M34_s1": 0.5666666666666667
+  },
+  "CLEAN_GUIDE": {
+   "SL": 0.33333333333333337,
+   "M34_s1": 0.49166666666666664
+  },
+  "M34_s1": {
+   "SL": 0.43333333333333335,
+   "CLEAN_GUIDE": 0.5083333333333333
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_draw": 17,
+    "a_black_black_win": 13,
+    "a_white_white_win": 9,
+    "a_black_draw": 15,
+    "a_white_unfinished": 3,
+    "a_black_white_win": 1,
+    "a_black_unfinished": 1,
+    "a_white_black_win": 1
+   }
+  },
+  {
+   "a": "SL",
+   "b": "M34_s1",
+   "counts": {
+    "a_white_white_win": 14,
+    "a_black_white_win": 10,
+    "a_white_unfinished": 4,
+    "a_black_draw": 14,
+    "a_white_draw": 11,
+    "a_black_black_win": 5,
+    "a_white_black_win": 1,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "CLEAN_GUIDE",
+   "b": "M34_s1",
+   "counts": {
+    "a_white_black_win": 9,
+    "a_black_draw": 13,
+    "a_white_draw": 13,
+    "a_white_unfinished": 3,
+    "a_black_unfinished": 4,
+    "a_white_white_win": 5,
+    "a_black_black_win": 8,
+    "a_black_white_win": 5
+   }
+  }
+ ]
+}

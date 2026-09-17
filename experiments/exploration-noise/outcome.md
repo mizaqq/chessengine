@@ -204,3 +204,20 @@ reading: mate-in-3/4 positions are ordinary middlegame tactics, so training on t
 pulled the policy back toward positions the prior was good at, whereas mate-in-1/2
 and finishing boards are end-of-game only. Needs confirming with a second seed
 before it is a lesson.
+
+## M34 second seed (seed 1, same recipe), 2026-09-17 23:02
+
+Held-out top-1 at 120: m1 0.732, m2 0.638, m3 0.535, m4 0.464, own-game 0.26
+(seed 42: 0.741 / 0.634 / 0.546 / 0.442 / 0.22). Puzzle learning reproduces:
+m3 +8, m4 +9, m1 / m2 within 2 points. Finishing 0.29 / 0.08 / 0.09. Games: 14
+decisive of 40, mate 14 of 43 (0.33).
+
+Win matrix (fresh game seeds): SL vs M34_s1 19-11 (score 0.57 for SL); SL vs
+CLEAN_GUIDE 22-2 in the same session; CLEAN_GUIDE vs M34_s1 13-14.
+
+Verdict on the "middlegame tactics repair the drift" reading: partly. Both seeds
+close most of the gap to the prior (CLEAN_GUIDE loses 4-22 and 2-22; M34 12-11 and
+11-19), so the direction is real, but seed 1 is still behind the prior and only
+even with its parent. The deeper rungs slow or partly reverse the drift; they do
+not by themselves restore the prior's strength. The opponent pool with the prior
+in it remains the direct fix; M34 (seed 42) is the starting checkpoint.
