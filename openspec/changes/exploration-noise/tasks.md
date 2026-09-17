@@ -12,7 +12,12 @@
 ## 2b. Label-guided variant (owner, 2026-09-17: "okay, agreed on it", after NOISE and PUZNOISE flattened the policy)
 
 - [x] 2b.1 Demonstration lines in the env (`set_demo_line`, `demo_actions`, rules-mate fallback), human line carried on finishing starts, `guided_probs`, rollout branch, `guide_epsilon` / `guide_boards` config, `guide_demo_share` metric. Verify: `tests/model/test_guided.py`, config test.
-- [ ] 2b.2 Arm GUIDE: 120 updates from CONTROL with `guide_epsilon` 0.25 on curriculum boards; dials as for NOISE plus conversion at depth 10 and 20. Verify: run records and outcome.md.
+- [x] 2b.2 (GUIDE, GUIDE_LONG, CLEAN_GUIDE; see outcome.md) Arm GUIDE: 120 updates from CONTROL with `guide_epsilon` 0.25 on curriculum boards; dials as for NOISE plus conversion at depth 10 and 20. Verify: run records and outcome.md.
+
+## 2c. Deeper puzzle rungs (owner, 2026-09-17: forced mates stay won whatever the defender does)
+
+- [x] 2c.1 `scripts/prepare_puzzles.py --depth 3|4` (first move trusted from Lichess, legal line ending in mate, `solution` column); `Puzzle.solution`; puzzle boards set the solution line as the demonstrator; fallbacks rules mate-in-one then forcing mate-in-two (`forcing_mate_actions_of`). Verify: tests in `tests/scripts/test_prepare_puzzles.py`, `tests/envs/test_start_from_fen.py`.
+- [ ] 2c.2 Arm M34: default layout, m1-m4 mix, guidance 0.25, 120 updates from CLEAN_GUIDE; dials: held-out m3 / m4 from their baselines, m1 / m2 held, finishing conversion. Verify: run records and outcome.md.
 
 ## 3. Experiment
 
