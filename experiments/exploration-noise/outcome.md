@@ -53,3 +53,30 @@ size of the NOISE flattening but not its existence. Behaviour noise with an
 importance-corrected, clipped PPO update is out as a remedy here. What is left
 for the confident-wrong third: search as the teacher (AlphaZero), or
 label-guided behaviour on labelled boards.
+
+# Arm GUIDE (2026-09-17): label-guided exploration, from CONTROL
+
+120 updates from CONTROL (m1 0.653, m2 0.571), guide_epsilon 0.25 on puzzle and
+finishing boards: the behaviour policy plays the demonstrator's move (puzzle key
+move / human line / rules mate) one time in four; honest mixture log-prob in the
+PPO ratio; update unchanged.
+
+| Dial | CONTROL start | GUIDE @50 | @100 | @120 |
+|---|---|---|---|---|
+| Lichess m1 top-1 | 0.653 | 0.666 | 0.670 | **0.685** |
+| Lichess m2 top-1 | 0.571 | 0.565 | 0.579 | **0.605** |
+| Own-game mate positions top-1 | 0.12 | 0.13 | 0.17 | **0.17** |
+| Held-out conversion d2 / d10 / d20 | 0.16 / 0.12 / 0.06 | 0.21 / 0.12 / 0.07 | 0.23 / 0.09 / 0.08 | **0.24 / 0.14 / 0.08** |
+| Curriculum depth | 6 | 6 | 12 | **14** |
+| Entropy, puzzle / game boards | 0.10 / 0.31 | 0.10 / 0.32 | 0.10 / 0.33 | 0.10 / 0.35 |
+
+Reading: the first exploration device that helped, and on every dial at once:
++3 points m1, +3.5 m2, +5 own-game, +8 on two-ply conversion, and the depth
+curriculum, stuck at 4-6 all day, climbed to 14. The policy stayed sharp
+(puzzle entropy 0.10 throughout), unlike both noise arms. Training-side success
+rates (puzzle m1 0.74, depth-0 0.80) are inflated by the guidance itself and are
+not comparable; the held-out numbers above are the reading. About 70% of guided
+picks were the demonstrated move (the network's own mass plus the 0.25).
+Mechanism confirmed: guided picks are always the good move and always rewarded,
+so nothing random is reinforced; the only cost is a small importance ratio on
+the rarest ones.
