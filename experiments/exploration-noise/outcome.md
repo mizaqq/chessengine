@@ -157,3 +157,8 @@ were the demonstrated move. Still rising at the end. Best checkpoint of the
 project so far, with a clean history: `experiments/exploration-noise/CLEAN_GUIDE`.
 Conversion from 10-20 plies out is noisy at 100 games (0.07-0.18) and shows no
 trend: unchanged verdict, that is the search problem.
+
+Probe after CLEAN_GUIDE: Lichess m1 histogram <0.05 / mid / >0.8 = 0.17 / 0.16 /
+0.67 (day start 0.30 / 0.11 / 0.59). Human-mate d0 top-1 0.52, value +0.76.
+Own-game m1 top-1 0.22, <0.05 share 0.62 (from 0.80). 40 sampled games: mate
+found in 10 of 27 chances (0.37; day start 7 of 100).

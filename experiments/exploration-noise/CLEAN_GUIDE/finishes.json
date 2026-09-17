@@ -1,0 +1,13 @@
+{
+ "finish_rate_d2": 0.28,
+ "finish_games_d2": 100,
+ "finish_rate_d10": 0.18,
+ "finish_games_d10": 100,
+ "finish_rate_d20": 0.07,
+ "finish_games_d20": 100,
+ "checkpoints": {
+  "model": "experiments/exploration-noise/CLEAN_GUIDE/model_20260917204637_episodes_420.pth"
+ },
+ "records": "data/finishes/finish_eval.csv",
+ "seed": 0
+}
