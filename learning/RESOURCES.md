@@ -161,6 +161,27 @@ reach for it. Prune anything that turns out shallow or wrong.
   chess input 119 planes (8-step history), policy 8x8x73. Use for: exploration
   noise (alpha 0.3 for chess) and the later search change.
 
+- [Paper: "Self-Imitation Learning" — Oh, Guo, Singh & Lee (ICML 2018)](https://arxiv.org/abs/1806.05635)
+  Read 2026-09-17 (pp. 1-8): replay buffer of (s, a, R) with Monte-Carlo return R;
+  loss L_policy = -log pi(a|s) (R - V(s))_+ and L_value = 1/2 ||(R - V(s))_+||^2
+  (eq. 2-3): only state-actions whose past return beat the current value estimate
+  get gradient; sampled with priority (R - V)_+; no importance ratio, so it works
+  from any past behaviour. M = 4 SIL updates per A2C update (Atari), 10 per PPO
+  iteration (MuJoCo). Helped most on sparse/delayed-reward tasks; caveat (5.4):
+  "sometimes gets stuck at a sub-optimal policy" when exploitation is excessive,
+  fixed by fewer SIL updates or a smaller weight later. Use for: replaying our own
+  won games on finishing boards (the demonstrator becomes the past self).
+
+- [Paper: "Emergent Complexity via Multi-Agent Competition" — Bansal et al. (ICLR 2018)](https://arxiv.org/abs/1710.03748)
+  Read 2026-09-17 (pp. 4-8): "training agents against the most recent opponent
+  leads to imbalance ... the other agent is unable to recover" (4.2); sample the
+  opponent from Uniform(delta*v, v) over checkpoint history; delta = 0 (whole
+  history) best for Ant, delta = 0.5 for Humanoid, delta = 1 (latest only) worst
+  in both (Table 1). Evaluation: win-rate matrix between agents trained with each
+  delta. Also 5.5.2: long self-play "over-fitting to the behavior of the opponent",
+  cured by an ensemble pool. Use for: opponent pool from saved checkpoints, and
+  the checkpoint-vs-checkpoint win matrix as the "cycling" probe.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
@@ -171,4 +192,3 @@ Sources still needed, ordered by roadmap priority:
 
 - Engine-based evaluation of learned policies (roadmap/06_evaluation.md §1)
 - Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
-- Fictitious self-play and opponent sampling (roadmap/05_opponent_sampling.md §1)
