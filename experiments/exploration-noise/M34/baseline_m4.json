@@ -1,0 +1,10 @@
+{
+ "puzzle_top1": 0.375,
+ "puzzle_mate_prob": 0.35705290151658664,
+ "puzzle_count": 2000,
+ "checkpoints": {
+  "model": "experiments/exploration-noise/CLEAN_GUIDE/model_20260917204637_episodes_420.pth"
+ },
+ "oriented": true,
+ "eval_file": "data/puzzles/mate_in_4_eval.csv"
+}

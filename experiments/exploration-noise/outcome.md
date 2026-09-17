@@ -172,3 +172,35 @@ sampling: CLEAN_GUIDE d2 / d10 / d20 = 0.27 / 0.17 / 0.13 (sampled 0.28 / 0.18 /
 conversion; it is not a sampling artefact. Note also that d2 is capped well
 below 1 even for a good player: the human defender often blundered into the
 mate, so after the network's different reply a forced mate need not exist.
+
+# Arm M34: mate-in-3 and mate-in-4 rungs (2026-09-17, night)
+
+Owner: "in puzzles if defensor doesnt reply the same then the mate should come
+even faster. Maybe we should add more puzzles than mate in 2." Puzzle mix m1-m4
+at 0.25 each, the Lichess solution line as the demonstrator (rules mate-in-one
+and forcing-move fallbacks), guidance 0.25, 120 updates from CLEAN_GUIDE. 40 min.
+
+Held-out top-1 (baseline = CLEAN_GUIDE before the arm):
+
+| update | m1 | m2 | m3 | m4 | own-game m1 |
+|---|---|---|---|---|---|
+| 0 | 0.752 | 0.638 | 0.454 | 0.375 | 0.22 |
+| 50 | 0.737 | 0.637 | 0.522 | 0.436 | 0.23 |
+| 100 | 0.744 | 0.639 | 0.541 | 0.441 | 0.25 |
+| 120 | 0.741 | 0.634 | **0.546** | **0.442** | 0.22 |
+
+m3 +9 points and m4 +7 in 120 updates, most of it in the first 50; m1 and m2
+held within a point; own-game unchanged. Finishing conversion d2 / d10 / d20 =
+0.32 / 0.16 / 0.12 (CLEAN_GUIDE 0.28 / 0.18 / 0.07): bystander, as predicted.
+40 sampled games: 15 decisive (11 white, 4 black), 22 draws, 3 capped; mate found
+15 of 51 (0.29; CLEAN_GUIDE 0.37). Probe: Lichess m1 confident-wrong share 0.16
+(unchanged), own-game m1 0.61 (unchanged).
+
+Win matrix (see `experiments/win-matrix/`): M34 vs SL prior 12-11 decisive
+(0.49 score), while its parent CLEAN_GUIDE lost to SL 4-22 in the same session and
+lost to M34 1-15. The deeper rungs did not move the puzzle dials much beyond their
+own sets, but they repaired whole-game strength back to par with the prior. Working
+reading: mate-in-3/4 positions are ordinary middlegame tactics, so training on them
+pulled the policy back toward positions the prior was good at, whereas mate-in-1/2
+and finishing boards are end-of-game only. Needs confirming with a second seed
+before it is a lesson.
