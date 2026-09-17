@@ -160,5 +160,5 @@ trend: unchanged verdict, that is the search problem.
 
 Probe after CLEAN_GUIDE: Lichess m1 histogram <0.05 / mid / >0.8 = 0.17 / 0.16 /
 0.67 (day start 0.30 / 0.11 / 0.59). Human-mate d0 top-1 0.52, value +0.76.
-Own-game m1 top-1 0.22, <0.05 share 0.62 (from 0.80). 40 sampled games: mate
-found in 10 of 27 chances (0.37; day start 7 of 100).
+Own-game m1 top-1 0.22, <0.05 share 0.62 (from 0.80). 40 sampled games: 20 decisive (13 black, 7 white), 15 draws, mean 148 plies;
+mate found in 20 of 54 chances (0.37). Day start: 7 decisive, 7 of 100.
