@@ -13,7 +13,7 @@ puzzle and finishing boards from 0.75 pi + 0.25 Dir(0.3); CONTROL draws from pi.
 | Own-game mate rate, 40 sampled games | 0.13 | 0.10 (8/80) | 0.08 (5/66) |
 | Normalised entropy, puzzle / game boards | 0.10 / 0.33 | **0.27 / 0.52** | 0.10 / 0.31 |
 | Curriculum depth | 6 | 2 | 6 |
-| Mate-mass histogram, Lichess m1 (<0.05 / mid / >0.8) | 0.30 / 0.11 / 0.59 | 0.28 / 0.28 / 0.44 | see probe.txt |
+| Mate-mass histogram, Lichess m1 (<0.05 / mid / >0.8) | 0.30 / 0.11 / 0.59 | 0.28 / 0.28 / 0.44 | 0.30 / 0.13 / 0.57 |
 
 Reading: the noise hurt. The confident-wrong share it was aimed at barely moved
 (0.30 -> 0.28) while the confident-right share fell (0.59 -> 0.44) and entropy

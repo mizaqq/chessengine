@@ -1,0 +1,6 @@
+experiments/exploration-noise/CONTROL
+  human mate d0 : {'value': 0.319, 'mate_mass': 0.422, 'top1': 0.457, 'hist': {'<0.05': 0.473, '<0.5': 0.09, '<0.8': 0.08, '<1.01': 0.357}}
+  human mate d2 : {'value': 0.2}
+  human mate d10: {'value': 0.119}
+  lichess m1    : {'value': 0.833, 'mate_mass': 0.622, 'top1': 0.643, 'hist': {'<0.05': 0.3, '<0.5': 0.067, '<0.8': 0.06, '<1.01': 0.573}}
+  own-game m1   : {'value': -0.156, 'mate_mass': 0.109, 'top1': 0.12, 'hist': {'<0.05': 0.8, '<0.5': 0.103, '<0.8': 0.023, '<1.01': 0.073}}
