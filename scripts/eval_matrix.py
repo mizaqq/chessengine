@@ -23,9 +23,8 @@ from pathlib import Path
 import torch
 
 from src.model.checkpoints import load_models
-from src.viz.play import play_game
 
-RESULT_SCORE_WHITE = {"white_win": 1.0, "black_win": 0.0, "draw": 0.5, "unfinished": 0.5}
+from src.eval.matches import play_match, score_from_counts  # noqa: E402
 
 
 def play_pair(job):
@@ -36,25 +35,7 @@ def play_pair(job):
     mb, _, ob, _ = load_models(dir_b)
     if not (oa and ob):
         raise ValueError("matrix expects shared (oriented) checkpoints")
-    counts = Counter()
-    torch.manual_seed(seed)
-    for g in range(games):
-        r = play_game(ma, mb, greedy=False, oriented=True).result
-        counts["a_white_" + r] += 1
-        r = play_game(mb, ma, greedy=False, oriented=True).result
-        counts["a_black_" + r] += 1
-    return a, b, dict(counts)
-
-
-def score_from_counts(counts):
-    """Row player's score in [0, 1] over all games of a pairing."""
-    total = points = 0
-    for key, n in counts.items():
-        colour, result = key.split("_", 2)[1], key.split("_", 2)[2]
-        s = RESULT_SCORE_WHITE[result]
-        points += n * (s if colour == "white" else 1 - s)
-        total += n
-    return points / total if total else None
+    return a, b, play_match(ma, mb, games, seed)
 
 
 def build_table(names, pair_results):

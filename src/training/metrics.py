@@ -37,6 +37,7 @@ class MetricsAggregator:
         self.guide_count = 0
         self.guide_demo_picks = 0
         self._finish_by_depth = {}   # depth -> [attempts, successes]
+        self._pool_by_name = {}      # opponent name -> [games, points]
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
 
@@ -71,6 +72,13 @@ class MetricsAggregator:
         entry = self._finish_by_depth.setdefault(int(depth), [0, 0])
         entry[0] += 1
         entry[1] += int(success)
+
+    def add_pool_result(self, name: str, score: float):
+        """Record a finished pool-board game: learner's score (win 1, draw 0.5, loss 0)
+        against the pool member `name`; kept out of the self-play rates."""
+        entry = self._pool_by_name.setdefault(str(name), [0, 0.0])
+        entry[0] += 1
+        entry[1] += float(score)
 
     def add_explore(self, count: int, offprior: int):
         """Moves drawn on noisy boards and how many of them the network itself gave
@@ -149,6 +157,10 @@ class MetricsAggregator:
             "explore_offprior_share": (self.explore_offprior / self.explore_count if self.explore_count else None),
             "guide_moves": self.guide_count,
             "guide_demo_share": (self.guide_demo_picks / self.guide_count if self.guide_count else None),
+            "pool_games": sum(v[0] for v in self._pool_by_name.values()),
+            "pool_score": (sum(v[1] for v in self._pool_by_name.values()) / sum(v[0] for v in self._pool_by_name.values())
+                           if self._pool_by_name else None),
+            **{f"pool_score_{n}": v[1] / v[0] for n, v in sorted(self._pool_by_name.items())},
             "finish_attempts": self.finish_attempts,
             "finish_success_rate": (self.finish_success / self.finish_attempts if self.finish_attempts else None),
             "finish_depth": getattr(self, "finish_depth", None),

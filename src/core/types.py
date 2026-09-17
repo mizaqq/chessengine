@@ -32,3 +32,4 @@ class StepRecord:
     terminal_r_white: Tensor   # [num_envs], precomputed terminal reward for white
     terminal_r_black: Tensor   # [num_envs], precomputed terminal reward for black
     noisy: Tensor = None       # [num_envs] bool, move drawn from the exploration mixture (diagnostics only)
+    learner: Tensor = None     # [num_envs] bool, ply chosen by the learner (False = frozen pool opponent; dropped from the update)

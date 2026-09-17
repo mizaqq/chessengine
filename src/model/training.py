@@ -87,6 +87,7 @@ def _collect_rollout(
     oriented=False,
     explore=None,
     guide=None,
+    pool=None,
 ):
     """Play `num_steps` plies on every board and record what the update needs.
 
@@ -100,7 +101,11 @@ def _collect_rollout(
     tensor of boards whose moves are drawn from the behaviour mixture
     `behaviour_probs`; those steps store log b(a) as `old_log_prob` (the PPO
     ratio is then taken against the distribution the move came from) while the
-    logged entropy stays the network's."""
+    logged entropy stays the network's.
+
+    `pool`: None or a `PoolBoards`; on its boards the ply is chosen by the frozen
+    opponent whenever the side to move is not the learner's colour. Those plies
+    are stored with `learner=False` and leave the batch in `_gather_side`."""
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
     noisy = explore["mask"] if explore is not None and explore.get("epsilon", 0) > 0 else None
@@ -125,8 +130,20 @@ def _collect_rollout(
             if demos is not None:
                 guided_rows = torch.tensor([bool(guided[i]) and bool(demos[i]) for i in range(num_envs)])
 
+            learner = pool.learner_mask(players) if pool is not None else torch.ones(num_envs, dtype=torch.bool)
+            if pool is not None:
+                for opp_model, ids in pool.opponent_groups(players).items():
+                    ids_t = torch.tensor(ids, dtype=torch.long)
+                    p, v = opp_model(obs_in[ids_t], legal[ids_t])
+                    dist = Categorical(probs=p)
+                    a = dist.sample()
+                    actions[ids_t] = a
+                    old_log_prob[ids_t] = dist.log_prob(a)
+                    old_value[ids_t] = v.squeeze(-1)
+                    entropy[ids_t] = dist.entropy()
+
             for model_id in (WHITE, BLACK):
-                mask = players == model_id
+                mask = (players == model_id) & learner
                 if not mask.any():
                     continue
                 p, v = models[model_id](obs_in[mask], legal[mask])
@@ -171,7 +188,17 @@ def _collect_rollout(
                 puzzle_boards = env_step.info.get("puzzle_boards", {})
                 puzzle_depth = env_step.info.get("puzzle_depth", {})
                 finish_boards = env_step.info.get("finish_boards", {})
+                pool_done = []
                 for env_idx, result in env_step.info["game_results"].items():
+                    if pool is not None and env_idx in pool.board_ids:
+                        # Pool board: score from the learner's side, by opponent; kept out of
+                        # the self-play rates; the board redraws opponent and colour.
+                        colour = pool.learner_colour(env_idx)
+                        score = 0.5 if result not in ("white_win", "black_win") else float(
+                            (result == "white_win") == (colour == WHITE))
+                        metrics.add_pool_result(pool.opponent_name(env_idx), score)
+                        pool_done.append(env_idx)
+                        continue
                     if finish_boards.get(env_idx, False):
                         # Finishing board: success = the record's winner won; kept out of the
                         # game rates like puzzles. Rewards are the normal win/loss/draw.
@@ -194,6 +221,8 @@ def _collect_rollout(
                         metrics.add_terminal_result(black_win=True)
                     else:
                         metrics.add_terminal_result(draw=True)
+                if pool is not None and pool_done:
+                    pool.redraw(pool_done)
 
             steps_data.append(
                 StepRecord(
@@ -211,6 +240,7 @@ def _collect_rollout(
                     terminal_r_black=tr_black,
                     noisy=(noisy.clone() if noisy is not None else
                            (guided_rows.clone() if guided_rows is not None else torch.zeros(num_envs, dtype=torch.bool))),
+                    learner=learner.clone(),
                 )
             )
 
@@ -281,6 +311,8 @@ def _gather_side(steps_data, advantages, targets, model_id, puzzle_env_mask=None
     parts = {k: [] for k in keys + ("adv", "target", "is_puzzle")}
     for i, step in enumerate(steps_data):
         is_mine = step.player == model_id
+        if step.learner is not None:
+            is_mine = is_mine & step.learner
         if not is_mine.any():
             continue
         for k in keys:
@@ -459,6 +491,7 @@ def run_chess_training(
     layout_schedule=None,
     explore=None,
     guide=None,
+    pool=None,
 ):
     """Run A2C or PPO self-play.
 
@@ -469,6 +502,10 @@ def run_chess_training(
     (puzzle + finishing boards) or `all`; the board mask is rebuilt every update.
     `guide`: None or dict(epsilon, boards): label-guided behaviour, the demonstrator
     (puzzle key move / human line / rules mate) is played with probability epsilon.
+
+    `pool`: None or a `PoolBoards` (src/training/opponent_pool.py): its boards play
+    the learner against a frozen pool member; after each update the pool may take
+    a snapshot of the learner (`opponent_snapshot_every`).
 
     `algorithm`: dict of update settings (`epochs`, `minibatches`, `clip_epsilon`,
     `normalize_advantage`, `value_coef`, `gae_lambda`); default `A2C_PRESET`.
@@ -548,6 +585,7 @@ def run_chess_training(
             oriented=shared,
             explore=explore_now,
             guide=guide_now,
+            pool=pool,
         )
 
         bootstrap_white = _compute_bootstrap(
@@ -609,6 +647,8 @@ def run_chess_training(
         )
 
         pbar.set_postfix(loss=total_loss)
+        if pool is not None:
+            pool.pool.maybe_snapshot(white_model, episode)
 
         if episode % lr_decay_interval == 0:
             for opt in [optimizer_white, optimizer_black]:

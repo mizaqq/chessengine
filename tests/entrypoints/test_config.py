@@ -250,3 +250,25 @@ def test_guide_resolver():
         resolve_guide({"guide_epsilon": 0.25, "explore_epsilon": 0.1})
     with pytest.raises(ValueError):
         resolve_guide({"guide_epsilon": 1.0})
+
+
+from src.entrypoints.train import resolve_opponent_pool, resolve_prior_match  # noqa: E402
+
+
+def test_opponent_pool_resolver(tmp_path):
+    import torch
+    from src.model.chess_model import ChessPolicyProbs
+    from src.model.checkpoints import save_model
+    save_model(ChessPolicyProbs().eval(), tmp_path, updates=1)
+    assert resolve_opponent_pool({"opponent_pool_boards": 0}, 6) is None
+    with pytest.raises(ValueError):                                  # no prior
+        resolve_opponent_pool({"num_envs": 16, "opponent_pool_boards": 5}, 6)
+    with pytest.raises(ValueError):                                  # does not fit
+        resolve_opponent_pool({"num_envs": 16, "opponent_pool_boards": 11, "opponent_prior": str(tmp_path)}, 6)
+    pool = resolve_opponent_pool({"num_envs": 16, "opponent_pool_boards": 5, "opponent_prior": str(tmp_path),
+                                  "opponent_pool_size": 4, "opponent_snapshot_every": 50}, 6)
+    assert pool.board_ids == [6, 7, 8, 9, 10]                        # first game boards after 4 puzzle + 2 finishing
+    assert [n for n, _ in pool.pool.members] == ["prior"]
+    assert pool.learner_mask(torch.ones(16, dtype=torch.long)).shape == (16,)
+    assert resolve_prior_match({"opponent_prior": str(tmp_path), "prior_eval_games": 0}) is None
+    assert resolve_prior_match({"opponent_prior": str(tmp_path), "prior_eval_games": 1}) is not None

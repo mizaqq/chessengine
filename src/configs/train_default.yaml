@@ -1,10 +1,14 @@
 # One network plays both colours on observations oriented to the mover (AlphaZero,
 # Silver et al. 2017). false = legacy separate white/black networks.
 shared_network: true
-num_envs: 12
+# 16 boards since 2026-09-17 (owner: "go with 16 boards"): 4 puzzle, 2 finishing,
+# 5 mid-game, 5 opening. The checkpoint win matrix showed the supervised prior beating
+# every RL checkpoint 88-9 while only 4 of 12 boards played whole games.
+num_envs: 16
 # Standard budget (owner, 2026-09-16): 7,500 plies per board = 120 updates x 64 plies.
 max_updates: 120
-# 64 plies x 12 boards = 768 samples per update, split into 4 PPO minibatches.
+# 64 plies x 16 boards = 1,024 samples per update (opponent plies on pool boards
+# leave the batch), split into 4 PPO minibatches.
 steps_per_update: 64
 # 1e-4 for PPO (16 gradient steps per rollout): at 3e-4 a fresh update left the
 # clip band after 5 of 16 minibatches and opening entropy fell to 0.2; at 1e-4
@@ -83,7 +87,7 @@ algorithm: ppo
 # built by scripts/prepare_games.py). 0 = every game board starts from the opening.
 # The owner chose 4 of the 8 game boards for the run from the pretrained network;
 # 2 since the finishing boards took 4 (layout 4 puzzle / 4 finishing / 2 mid-game / 2 opening).
-midgame_boards: 2
+midgame_boards: 5
 game_start_file: data/games/midgame_starts.csv
 
 # Finishing boards (decided 2026-09-17; reverse curriculum, Florensa et al. 2017).
@@ -96,7 +100,7 @@ game_start_file: data/games/midgame_starts.csv
 # values up to the current depth, which starts at finish_depth_start and rises by 2
 # (up to finish_depth_max) whenever the success rate over the last finish_window
 # finishing episodes reaches finish_advance_rate. Sync env only.
-finish_boards: 4
+finish_boards: 2
 finish_train_file: data/finishes/finish_train.csv
 finish_depth_start: 2
 finish_depth_max: 40
@@ -157,3 +161,18 @@ lr_decay_interval: 1000
 lr_decay_factor: 0.5
 min_lr: 0.00003
 log_interval: 10
+
+# Opponent pool (Bansal et al. 2017, ICLR 2018 §4.2; experiments/win-matrix 2026-09-17).
+# The first opponent_pool_boards game boards after the puzzle and finishing boards
+# play the learner against a frozen member of the pool: the supervised prior plus the
+# learner's last opponent_pool_size snapshots taken every opponent_snapshot_every
+# updates (owner: "every 50 updates and we play against a pool of last 4"). The
+# learner's colour is drawn per game; only the learner's plies enter the update.
+# 0 boards = plain self-play. Training log: pool_games, pool_score, pool_score_<name>.
+opponent_pool_boards: 5
+opponent_pool_size: 4
+opponent_snapshot_every: 50
+opponent_prior: experiments/human-pretraining/sl
+# prior_score in the periodic evaluation: games per colour vs opponent_prior, both
+# sampling (0 = off). Success for the pool change: >= 0.5 at the end of the run.
+prior_eval_games: 20

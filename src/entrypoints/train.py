@@ -10,6 +10,8 @@ from src.model.chess_model import ChessPolicyProbs
 from src.model.training import run_chess_training, A2C_PRESET, PPO_PRESET
 from src.envs.start_positions import FenSampler, MixedSampler, StartPositionSampler, load_fens, load_puzzles, FinishCurriculum, load_finishes
 from src.eval.finishes import evaluate_finishes
+from src.eval.matches import play_match, summarize_match
+from src.training.opponent_pool import OpponentPool, PoolBoards, freeze
 from src.eval.puzzles import evaluate_mate_in_one
 
 
@@ -110,7 +112,8 @@ def resolve_eval_fn(config: Dict[str, Any]):
     """
     named = config.get("puzzle_eval_files")
     finish_path = config.get("finish_eval_file")
-    if named or finish_path:
+    prior_match = resolve_prior_match(config)
+    if named or finish_path or prior_match is not None:
         sets = {name: load_puzzles(path) for name, path in (named or {}).items()}
         finish_records = load_finishes(finish_path) if finish_path else None
         finish_kwargs = dict(
@@ -127,6 +130,8 @@ def resolve_eval_fn(config: Dict[str, Any]):
                             f"{name}_count": r["puzzle_count"]})
             if finish_records is not None:
                 out.update(evaluate_finishes(white, black, finish_records, oriented=oriented, **finish_kwargs))
+            if prior_match is not None:
+                out.update(prior_match(white, oriented))
             return out
         return eval_many
     path = config.get("puzzle_eval_file")
@@ -134,6 +139,62 @@ def resolve_eval_fn(config: Dict[str, Any]):
         return None
     puzzles = load_puzzles(path)
     return lambda white, black, oriented=False: evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
+
+
+def resolve_prior_match(config: Dict[str, Any]):
+    """`prior_score` evaluation: `prior_eval_games` games per colour (0 = off)
+    between the learner and the checkpoint in `opponent_prior`, both sampling
+    (`src/eval/matches.py`). Returns None when off."""
+    games = int(config.get("prior_eval_games", 0) or 0)
+    path = config.get("opponent_prior")
+    if games <= 0 or not path:
+        return None
+    prior, _, oriented, _ = load_models(path)
+    if not oriented:
+        raise ValueError("opponent_prior must be a shared-network checkpoint")
+    prior = freeze(prior)
+    seed = int(config.get("seed", 42)) + 3000
+
+    def match(model, oriented=True):
+        if not oriented:
+            raise ValueError("prior_score needs the shared network")
+        was_training = model.training
+        model.eval()
+        counts = play_match(model, prior, games, seed=seed)
+        if was_training:
+            model.train()
+        s = summarize_match(counts)
+        return {"prior_score": s["score"], "prior_wins": s["wins"], "prior_losses": s["losses"], "prior_games": s["games"]}
+    return match
+
+
+def resolve_opponent_pool(config: Dict[str, Any], num_curriculum_envs: int):
+    """Frozen-opponent pool (Bansal et al. 2017): the first `opponent_pool_boards`
+    game boards after the puzzle and finishing boards play the learner against the
+    prior in `opponent_prior` or one of its last `opponent_pool_size` snapshots
+    taken every `opponent_snapshot_every` updates. Returns a `PoolBoards` or None
+    (`opponent_pool_boards` 0 = today's self-play)."""
+    n = int(config.get("opponent_pool_boards", 0) or 0)
+    if n == 0:
+        return None
+    num_envs = int(config.get("num_envs", 12))
+    if n < 0 or num_curriculum_envs + n > num_envs:
+        raise ValueError(f"opponent_pool_boards must be in [0, {num_envs - num_curriculum_envs}], got {n}")
+    if not bool(config.get("shared_network", True)):
+        raise ValueError("opponent_pool_boards > 0 requires shared_network")
+    size = int(config.get("opponent_pool_size", 4))
+    every = int(config.get("opponent_snapshot_every", 50))
+    if size < 0 or every <= 0:
+        raise ValueError("opponent_pool_size must be >= 0 and opponent_snapshot_every > 0")
+    path = config.get("opponent_prior")
+    if not path:
+        raise ValueError("opponent_pool_boards > 0 requires opponent_prior (the pool is empty before the first snapshot)")
+    prior, _, oriented, _ = load_models(path)
+    if not oriented:
+        raise ValueError("opponent_prior must be a shared-network checkpoint")
+    seed = int(config.get("seed", 42))
+    pool = OpponentPool(prior, size=size, snapshot_every=every, seed=seed + 4000)
+    return PoolBoards(range(num_curriculum_envs, num_curriculum_envs + n), pool, seed=seed + 4001)
 
 
 def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
@@ -312,6 +373,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     layout_schedule = resolve_layout_schedule(config, num_puzzle_envs)
     explore = resolve_exploration(config)
     guide = resolve_guide(config)
+    pool = resolve_opponent_pool(config, num_puzzle_envs + num_finish_envs)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
         finish_sampler = resolve_finish_boards({**config, "finish_boards": 1}, num_puzzle_envs)[0]
     if any(e["midgame_boards"] > 0 for e in layout_schedule) and game_start_sampler is None:
@@ -363,6 +425,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         layout_schedule=layout_schedule,
         explore=explore,
         guide=guide,
+        pool=pool,
     )
 
     return {
