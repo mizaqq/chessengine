@@ -135,3 +135,25 @@ Probe after GUIDE_LONG: Lichess m1 histogram <0.05 / mid / >0.8 = 0.19 / 0.14 /
 Human-mate d0 top-1 0.46 -> 0.58, value +0.32 -> +0.76. Own-game m1 <0.05
 0.80 -> 0.59, top-1 0.12 -> 0.23. 40 sampled games: mate found 8/33 (0.24), 8 decisive,
 against 7/100 and 7 decisive for the original SL+PPO checkpoint (small samples).
+
+# Arm CLEAN_GUIDE (2026-09-17, night): guidance on the clean base
+
+From CLEAN (SL -> 600 outcome-only; m1 0.647, m2 0.565), 420 guided updates so
+the lineage totals 1,020 updates like GUIDE_LONG, none of them shaped.
+
+| Update | m1 | m2 | own-game positions | conversion d2 / d10 / d20 |
+|---|---|---|---|---|
+| 0 (CLEAN) | 0.647 | 0.565 | 0.11 | 0.25 / 0.09 / 0.12 |
+| 100 | 0.675 | 0.586 | 0.18 | 0.26 / 0.06 / 0.09 |
+| 200 | 0.707 | 0.598 | 0.16 | 0.33 / 0.16 / 0.10 |
+| 300 | 0.722 | 0.613 | 0.20 | 0.27 / 0.12 / 0.16 |
+| 400 | 0.745 | 0.637 | 0.22 | 0.38 / 0.07 / 0.08 |
+| 420 | **0.752** | **0.638** | **0.22** | 0.28 / 0.18 / 0.07 |
+
+Versus GUIDE_LONG at the same 1,020 total updates (shaped lineage): 0.734 / 0.630
+/ 0.23. The clean lineage is ahead on both puzzle sets and equal on own-game
+positions; depth 20 (GUIDE_LONG 18); puzzle entropy 0.09; 75% of guided picks
+were the demonstrated move. Still rising at the end. Best checkpoint of the
+project so far, with a clean history: `experiments/exploration-noise/CLEAN_GUIDE`.
+Conversion from 10-20 plies out is noisy at 100 games (0.07-0.18) and shows no
+trend: unchanged verdict, that is the search problem.
