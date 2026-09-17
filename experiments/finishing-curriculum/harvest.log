@@ -1,0 +1,19 @@
+OMP: Warning #179: Function Can't set size of /tmp file failed:
+harvesting from {'model': 'experiments/human-pretraining/ppo_from_sl/model_20260917021812_episodes_600.pth'} oriented True
+step 500: 142 positions
+step 1000: 315 positions
+step 1500: 579 positions
+step 2000: 808 positions
+step 2500: 1082 positions
+step 3000: 1247 positions
+step 3500: 1457 positions
+step 4000: 1601 positions
+step 4500: 1796 positions
+step 5000: 1952 positions
+step 5500: 2139 positions
+step 6000: 2418 positions
+step 6500: 2565 positions
+step 7000: 2770 positions
+step 7500: 2919 positions
+step 8000: 3115 positions
+wrote 3000 train and 300 held-out self-play positions

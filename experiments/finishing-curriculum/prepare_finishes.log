@@ -1,0 +1,12 @@
+OMP: Warning #179: Function Can't set size of /tmp file failed:
+using existing data/raw/lichess_db_standard_rated_2013-12.pgn.zst
+  games 20000, mates kept 2435
+  games 40000, mates kept 4980
+  games 60000, mates kept 7593
+  games 80000, mates kept 10062
+  games 100000, mates kept 12510
+  games 120000, mates kept 15109
+  games 140000, mates kept 17601
+  games 160000, mates kept 20089
+scanned 175406 games, kept 22000 checkmate games
+wrote 20000 train / 2000 held-out records to data/finishes

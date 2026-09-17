@@ -1,7 +1,7 @@
 ## 1. Data
 
 - [x] 1.1 `scripts/prepare_finishes.py`: stream the Lichess month, keep checkmate games with both Elo >= 1500, write `data/finishes/finish_train.csv` / `finish_eval.csv` (`game_id,anchor_fen,moves,winner`, anchor at most 40 plies before the end, split by game). Verify: unit tests for the record builder (short game, resignation rejected) in `tests/scripts/test_prepare_finishes.py`; run for 20,000 train / 2,000 held-out.
-- [ ] 1.2 Re-harvest own-game mate-in-one positions from `experiments/human-pretraining/ppo_from_sl` with `scripts/harvest_positions.py` into `data/puzzles/selfplay_mate_in_1_{train,eval}.csv`. Verify: files rewritten, eval count 300, positions carry the new checkpoint's game phase (mean ply > 20).
+- [x] 1.2 Re-harvest own-game mate-in-one positions from `experiments/human-pretraining/ppo_from_sl` with `scripts/harvest_positions.py` into `data/puzzles/selfplay_mate_in_1_{train,eval}.csv`. Verify: files rewritten, eval count 300, positions carry the new checkpoint's game phase (mean ply > 20).
 
 ## 2. Environment
 
@@ -20,7 +20,7 @@
 
 ## 5. Experiment
 
-- [ ] 5.1 `experiments/finishing-curriculum/run.sh`: 120 updates from the SL + PPO 600 checkpoint with the default layout, then `scripts.eval_games` (40 games) and `scripts.eval_finishes`. Verify: `run.json`, `games.json`, `finishes.json` written and committed; results compared with the baselines in chat and recorded in `experiments/finishing-curriculum/outcome.md`.
+- [x] 5.1 `experiments/finishing-curriculum/run.sh`: 120 updates from the SL + PPO 600 checkpoint with the default layout, then `scripts.eval_games` (40 games) and `scripts.eval_finishes`. Verify: `run.json`, `games.json`, `finishes.json` written and committed; results compared with the baselines in chat and recorded in `experiments/finishing-curriculum/outcome.md`.
 - [ ] 5.2 `learning/`: RESOURCES entry for Florensa et al. 2017 (fetched 2026-09-17), NOTES section on reverse curriculum and the finishing diagnosis, session file. Verify: files updated and committed.
 
 ## 6. Comprehension
