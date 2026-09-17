@@ -66,3 +66,17 @@ from the SL checkpoint despite ~150k puzzle episodes, so a plateau of this
 network-plus-update on mate recognition is on the table, not only sample count.
 
 Next (owner): shaping off (arm FIN3), pretrained prior supplies the density.
+
+# The ceiling is exploration, not capacity (2026-09-17, evening)
+
+Mass on the mating move over 1,000 Lichess m1 puzzles (SL+PPO 600 checkpoint) is
+bimodal: 52% above 0.8, 35% below 0.05, 13% in between. On the confident-wrong
+third the mate is sampled less than 1 in 20 times, so policy gradient gets no
+signal there; each rare hit is one clipped step. Supervised upper bound: the same
+network trained with cross-entropy on the mating moves of the 20k training puzzles
+(Adam 3e-4, batch 256) went 0.57 -> 0.745 (1 epoch) -> 0.849 (3) -> 0.902 (12) on
+the held-out set, while 900 PPO updates left it at 0.57. Capacity is not the
+limit; the update's exploration is. Options, in order: exploration noise on the
+curriculum boards (AlphaZero root Dirichlet is the same device; PPO ratio must use
+the behaviour log-prob), search as teacher (the agreed AlphaZero step), supervised
+target on labelled boards (fallback), bigger network (not needed).
