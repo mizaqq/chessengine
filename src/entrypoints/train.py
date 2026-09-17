@@ -185,6 +185,25 @@ def resolve_midgame_boards(config: Dict[str, Any], num_puzzle_envs: int):
     return FenSampler(load_fens(path), seed=int(config.get("seed", 42)) + 1000), n
 
 
+def resolve_exploration(config: Dict[str, Any]):
+    """Behaviour noise on curriculum boards (AlphaZero root noise carried into the
+    PPO rollout): `explore_epsilon` in [0, 1) (0 = off), `explore_alpha` > 0
+    (Dirichlet concentration, 0.3 for chess in Silver et al. 2017), `explore_boards`
+    `curriculum` (puzzle + finishing) or `all`. Returns None when off."""
+    eps = float(config.get("explore_epsilon", 0.0) or 0.0)
+    if not 0.0 <= eps < 1.0:
+        raise ValueError(f"explore_epsilon must be in [0, 1), got {eps}")
+    if eps == 0.0:
+        return None
+    alpha = float(config.get("explore_alpha", 0.3))
+    if alpha <= 0:
+        raise ValueError(f"explore_alpha must be > 0, got {alpha}")
+    boards = config.get("explore_boards", "curriculum")
+    if boards not in ("curriculum", "all"):
+        raise ValueError(f"explore_boards must be 'curriculum' or 'all', got {boards!r}")
+    return {"epsilon": eps, "alpha": alpha, "boards": boards}
+
+
 def resolve_layout_schedule(config: Dict[str, Any], num_puzzle_envs: int):
     """`layout_schedule: [{from_update, finish_boards, midgame_boards}, ...]`: board
     roles after the puzzle boards switch at those updates (boards beyond the three
@@ -272,6 +291,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     finish_sampler, num_finish_envs = resolve_finish_boards(config, num_puzzle_envs)
     game_start_sampler, num_midgame_envs = resolve_midgame_boards(config, num_puzzle_envs + num_finish_envs)
     layout_schedule = resolve_layout_schedule(config, num_puzzle_envs)
+    explore = resolve_exploration(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
         finish_sampler = resolve_finish_boards({**config, "finish_boards": 1}, num_puzzle_envs)[0]
     if any(e["midgame_boards"] > 0 for e in layout_schedule) and game_start_sampler is None:
@@ -321,6 +341,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         log_interval=log_interval,
         algorithm=algorithm,
         layout_schedule=layout_schedule,
+        explore=explore,
     )
 
     return {

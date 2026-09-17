@@ -124,3 +124,11 @@ def test_finish_results_split_by_depth_and_stay_out_of_game_rates():
     assert s["draw_rate"] == 1.0
     s2 = m.episode_summary()
     assert s2["finish_attempts"] == 0 and s2["finish_success_rate"] is None and s2["finish_depth"] == 2
+
+
+def test_explore_share():
+    m = MetricsAggregator()
+    m.add_explore(count=10, offprior=3)
+    s = m.episode_summary()
+    assert s["explore_moves"] == 10 and abs(s["explore_offprior_share"] - 0.3) < 1e-9
+    assert m.episode_summary()["explore_offprior_share"] is None

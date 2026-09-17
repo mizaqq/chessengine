@@ -42,6 +42,25 @@ def _precompute_terminal_rewards(info, num_envs, terminal_rewards, players=None)
     return tr_white, tr_black
 
 
+def behaviour_probs(p, legal, epsilon, alpha, generator=None):
+    """Exploration mixture over legal moves (AlphaZero root noise, Silver et al.
+    2017 p.14): b = (1 - epsilon) * p + epsilon * Dir(alpha), the Dirichlet drawn over
+    the legal moves of each row only. epsilon = 0 returns p. Rows: [n, actions]."""
+    if epsilon <= 0:
+        return p
+    legal = legal.bool()
+    noise = torch.zeros_like(p)
+    for i in range(p.shape[0]):
+        idx = legal[i].nonzero().squeeze(1)
+        conc = torch.full((len(idx),), float(alpha))
+        gamma = torch._standard_gamma(conc, generator=generator) if generator is not None else torch._standard_gamma(conc)
+        noise[i, idx] = gamma / gamma.sum()
+    return (1.0 - epsilon) * p + epsilon * noise
+
+
+OFFPRIOR_THRESHOLD = 0.05   # a pick counts as "against the prior" below this network probability
+
+
 def _collect_rollout(
     envs,
     white_model,
@@ -52,6 +71,7 @@ def _collect_rollout(
     terminal_rewards,
     metrics,
     oriented=False,
+    explore=None,
 ):
     """Play `num_steps` plies on every board and record what the update needs.
 
@@ -59,9 +79,16 @@ def _collect_rollout(
     model saw it, legal mask, action, old log-prob, old value) and the update
     re-runs the network on them. `oriented`: observations are flipped to the
     mover's view before the model (shared network); the environment still
-    reports the absolute board."""
+    reports the absolute board.
+
+    `explore`: None, or dict(epsilon, alpha, mask) with `mask` a [num_envs] bool
+    tensor of boards whose moves are drawn from the behaviour mixture
+    `behaviour_probs`; those steps store log b(a) as `old_log_prob` (the PPO
+    ratio is then taken against the distribution the move came from) while the
+    logged entropy stays the network's."""
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
+    noisy = explore["mask"] if explore is not None and explore.get("epsilon", 0) > 0 else None
 
     with torch.no_grad():
         for _ in range(num_steps):
@@ -82,10 +109,20 @@ def _collect_rollout(
                     continue
                 p, v = models[model_id](obs_in[mask], legal[mask])
                 dist = Categorical(probs=p)
-                a = dist.sample()
+                if noisy is not None and noisy[mask].any():
+                    b = p.clone()
+                    rows = noisy[mask]
+                    b[rows] = behaviour_probs(p[rows], legal[mask][rows], explore["epsilon"], explore["alpha"])
+                    bdist = Categorical(probs=b)
+                    a = bdist.sample()
+                    old_log_prob[mask] = bdist.log_prob(a)
+                    picked = p.gather(1, a[:, None]).squeeze(1)[rows]
+                    metrics.add_explore(count=int(rows.sum()), offprior=int((picked < OFFPRIOR_THRESHOLD).sum()))
+                else:
+                    a = dist.sample()
+                    old_log_prob[mask] = dist.log_prob(a)
                 actions[mask] = a
                 old_value[mask] = v.squeeze(-1)
-                old_log_prob[mask] = dist.log_prob(a)
                 entropy[mask] = dist.entropy()
 
             sampled_is_legal = legal.gather(1, actions.unsqueeze(1)).squeeze(1) > 0
@@ -378,12 +415,15 @@ def run_chess_training(
     log_interval=10,
     algorithm=None,
     layout_schedule=None,
+    explore=None,
 ):
     """Run A2C or PPO self-play.
 
     `layout_schedule`: list of {from_update, finish_boards, midgame_boards}; at
     `from_update` the env's board roles after the puzzle boards are switched
     (`envs.set_layout`), e.g. to hand finishing boards back to opening play.
+    `explore`: None or dict(epsilon, alpha, boards) with boards `curriculum`
+    (puzzle + finishing boards) or `all`; the board mask is rebuilt every update.
 
     `algorithm`: dict of update settings (`epochs`, `minibatches`, `clip_epsilon`,
     `normalize_advantage`, `value_coef`, `gae_lambda`); default `A2C_PRESET`.
@@ -430,6 +470,14 @@ def run_chess_training(
             print(f"update {episode}: layout -> finish {change['finish_boards']}, mid-game {change['midgame_boards']}")
         if finish_sampler is not None:
             metrics.set_finish_depth(finish_sampler.current_depth)
+        explore_now = None
+        if explore is not None and explore.get("epsilon", 0) > 0:
+            if explore.get("boards", "curriculum") == "all":
+                emask = torch.ones(num_envs, dtype=torch.bool)
+            else:
+                is_finish = getattr(envs, "is_finish_env", lambda i: False)
+                emask = torch.tensor([envs.is_puzzle_env(i) or is_finish(i) for i in range(num_envs)])
+            explore_now = {"epsilon": explore["epsilon"], "alpha": explore["alpha"], "mask": emask}
         steps_data, env_step = _collect_rollout(
             envs,
             white_model,
@@ -440,6 +488,7 @@ def run_chess_training(
             terminal_rewards,
             metrics,
             oriented=shared,
+            explore=explore_now,
         )
 
         bootstrap_white = _compute_bootstrap(

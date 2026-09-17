@@ -151,6 +151,16 @@ reach for it. Prune anything that turns out shallow or wrong.
   (start k plies before a human checkmate, depth rises with the success rate);
   the puzzle boards are the k = 0 special case.
 
+- [Paper: "Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm" (AlphaZero preprint) — Silver et al. (2017)](https://arxiv.org/abs/1712.01815)
+  Read 2026-09-17 (pp. 3-4, 13-15): loss (z - v)^2 - pi^T log p + c||theta||^2
+  (eq. 1); outcome -1/0/+1 only; "the noise that is added to the prior policy to
+  ensure exploration ... is scaled in proportion to the typical number of legal
+  moves" (p.4); Methods p.14: "Dirichlet noise Dir(alpha) was added to the prior
+  probabilities in the root node ... alpha = {0.3, 0.15, 0.03} for chess, shogi
+  and Go"; evaluation "selects moves greedily" (p.15); 800 simulations per move;
+  chess input 119 planes (8-step history), policy 8x8x73. Use for: exploration
+  noise (alpha 0.3 for chess) and the later search change.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->

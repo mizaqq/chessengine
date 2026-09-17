@@ -35,6 +35,9 @@ def probe(model, fens, with_mate=False):
     out = {"value": round(float(np.mean(vals)), 3)}
     if with_mate:
         out.update(mate_mass=round(float(np.mean(mass)), 3), top1=round(float(np.mean(top1)), 3))
+        m = np.array(mass)
+        out["hist"] = {f"<{hi}": round(float(((m >= lo) & (m < hi)).mean()), 3)
+                       for lo, hi in ((0, 0.05), (0.05, 0.5), (0.5, 0.8), (0.8, 1.01))}
     return out
 
 

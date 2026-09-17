@@ -32,6 +32,8 @@ class MetricsAggregator:
         self._puzzle_by_depth = {}   # depth -> [attempts, solved]
         self.finish_attempts = 0
         self.finish_success = 0
+        self.explore_count = 0
+        self.explore_offprior = 0
         self._finish_by_depth = {}   # depth -> [attempts, successes]
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
@@ -67,6 +69,12 @@ class MetricsAggregator:
         entry = self._finish_by_depth.setdefault(int(depth), [0, 0])
         entry[0] += 1
         entry[1] += int(success)
+
+    def add_explore(self, count: int, offprior: int):
+        """Moves drawn on noisy boards and how many of them the network itself gave
+        less than 5% (picks against the prior)."""
+        self.explore_count += int(count)
+        self.explore_offprior += int(offprior)
 
     def set_finish_depth(self, depth):
         """Current curriculum depth (state, not a window count)."""
@@ -129,6 +137,8 @@ class MetricsAggregator:
             },
             **{f"puzzle_solved_rate_m{d}": (v[1] / v[0]) for d, v in sorted(self._puzzle_by_depth.items())},
             **{f"puzzle_attempts_m{d}": v[0] for d, v in sorted(self._puzzle_by_depth.items())},
+            "explore_moves": self.explore_count,
+            "explore_offprior_share": (self.explore_offprior / self.explore_count if self.explore_count else None),
             "finish_attempts": self.finish_attempts,
             "finish_success_rate": (self.finish_success / self.finish_attempts if self.finish_attempts else None),
             "finish_depth": getattr(self, "finish_depth", None),

@@ -109,6 +109,18 @@ finish_eval_games: 100
 # Example: [{from_update: 200, finish_boards: 4, midgame_boards: 2}]
 layout_schedule: []
 
+# Exploration noise on curriculum boards (decided 2026-09-17). Mate-in-one sat at
+# 0.57 for 900 updates: on 35% of puzzles the policy gave the mate < 0.05, so it was
+# never played and never rewarded, while the same network reaches 0.90 when told
+# the move. Training moves on puzzle and finishing boards are drawn from
+# (1 - explore_epsilon) * pi + explore_epsilon * Dir(explore_alpha) over legal moves
+# (AlphaZero root noise, Silver et al. 2017 p.14: alpha 0.3 for chess; AlphaGo Zero
+# eps 0.25); the stored log-prob is the mixture's, so the PPO ratio is honest. The
+# network's own probabilities and evaluation are untouched. 0 = off.
+explore_epsilon: 0.0
+explore_alpha: 0.3
+explore_boards: curriculum
+
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").
 # Training games ran 200-220 plies into repetition draws; 120 is a first guess.
