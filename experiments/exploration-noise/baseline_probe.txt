@@ -1,0 +1,6 @@
+experiments/finishing-curriculum/FIN3
+  human mate d0 : {'value': 0.506, 'mate_mass': 0.406, 'top1': 0.42, 'hist': {'<0.05': 0.463, '<0.5': 0.133, '<0.8': 0.06, '<1.01': 0.343}}
+  human mate d2 : {'value': 0.387}
+  human mate d10: {'value': 0.234}
+  lichess m1    : {'value': 0.862, 'mate_mass': 0.62, 'top1': 0.627, 'hist': {'<0.05': 0.3, '<0.5': 0.077, '<0.8': 0.033, '<1.01': 0.59}}
+  own-game m1   : {'value': 0.063, 'mate_mass': 0.116, 'top1': 0.12, 'hist': {'<0.05': 0.8, '<0.5': 0.097, '<0.8': 0.02, '<1.01': 0.083}}
