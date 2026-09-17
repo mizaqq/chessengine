@@ -233,6 +233,7 @@ from src.entrypoints.train import resolve_exploration  # noqa: E402
 def test_exploration_resolver():
     assert resolve_exploration({}) is None
     assert resolve_exploration({"explore_epsilon": 0.25}) == {"epsilon": 0.25, "alpha": 0.3, "boards": "curriculum"}
+    assert resolve_exploration({"explore_epsilon": 0.25, "explore_boards": "puzzle"})["boards"] == "puzzle"
     for bad in ({"explore_epsilon": 1.0}, {"explore_epsilon": 0.2, "explore_alpha": 0},
                 {"explore_epsilon": 0.2, "explore_boards": "puzzles"}):
         with pytest.raises(ValueError):

@@ -119,6 +119,8 @@ layout_schedule: []
 # network's own probabilities and evaluation are untouched. 0 = off.
 explore_epsilon: 0.0
 explore_alpha: 0.3
+# puzzle | curriculum (puzzle + finishing) | all. 2026-09-17: `curriculum` flattened the
+# policy (see experiments/exploration-noise/outcome.md); `puzzle` is the mechanism test.
 explore_boards: curriculum
 
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a

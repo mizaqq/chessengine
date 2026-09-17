@@ -15,7 +15,7 @@ graph. The update SHALL re-run the network on the stored observations.
 
 ### Requirement: Exploration noise on curriculum boards
 When `explore_epsilon` > 0, moves on the selected boards (`explore_boards`:
-`curriculum` = puzzle and finishing boards, `all` = every board) SHALL be drawn
+`puzzle` = puzzle boards, `curriculum` = puzzle and finishing boards, `all` = every board) SHALL be drawn
 from `(1 - explore_epsilon) * pi + explore_epsilon * Dir(explore_alpha)`, where
 the Dirichlet sample is over the legal moves only. The network's probabilities,
 logged entropy and evaluation SHALL be unaffected. `explore_epsilon` SHALL be in

@@ -482,8 +482,11 @@ def run_chess_training(
             metrics.set_finish_depth(finish_sampler.current_depth)
         explore_now = None
         if explore is not None and explore.get("epsilon", 0) > 0:
-            if explore.get("boards", "curriculum") == "all":
+            which = explore.get("boards", "curriculum")
+            if which == "all":
                 emask = torch.ones(num_envs, dtype=torch.bool)
+            elif which == "puzzle":
+                emask = torch.tensor([envs.is_puzzle_env(i) for i in range(num_envs)])
             else:
                 is_finish = getattr(envs, "is_finish_env", lambda i: False)
                 emask = torch.tensor([envs.is_puzzle_env(i) or is_finish(i) for i in range(num_envs)])

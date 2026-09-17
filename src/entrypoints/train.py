@@ -189,7 +189,8 @@ def resolve_exploration(config: Dict[str, Any]):
     """Behaviour noise on curriculum boards (AlphaZero root noise carried into the
     PPO rollout): `explore_epsilon` in [0, 1) (0 = off), `explore_alpha` > 0
     (Dirichlet concentration, 0.3 for chess in Silver et al. 2017), `explore_boards`
-    `curriculum` (puzzle + finishing) or `all`. Returns None when off."""
+    `puzzle` (puzzle boards only), `curriculum` (puzzle + finishing) or `all`.
+    Returns None when off."""
     eps = float(config.get("explore_epsilon", 0.0) or 0.0)
     if not 0.0 <= eps < 1.0:
         raise ValueError(f"explore_epsilon must be in [0, 1), got {eps}")
@@ -199,8 +200,8 @@ def resolve_exploration(config: Dict[str, Any]):
     if alpha <= 0:
         raise ValueError(f"explore_alpha must be > 0, got {alpha}")
     boards = config.get("explore_boards", "curriculum")
-    if boards not in ("curriculum", "all"):
-        raise ValueError(f"explore_boards must be 'curriculum' or 'all', got {boards!r}")
+    if boards not in ("puzzle", "curriculum", "all"):
+        raise ValueError(f"explore_boards must be 'puzzle', 'curriculum' or 'all', got {boards!r}")
     return {"epsilon": eps, "alpha": alpha, "boards": boards}
 
 
