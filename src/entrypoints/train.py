@@ -8,7 +8,8 @@ from src.envs.open_spiel_vector_env import OpenSpielVectorEnv
 from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
 from src.model.chess_model import ChessPolicyProbs
 from src.model.training import run_chess_training, A2C_PRESET, PPO_PRESET
-from src.envs.start_positions import FenSampler, MixedSampler, StartPositionSampler, load_fens, load_puzzles
+from src.envs.start_positions import FenSampler, MixedSampler, StartPositionSampler, load_fens, load_puzzles, FinishCurriculum, load_finishes
+from src.eval.finishes import evaluate_finishes
 from src.eval.puzzles import evaluate_mate_in_one
 
 
@@ -108,8 +109,15 @@ def resolve_eval_fn(config: Dict[str, Any]):
     unprefixed `puzzle_*` keys.
     """
     named = config.get("puzzle_eval_files")
-    if named:
-        sets = {name: load_puzzles(path) for name, path in named.items()}
+    finish_path = config.get("finish_eval_file")
+    if named or finish_path:
+        sets = {name: load_puzzles(path) for name, path in (named or {}).items()}
+        finish_records = load_finishes(finish_path) if finish_path else None
+        finish_kwargs = dict(
+            depths=tuple(int(d) for d in config.get("finish_eval_depths", (2, 10, 20))),
+            games=int(config.get("finish_eval_games", 100)),
+            cap_margin=int(config.get("finish_cap_margin", 20)),
+        )
 
         def eval_many(white, black, oriented=False):
             out = {}
@@ -117,6 +125,8 @@ def resolve_eval_fn(config: Dict[str, Any]):
                 r = evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
                 out.update({f"{name}_top1": r["puzzle_top1"], f"{name}_mate_prob": r["puzzle_mate_prob"],
                             f"{name}_count": r["puzzle_count"]})
+            if finish_records is not None:
+                out.update(evaluate_finishes(white, black, finish_records, oriented=oriented, **finish_kwargs))
             return out
         return eval_many
     path = config.get("puzzle_eval_file")
@@ -126,7 +136,40 @@ def resolve_eval_fn(config: Dict[str, Any]):
     return lambda white, black, oriented=False: evaluate_mate_in_one(white, black, puzzles, oriented=oriented)
 
 
+def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
+    """Return (FinishCurriculum or None, num_finish_envs). `finish_boards` boards
+    (after the puzzle boards) start k plies before a human checkmate with the winner
+    to move and must win under a cap of k + `finish_cap_margin` plies (reverse
+    curriculum, Florensa et al. 2017). Depth starts at `finish_depth_start`, rises
+    by 2 up to `finish_depth_max` when the success rate over the last
+    `finish_window` episodes reaches `finish_advance_rate`."""
+    n = int(config.get("finish_boards", 0) or 0)
+    if n == 0:
+        return None, 0
+    num_envs = int(config.get("num_envs", 12))
+    if n < 0 or num_puzzle_envs + n > num_envs:
+        raise ValueError(f"finish_boards must be in [0, {num_envs - num_puzzle_envs}], got {n}")
+    path = config.get("finish_train_file")
+    if not path:
+        raise ValueError("finish_boards > 0 requires finish_train_file")
+    try:
+        sampler = FinishCurriculum(
+            load_finishes(path),
+            depth_start=int(config.get("finish_depth_start", 2)),
+            depth_max=int(config.get("finish_depth_max", 40)),
+            advance_rate=float(config.get("finish_advance_rate", 0.6)),
+            window=int(config.get("finish_window", 100)),
+            cap_margin=int(config.get("finish_cap_margin", 20)),
+            seed=int(config.get("seed", 42)) + 2000,
+        )
+    except ValueError as e:
+        raise ValueError(f"finishing curriculum config: {e}") from e
+    return sampler, n
+
+
 def resolve_midgame_boards(config: Dict[str, Any], num_puzzle_envs: int):
+    """`num_puzzle_envs` counts the puzzle and finishing boards that precede the
+    mid-game boards."""
     """Return (FenSampler or None, num_midgame_envs). `midgame_boards` game boards
     start from FENs in `game_start_file` (mid-game human positions); they follow
     the puzzle boards and must fit within num_envs."""
@@ -171,13 +214,13 @@ def set_seed(seed: int):
 
 
 def _create_envs(env_type: str, num_envs: int, start_sampler=None, num_puzzle_envs=0, max_plies=None,
-                 game_start_sampler=None, num_midgame_envs=0):
+                 game_start_sampler=None, num_midgame_envs=0, finish_sampler=None, num_finish_envs=0):
     if env_type == "async":
         return OpenSpielAsyncVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies,
-                                       game_start_sampler, num_midgame_envs)
+                                       game_start_sampler, num_midgame_envs, finish_sampler, num_finish_envs)
     elif env_type == "sync":
         return OpenSpielVectorEnv(num_envs, start_sampler, num_puzzle_envs, max_plies,
-                                  game_start_sampler, num_midgame_envs)
+                                  game_start_sampler, num_midgame_envs, finish_sampler, num_finish_envs)
     else:
         raise ValueError(f"Unknown env_type: {env_type}")
 
@@ -206,12 +249,13 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     log_interval = int(config.get("log_interval", 10))
     algorithm = resolve_algorithm(config)
     max_plies = resolve_max_plies(config)
-    game_start_sampler, num_midgame_envs = resolve_midgame_boards(config, num_puzzle_envs)
+    finish_sampler, num_finish_envs = resolve_finish_boards(config, num_puzzle_envs)
+    game_start_sampler, num_midgame_envs = resolve_midgame_boards(config, num_puzzle_envs + num_finish_envs)
 
     set_seed(seed)
 
     envs = _create_envs(env_type, num_envs, start_sampler, num_puzzle_envs, max_plies,
-                        game_start_sampler, num_midgame_envs)
+                        game_start_sampler, num_midgame_envs, finish_sampler, num_finish_envs)
     shared = bool(config.get("shared_network", True))
     init_from = config.get("init_from")
     if init_from:

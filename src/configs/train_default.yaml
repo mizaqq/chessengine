@@ -70,9 +70,33 @@ algorithm: ppo
 # Mid-game start boards (decided 2026-09-16): the boards after the puzzle boards
 # start full games from human positions at plies 20-60 (data/games/midgame_starts.csv,
 # built by scripts/prepare_games.py). 0 = every game board starts from the opening.
-# The owner chose 4 of the 8 game boards for the run from the pretrained network.
-midgame_boards: 0
+# The owner chose 4 of the 8 game boards for the run from the pretrained network;
+# 2 since the finishing boards took 4 (layout 4 puzzle / 4 finishing / 2 mid-game / 2 opening).
+midgame_boards: 2
 game_start_file: data/games/midgame_starts.csv
+
+# Finishing boards (decided 2026-09-17; reverse curriculum, Florensa et al. 2017).
+# The SL+PPO model won material but found 7 of 100 mates-in-one in its own games:
+# only 23% of its human training games end in mate (the rest resign or flag), and
+# puzzle accuracy did not transfer to its own positions. A finishing board starts
+# k plies before a human checkmate (data/finishes, scripts/prepare_finishes.py)
+# with the winner to move and plays a full game under a cap of k + finish_cap_margin
+# plies; a cap is a draw (-0.5), a mate the normal win. k is drawn from the even
+# values up to the current depth, which starts at finish_depth_start and rises by 2
+# (up to finish_depth_max) whenever the success rate over the last finish_window
+# finishing episodes reaches finish_advance_rate. Sync env only.
+finish_boards: 4
+finish_train_file: data/finishes/finish_train.csv
+finish_depth_start: 2
+finish_depth_max: 40
+finish_advance_rate: 0.6
+finish_window: 100
+finish_cap_margin: 20
+# Held-out conversion rate from rewound positions at fixed depths, reported as
+# finish_rate_d<k> every eval_interval. Remove finish_eval_file to skip.
+finish_eval_file: data/finishes/finish_eval.csv
+finish_eval_depths: [2, 10, 20]
+finish_eval_games: 100
 
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").

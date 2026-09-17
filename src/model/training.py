@@ -102,7 +102,16 @@ def _collect_rollout(
             if "game_results" in env_step.info:
                 puzzle_boards = env_step.info.get("puzzle_boards", {})
                 puzzle_depth = env_step.info.get("puzzle_depth", {})
+                finish_boards = env_step.info.get("finish_boards", {})
                 for env_idx, result in env_step.info["game_results"].items():
+                    if finish_boards.get(env_idx, False):
+                        # Finishing board: success = the record's winner won; kept out of the
+                        # game rates like puzzles. Rewards are the normal win/loss/draw.
+                        metrics.add_finish_result(
+                            depth=env_step.info["finish_depth"][env_idx],
+                            success=env_step.info["finish_success"][env_idx],
+                        )
+                        continue
                     if puzzle_boards.get(env_idx, False):
                         mover_won = (result == "white_win") == (int(players[env_idx]) == WHITE)
                         metrics.add_puzzle_result(
@@ -407,7 +416,10 @@ def run_chess_training(
     env_step = envs.reset()
     pbar = tqdm(range(1, episodes + 1))
 
+    finish_sampler = getattr(envs, "finish_sampler", None)
     for episode in pbar:
+        if finish_sampler is not None:
+            metrics.set_finish_depth(finish_sampler.current_depth)
         steps_data, env_step = _collect_rollout(
             envs,
             white_model,

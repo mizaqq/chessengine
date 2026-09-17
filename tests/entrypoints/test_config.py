@@ -187,3 +187,27 @@ def test_midgame_boards_resolver(tmp_path):
         resolve_midgame_boards({"midgame_boards": 9, "game_start_file": str(path), "num_envs": 12}, 4)
     with pytest.raises(ValueError):
         resolve_midgame_boards({"midgame_boards": 2}, 4)
+
+
+from src.entrypoints.train import resolve_finish_boards  # noqa: E402
+
+_FINISH_CSV = "game_id,anchor_fen,moves,winner\ng1,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4 e7e5 f1c4 b8c6 d1h5 g8f6 h5f7,white\n"
+
+
+def test_finish_boards_resolver_and_layout(tmp_path):
+    f = tmp_path / "fin.csv"
+    f.write_text(_FINISH_CSV)
+    assert resolve_finish_boards({}, 4) == (None, 0)
+    sampler, n = resolve_finish_boards({"num_envs": 12, "finish_boards": 4, "finish_train_file": str(f),
+                                        "finish_depth_start": 2, "finish_depth_max": 40}, 4)
+    assert n == 4 and sampler.current_depth == 2 and sampler.cap_margin == 20
+    # puzzle 4 + finish 4 leaves 4 boards; mid-game 4 fits, 5 does not
+    assert resolve_midgame_boards({"num_envs": 12, "midgame_boards": 4, "game_start_file": "data/games/midgame_starts.csv"}, 8)[1] == 4
+    with pytest.raises(ValueError, match=r"\[0, 4\]"):
+        resolve_midgame_boards({"num_envs": 12, "midgame_boards": 5, "game_start_file": "x"}, 8)
+    with pytest.raises(ValueError, match=r"\[0, 8\]"):
+        resolve_finish_boards({"num_envs": 12, "finish_boards": 9, "finish_train_file": str(f)}, 4)
+    with pytest.raises(ValueError, match="finish_train_file"):
+        resolve_finish_boards({"num_envs": 12, "finish_boards": 1}, 4)
+    with pytest.raises(ValueError, match="advance_rate"):
+        resolve_finish_boards({"num_envs": 12, "finish_boards": 1, "finish_train_file": str(f), "finish_advance_rate": 0}, 4)

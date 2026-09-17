@@ -30,6 +30,9 @@ class MetricsAggregator:
         self.puzzle_attempts = 0
         self.puzzle_solved = 0
         self._puzzle_by_depth = {}   # depth -> [attempts, solved]
+        self.finish_attempts = 0
+        self.finish_success = 0
+        self._finish_by_depth = {}   # depth -> [attempts, successes]
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
 
@@ -55,6 +58,19 @@ class MetricsAggregator:
         entry = self._puzzle_by_depth.setdefault(int(depth), [0, 0])
         entry[0] += 1
         entry[1] += int(solved)
+
+    def add_finish_result(self, depth: int, success: bool):
+        """Record a finished finishing-board episode (kept out of the game rates);
+        `depth` is the rewind in plies, reported as `finish_success_rate_d<depth>`."""
+        self.finish_attempts += 1
+        self.finish_success += int(success)
+        entry = self._finish_by_depth.setdefault(int(depth), [0, 0])
+        entry[0] += 1
+        entry[1] += int(success)
+
+    def set_finish_depth(self, depth):
+        """Current curriculum depth (state, not a window count)."""
+        self.finish_depth = depth
 
     def add_terminal_return(self, white_view_return: float):
         """Record the unshaped terminal reward (white view) of a finished game."""
@@ -113,6 +129,11 @@ class MetricsAggregator:
             },
             **{f"puzzle_solved_rate_m{d}": (v[1] / v[0]) for d, v in sorted(self._puzzle_by_depth.items())},
             **{f"puzzle_attempts_m{d}": v[0] for d, v in sorted(self._puzzle_by_depth.items())},
+            "finish_attempts": self.finish_attempts,
+            "finish_success_rate": (self.finish_success / self.finish_attempts if self.finish_attempts else None),
+            "finish_depth": getattr(self, "finish_depth", None),
+            **{f"finish_success_rate_d{d}": (v[1] / v[0]) for d, v in sorted(self._finish_by_depth.items())},
+            **{f"finish_attempts_d{d}": v[0] for d, v in sorted(self._finish_by_depth.items())},
             "mean_terminal_return": (
                 self._terminal_return_sum / self._terminal_return_count
                 if self._terminal_return_count > 0

@@ -107,3 +107,20 @@ def test_puzzle_results_split_by_depth():
     assert s["puzzle_solved_rate_m1"] == 0.5 and s["puzzle_solved_rate_m2"] == 0.25
     assert s["puzzle_attempts_m2"] == 4
     assert "puzzle_solved_rate_m1" not in m.episode_summary()   # window reset
+
+
+def test_finish_results_split_by_depth_and_stay_out_of_game_rates():
+    m = MetricsAggregator()
+    m.set_finish_depth(2)
+    m.add_finish_result(0, True)
+    m.add_finish_result(2, True)
+    m.add_finish_result(2, False)
+    m.add_terminal_result(draw=True)
+    s = m.episode_summary()
+    assert s["finish_attempts"] == 3
+    assert abs(s["finish_success_rate"] - 2 / 3) < 1e-9
+    assert s["finish_success_rate_d0"] == 1.0 and s["finish_success_rate_d2"] == 0.5
+    assert s["finish_attempts_d2"] == 2 and s["finish_depth"] == 2
+    assert s["draw_rate"] == 1.0
+    s2 = m.episode_summary()
+    assert s2["finish_attempts"] == 0 and s2["finish_success_rate"] is None and s2["finish_depth"] == 2

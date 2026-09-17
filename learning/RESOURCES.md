@@ -143,6 +143,14 @@ reach for it. Prune anything that turns out shallow or wrong.
   Use for: the learned-world-model family, contrast with MuZero (imagined
   rollouts for policy gradient vs tree search).
 
+- [Paper: "Reverse Curriculum Generation for Reinforcement Learning" — Florensa et al. (2017)](https://arxiv.org/abs/1707.05300)
+  Abstract read 2026-09-17: the agent "is trained in reverse, gradually learning
+  to reach the goal from a set of start states increasingly far from the goal";
+  the start distribution "adapts to the agent's performance"; needs only "a
+  single state in which the task is achieved". Use for: the finishing boards
+  (start k plies before a human checkmate, depth rises with the success rate);
+  the puzzle boards are the k = 0 special case.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->

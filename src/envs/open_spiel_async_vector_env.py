@@ -81,7 +81,13 @@ class OpenSpielAsyncVectorEnv:
         max_plies: int | None = None,
         game_start_sampler=None,
         num_midgame_envs: int = 0,
+        finish_sampler=None,
+        num_finish_envs: int = 0,
     ):
+        if num_finish_envs > 0:
+            raise ValueError("finishing boards are supported by env_type sync only: the depth "
+                             "curriculum keeps one rolling success window, which worker "
+                             "processes cannot share")
         self.num_envs = num_envs
         if num_puzzle_envs > 0 and start_sampler is None:
             raise ValueError("num_puzzle_envs > 0 requires a start_sampler")

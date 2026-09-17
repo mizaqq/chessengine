@@ -4,6 +4,8 @@ from src.core.types import EnvStep
 from src.envs.open_spiel_env import OpenSpielEnv
 from src.envs.start_positions import StartPositionSampler
 
+WHITE = 1  # OpenSpiel convention
+
 PIECE_VALUES = np.array([0, 9, 5, 3, 3, 1], dtype=np.float32)
 
 
@@ -26,6 +28,8 @@ class OpenSpielVectorEnv:
         max_plies: int | None = None,
         game_start_sampler=None,
         num_midgame_envs: int = 0,
+        finish_sampler=None,
+        num_finish_envs: int = 0,
     ):
         self.num_envs = num_envs
         self.envs = [OpenSpielEnv() for _ in range(num_envs)]
@@ -38,26 +42,41 @@ class OpenSpielVectorEnv:
         self.num_puzzle_envs = num_puzzle_envs
         self.max_plies = max_plies          # game boards end as a draw at this ply count
         self.puzzle_depth: dict[int, int] = {}
-        # Boards [num_puzzle_envs, num_puzzle_envs + num_midgame_envs) start full games
-        # from sampled mid-game FENs (start-state curriculum for whole games).
+        # Layout after the puzzle boards: finishing boards [P, P+F) start k plies
+        # before a human mate under a per-board cap (reverse curriculum, Florensa
+        # et al. 2017); mid-game boards [P+F, P+F+M) start full games from sampled
+        # mid-game FENs; the rest start from the opening.
+        if num_finish_envs > 0 and finish_sampler is None:
+            raise ValueError("num_finish_envs > 0 requires a finish_sampler")
         if num_midgame_envs > 0 and game_start_sampler is None:
             raise ValueError("num_midgame_envs > 0 requires a game_start_sampler")
-        if num_puzzle_envs + num_midgame_envs > num_envs:
-            raise ValueError("num_puzzle_envs + num_midgame_envs must not exceed num_envs")
+        if num_puzzle_envs + num_finish_envs + num_midgame_envs > num_envs:
+            raise ValueError("num_puzzle_envs + num_finish_envs + num_midgame_envs must not exceed num_envs")
+        self.finish_sampler = finish_sampler
+        self.num_finish_envs = num_finish_envs
+        self.finish_start: dict[int, object] = {}
         self.game_start_sampler = game_start_sampler
         self.num_midgame_envs = num_midgame_envs
 
     def is_puzzle_env(self, i: int) -> bool:
         return i < self.num_puzzle_envs
 
+    def is_finish_env(self, i: int) -> bool:
+        return self.num_puzzle_envs <= i < self.num_puzzle_envs + self.num_finish_envs
+
     def is_midgame_env(self, i: int) -> bool:
-        return self.num_puzzle_envs <= i < self.num_puzzle_envs + self.num_midgame_envs
+        lo = self.num_puzzle_envs + self.num_finish_envs
+        return lo <= i < lo + self.num_midgame_envs
 
     def _reset_env(self, i: int) -> None:
         if self.is_puzzle_env(i):
             p = self.start_sampler.sample()
             self.puzzle_depth[i] = p.mate_in
             self.envs[i].reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves)
+        elif self.is_finish_env(i):
+            s = self.finish_sampler.sample()
+            self.finish_start[i] = s
+            self.envs[i].reset(s.fen, max_plies=s.cap)
         elif self.is_midgame_env(i):
             self.envs[i].reset(self.game_start_sampler.sample(), max_plies=self.max_plies)
         else:
@@ -92,6 +111,9 @@ class OpenSpielVectorEnv:
         game_results: dict[int, str] = {}
         puzzle_boards: dict[int, bool] = {}
         puzzle_depth: dict[int, int] = {}
+        finish_boards: dict[int, bool] = {}
+        finish_depth: dict[int, int] = {}
+        finish_success: dict[int, bool] = {}
 
         for i, (env, action) in enumerate(zip(self.envs, actions)):
             if not env.is_done():
@@ -104,6 +126,13 @@ class OpenSpielVectorEnv:
                 puzzle_boards[i] = self.is_puzzle_env(i)
                 if puzzle_boards[i]:
                     puzzle_depth[i] = self.puzzle_depth[i]
+                finish_boards[i] = self.is_finish_env(i)
+                if finish_boards[i]:
+                    start = self.finish_start[i]
+                    won = game_results[i] == ("white_win" if start.winner == WHITE else "black_win")
+                    finish_depth[i] = start.depth
+                    finish_success[i] = won
+                    self.finish_sampler.report(start.depth, won)
                 self._reset_env(i)
 
         states = [env.state() for env in self.envs]
@@ -120,6 +149,9 @@ class OpenSpielVectorEnv:
             info["game_results"] = game_results
             info["puzzle_boards"] = puzzle_boards
             info["puzzle_depth"] = puzzle_depth
+            info["finish_boards"] = finish_boards
+            info["finish_depth"] = finish_depth
+            info["finish_success"] = finish_success
 
         return EnvStep(
             obs=obs,

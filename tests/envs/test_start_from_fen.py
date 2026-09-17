@@ -1,3 +1,5 @@
+import chess
+import pytest
 import torch
 
 from src.envs.open_spiel_env import OpenSpielEnv
@@ -265,3 +267,72 @@ def test_async_midgame_board():
         assert int(step.legal_actions_mask[0].sum()) != 20 and int(step.legal_actions_mask[1].sum()) == 20
     finally:
         env.close()
+
+
+# --- finishing boards ---------------------------------------------------------
+from src.envs.start_positions import WHITE as _W, FinishCurriculum, FinishRecord  # noqa: E402
+
+_SCHOLAR = FinishRecord("g1", chess.STARTING_FEN if False else "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                        ["e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6", "h5f7"], _W)
+
+
+class _Recording(FinishCurriculum):
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.reports = []
+
+    def report(self, depth, success):
+        self.reports.append((depth, success))
+        super().report(depth, success)
+
+
+def _finish_env(num_envs=3, depth=0, cap_margin=20, puzzle=0):
+    cur = _Recording([_SCHOLAR], depth_start=depth, depth_max=depth, cap_margin=cap_margin, seed=0)
+    sampler = StartPositionSampler([Puzzle("p", "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", ["a1a8"], 0)]) if puzzle else None
+    env = OpenSpielVectorEnv(num_envs, sampler, puzzle, None, None, 0, cur, 1)
+    return env, cur
+
+
+def test_finish_board_layout_between_puzzle_and_midgame_boards():
+    cur = FinishCurriculum([_SCHOLAR], depth_start=0, depth_max=0)
+    puzzles = StartPositionSampler([Puzzle("p", "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", ["a1a8"], 0)])
+    env = OpenSpielVectorEnv(12, puzzles, 4, None, FenSampler([chess.STARTING_FEN]), 2, cur, 4)
+    assert [env.is_puzzle_env(i) for i in range(12)] == [True] * 4 + [False] * 8
+    assert [env.is_finish_env(i) for i in range(12)] == [False] * 4 + [True] * 4 + [False] * 4
+    assert [env.is_midgame_env(i) for i in range(12)] == [False] * 8 + [True] * 2 + [False] * 2
+    with pytest.raises(ValueError):
+        OpenSpielVectorEnv(12, puzzles, 4, None, FenSampler([chess.STARTING_FEN]), 4, cur, 6)
+    with pytest.raises(ValueError):
+        OpenSpielVectorEnv(4, None, 0, None, None, 0, None, 1)
+
+
+def test_finish_board_depth_zero_mate_is_a_success():
+    env, cur = _finish_env(depth=0)
+    step = env.reset()
+    assert env.envs[0].get_current_player() == _W and env.envs[0].max_plies == 20
+    mate = next(iter(env.envs[0].actions_for_uci(["h5f7"])))
+    actions = torch.tensor([mate] + [int(step.legal_actions_mask[i].nonzero()[0]) for i in (1, 2)])
+    step = env.step(actions)
+    assert step.info["game_results"][0] == "white_win"
+    assert step.info["finish_boards"] == {0: True}
+    assert step.info["finish_depth"] == {0: 0} and step.info["finish_success"] == {0: True}
+    assert cur.reports == [(0, True)]
+    assert env.envs[0].plies == 0                         # auto-reset to a new finishing start
+
+
+def test_finish_board_cap_is_a_draw_and_a_failure():
+    env, cur = _finish_env(depth=0, cap_margin=2)
+    step = env.reset()
+    for uci in ("a2a3", "a7a6"):                         # white quiet move, black quiet move
+        quiet = next(iter(env.envs[0].actions_for_uci([uci])))
+        actions = torch.tensor([quiet] + [int(step.legal_actions_mask[i].nonzero()[0]) for i in (1, 2)])
+        step = env.step(actions)
+    assert step.info["game_results"][0] == "draw"
+    assert step.info["finish_success"] == {0: False} and cur.reports == [(0, False)]
+
+
+def test_async_env_rejects_finishing_boards():
+    from src.envs.open_spiel_async_vector_env import OpenSpielAsyncVectorEnv
+    cur = FinishCurriculum([_SCHOLAR], depth_start=0, depth_max=0)
+    with pytest.raises(ValueError, match="sync"):
+        OpenSpielAsyncVectorEnv(2, None, 0, None, None, 0, cur, 1)
