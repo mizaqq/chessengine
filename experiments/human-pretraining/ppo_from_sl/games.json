@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 30,
+  "white_win": 5,
+  "unfinished": 3,
+  "black_win": 2
+ },
+ "draw_rate": 0.75,
+ "decisive_rate": 0.175,
+ "mate_in_one_opportunities": 100,
+ "mate_in_one_found": 7,
+ "mate_in_one_rate": 0.07,
+ "mean_plies": 175.825,
+ "checkpoints": {
+  "model": "experiments/human-pretraining/ppo_from_sl/model_20260917021812_episodes_600.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

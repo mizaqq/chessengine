@@ -141,6 +141,26 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Under potential shaping a mid-game start charges the start potential and never
   repays it; values shift, policy does not.
 
+## Pretraining on human moves, then RL (Sep 2026)
+
+- AlphaGo's first stage: predict the human move by cross-entropy, then start RL
+  from those weights ("weights rho are initialized to the same values").
+- Ours: 299k positions from Lichess 2013-12 (both Elo >= 1500, 8 positions per
+  game so one game's shared outcome does not dominate), 3 epochs, held-out
+  human-move top-1 0.34. Alone it reaches mating positions four times as often as
+  the RL network (139 vs 31 chances in 40 games) but takes almost none (0.17 on
+  mate-in-one puzzles).
+- PPO 600 updates from those weights: mate-in-one 0.57 and mate-in-two 0.51
+  held-out, against 0.44 / 0.35 for the same RL from scratch, with no plateau on
+  the two-step reward: a decent prior turns a 1-in-900 search into a common
+  event. PPO dials calm (KL 0.01-0.04).
+- The cost: human-move agreement fell 0.34 -> 0.17 during RL. The outcome
+  objective narrows the beam (AlphaGo p. 486: the SL policy searched better
+  because humans "select a diverse beam"). Watch this number when RL follows
+  pretraining; it is the same tension as SFT -> RLHF in language models.
+- Mid-game start boards (4 of 8 game boards from human positions at plies
+  20-60) ran alongside; their separate effect was not isolated.
+
 ## Sparse rewards plateau, then knee (Sep 2026)
 
 - Mate-in-two boards pay only when the first move is the verified forcing move

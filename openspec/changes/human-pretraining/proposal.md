@@ -49,6 +49,37 @@ Search (AlphaZero) is deferred by the owner's decision.
    long run at 120 and 600 (`experiments/mate-in-two-ply-cap/`): puzzle held-out,
    opening entropy, games finished, 40 games.
 
+### Outcome (2026-09-16/17)
+
+Data: 578k games scanned, 55% passed Elo >= 1500; 298,960 train / 16,040
+held-out positions; 50,000 mid-game FENs. Pretraining 3 epochs, 3,504 batches,
+58 min: held-out human-move top-1 **0.341** (AlphaGo in Go: 0.57).
+
+| checkpoint | human-move top-1 | Lichess m1 | Lichess m2 | opening entropy | 40 games: mate chances / found | mean plies |
+|---|---|---|---|---|---|---|
+| pretrained only (SL) | 0.341 | 0.169 | 0.132 | - | 139 / 5 (3.6%) | 170 |
+| PPO 600 from SL, 4 mid-game boards | 0.165 | **0.570** | **0.510** | 0.28 | 100 / 7 (7.0%) | 176 |
+| fresh PPO 600 (mate-in-two-ply-cap/LONG) | 0.078 | 0.444 | 0.351 | 0.42 | 31 / 3 | 186 |
+
+PPO-from-SL curve: m1 0.31 @50, 0.41 @100, 0.52 @300, 0.57 @600; m2 0.23 @50,
+0.30 @100, 0.44 @300, 0.51 @600. No plateau on mate-in-two: the human prior put
+enough mass on forcing moves that the two-step reward was found from the start
+(fresh run: flat at 0.08 until update 200). PPO dials were calm: clip fraction
+0.12-0.16, approx KL 0.013-0.036 (fresh run: 0.2-0.4 / 0.04-0.09). Decisive
+evaluation games 17.5% vs 7.5%, and three times the mating chances of the fresh
+network.
+
+Reading:
+- Pretraining + RL beat RL alone on every puzzle number at equal RL budget, and
+  the RL stage learned faster from the first update (0.31 vs 0.10 at update 50).
+- RL narrowed the beam: human-move agreement fell 0.34 -> 0.17 during PPO (still
+  double the fresh network's 0.08), and opening entropy sits at 0.28. This is the
+  AlphaGo p. 486 caution observed directly: the outcome objective trades human
+  diversity for its own preferences.
+- Games are still mostly draws (75%) at ~176 plies, but with 100 mating chances
+  and 7 taken. The in-game mate rate is still a small-count number.
+- Owner's prediction: not given.
+
 ## What to understand
 
 - Pretraining gives a starting point and diversity; RL then optimises for the

@@ -590,6 +590,73 @@ if _runs:
     print("expected direction: training m2 solved rate below held-out m2 top-1, because it also demands the mating move against the network's own defence.")
 """)
 
+
+# --------------------------------------------------------------------------- 11b
+md("""
+## 11b. Pretraining on human moves, then RL
+
+**Plain words.** AlphaGo's first stage did not play at all: it learned to predict
+the move a human made in 30 million positions, then reinforcement learning
+started from those weights. We did the same with 299,000 positions from Lichess
+games (both players rated 1500 or more, 8 positions per game). The pretrained
+network alone agreed with the human move 34% of the time on held-out positions.
+Then PPO ran 600 updates from it, with the same puzzle boards as the fresh run.
+
+Two things to read below: how fast the RL stage learned the puzzles compared with
+the fresh network, and what happened to agreement with human moves once the
+outcome reward took over. AlphaGo's authors noticed the same tension: the
+supervised policy searched better than the stronger RL policy, "presumably
+because humans select a diverse beam of promising moves".
+""")
+code("""
+SL = Path("experiments/human-pretraining/sl/pretrain_log.json")
+PPO_SL = Path("experiments/human-pretraining/ppo_from_sl/run.json")
+FRESH = [Path("experiments/mate-in-two-ply-cap/BOTH/run.json"), Path("experiments/mate-in-two-ply-cap/LONG/run.json")]
+AGREE = Path("experiments/human-pretraining/human_move_top1.json")
+_have = SL.exists() and PPO_SL.exists() and all(f.exists() for f in FRESH) and AGREE.exists()
+if _have:
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4))
+    sl_log = [e for e in json.loads(SL.read_text()) if "eval_top1" in e]
+    axes[0].plot([e["step"] for e in sl_log], [e["eval_top1"] for e in sl_log], marker=".")
+    axes[0].set_title("pretraining: held-out human-move top-1 vs batch"); axes[0].set_xlabel("batch")
+    fresh_logs, off = [], 0
+    for f in FRESH:
+        lg, cfg = load_run(f); fresh_logs += [{**e, "episode": e["episode"] + off} for e in lg]; off += cfg["max_updates"]
+    ppo_logs, _ = load_run(PPO_SL)
+    _rng2 = random.Random(11); _pair = ["P", "Q"]; _rng2.shuffle(_pair)
+    HIDDEN2 = {_pair[0]: "from pretrained", _pair[1]: "fresh"}
+    for letter, logs in ((_pair[0], ppo_logs), (_pair[1], fresh_logs)):
+        for key, style in (("lichess_top1", "-"), ("lichess_m2_top1", "--")):
+            xs, ys = series(logs, key); axes[1].plot(xs, ys, style, marker="o", ms=3, label=f"{letter} {key}")
+    axes[1].set_title("RL stage: held-out puzzle top-1 (solid m1, dashed m2)"); axes[1].set_xlabel("update"); axes[1].legend(fontsize=7)
+    agree = json.loads(AGREE.read_text())
+    axes[2].bar(list(agree), list(agree.values())); axes[2].set_title("agreement with human moves (held-out top-1)")
+    plt.tight_layout(); plt.show()
+else:
+    print("pretraining run not found; skip this section")
+""")
+task("read_pretraining", """
+# 1. Which letter is the run that started from the pretrained weights? ("P" or "Q")
+PRETRAINED_LETTER = ...
+# 2. One of the two runs shows a long flat start on mate-in-two before it takes off. Which letter, and
+#    in one sentence, why does the other one not have it?
+FLAT_START_LETTER = ...
+WHY_NO_PLATEAU = \"\"\"...\"\"\"
+# 3. Agreement with human moves went 0.34 -> 0.17 during RL. Is that a bug, a cost, or a win? One sentence.
+AGREEMENT_DROP = \"\"\"...\"\"\"
+""", """
+PRETRAINED_LETTER = [k for k, v in HIDDEN2.items() if v == "from pretrained"][0]
+FLAT_START_LETTER = [k for k, v in HIDDEN2.items() if v == "fresh"][0]
+WHY_NO_PLATEAU = \"\"\"The pretrained policy already puts mass on forcing moves, so the two-step reward is found often enough from the start to learn from.\"\"\"
+AGREEMENT_DROP = \"\"\"A cost worth watching: the outcome reward narrows the policy toward its own preferences and away from the diverse human beam.\"\"\"
+""")
+code("""
+if _have:
+    check("pretrained run identified", HIDDEN2.get(PRETRAINED_LETTER) == "from pretrained", f"truth {HIDDEN2}")
+    check("plateau run identified", HIDDEN2.get(FLAT_START_LETTER) == "fresh")
+    print("your reasons:", WHY_NO_PLATEAU, "|", AGREEMENT_DROP)
+""")
+
 # --------------------------------------------------------------------------- 12
 md("""
 ## 12. Your words

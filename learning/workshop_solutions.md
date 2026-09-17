@@ -110,3 +110,12 @@ def first_move_is_key(env, action, key_ucis):
 HARDER_DEPTH = "m2"
 WHICH_IS_LOWER_AND_WHY = """The training solved rate should be lower: it needs the key move and the follow-up mate against a live defender, while held-out top-1 needs only the key move."""
 ```
+
+## read_pretraining
+
+```python
+PRETRAINED_LETTER = [k for k, v in HIDDEN2.items() if v == "from pretrained"][0]
+FLAT_START_LETTER = [k for k, v in HIDDEN2.items() if v == "fresh"][0]
+WHY_NO_PLATEAU = """The pretrained policy already puts mass on forcing moves, so the two-step reward is found often enough from the start to learn from."""
+AGREEMENT_DROP = """A cost worth watching: the outcome reward narrows the policy toward its own preferences and away from the diverse human beam."""
+```

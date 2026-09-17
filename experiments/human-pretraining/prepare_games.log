@@ -1,0 +1,13 @@
+OMP: Warning #179: Function Can't set size of /tmp file failed:
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 39 87.5M   39 34.9M    0     0  31.4M      0  0:00:02  0:00:01  0:00:01 31.4M 92 87.5M   92 80.7M    0     0  38.2M      0  0:00:02  0:00:02 --:--:-- 38.2M100 87.5M  100 87.5M    0     0  38.7M      0  0:00:02  0:00:02 --:--:-- 38.6M
+downloading https://database.lichess.org/standard/lichess_db_standard_rated_2013-12.pgn.zst -> data/raw/lichess_db_standard_rated_2013-12.pgn.zst
+  games 20000, kept 11131, positions 89048
+  games 40000, kept 22387, positions 179096
+  games 60000, kept 33881, positions 271048
+scanned 69716 games, kept 39375; 298960 train / 16040 eval positions, 38624 mid-game FENs
+encoding eval (16040 positions)
+  wrote 16040 rows to data/games/human_eval.npz
+encoding train (298960 positions)
+  wrote 298960 rows to data/games/human_train.npz

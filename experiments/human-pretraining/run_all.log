@@ -1,0 +1,29 @@
+=== SL start 22:59:19
+{"step": 1, "epoch": 0, "train_ce": 3.4027, "train_top1": 0.0508, "train_value_mse": 1.0165, "elapsed_s": 1.2978, "eval_ce": 3.3093, "eval_value_mse": 0.9635, "eval_top1": 0.0732, "eval_n": 2048}
+{"step": 200, "epoch": 0, "train_ce": 2.9213, "train_top1": 0.1953, "train_value_mse": 0.9463, "elapsed_s": 229.2194, "eval_ce": 2.8999, "eval_value_mse": 0.957, "eval_top1": 0.1851, "eval_n": 2048}
+{"step": 400, "epoch": 0, "train_ce": 2.648, "train_top1": 0.2656, "train_value_mse": 0.9691, "elapsed_s": 458.5343, "eval_ce": 2.799, "eval_value_mse": 0.9523, "eval_top1": 0.21, "eval_n": 2048}
+{"step": 600, "epoch": 0, "train_ce": 2.5626, "train_top1": 0.3047, "train_value_mse": 0.9504, "elapsed_s": 687.6272, "eval_ce": 2.6546, "eval_value_mse": 0.9384, "eval_top1": 0.2505, "eval_n": 2048}
+{"step": 800, "epoch": 0, "train_ce": 2.5432, "train_top1": 0.2656, "train_value_mse": 0.9774, "elapsed_s": 916.6077, "eval_ce": 2.5925, "eval_value_mse": 0.9288, "eval_top1": 0.2656, "eval_n": 2048}
+{"step": 1000, "epoch": 0, "train_ce": 2.373, "train_top1": 0.2812, "train_value_mse": 0.9608, "elapsed_s": 1120.3605, "eval_ce": 2.5168, "eval_value_mse": 0.9261, "eval_top1": 0.2788, "eval_n": 2048}
+{"step": 1200, "epoch": 1, "train_ce": 2.2497, "train_top1": 0.3203, "train_value_mse": 0.9707, "elapsed_s": 1306.0644, "eval_ce": 2.4829, "eval_value_mse": 0.92, "eval_top1": 0.2876, "eval_n": 2048}
+{"step": 1400, "epoch": 1, "train_ce": 2.2151, "train_top1": 0.3203, "train_value_mse": 0.9447, "elapsed_s": 1493.7897, "eval_ce": 2.4549, "eval_value_mse": 0.9306, "eval_top1": 0.2939, "eval_n": 2048}
+{"step": 1600, "epoch": 1, "train_ce": 2.1873, "train_top1": 0.3633, "train_value_mse": 0.9478, "elapsed_s": 1680.7396, "eval_ce": 2.4349, "eval_value_mse": 0.9156, "eval_top1": 0.2998, "eval_n": 2048}
+{"step": 1800, "epoch": 1, "train_ce": 2.1854, "train_top1": 0.3242, "train_value_mse": 0.9021, "elapsed_s": 1867.8432, "eval_ce": 2.4092, "eval_value_mse": 0.9039, "eval_top1": 0.3042, "eval_n": 2048}
+{"step": 2000, "epoch": 1, "train_ce": 2.107, "train_top1": 0.3594, "train_value_mse": 0.9005, "elapsed_s": 2053.1917, "eval_ce": 2.4041, "eval_value_mse": 0.9098, "eval_top1": 0.3052, "eval_n": 2048}
+{"step": 2200, "epoch": 1, "train_ce": 2.2805, "train_top1": 0.3203, "train_value_mse": 0.9451, "elapsed_s": 2238.5348, "eval_ce": 2.3802, "eval_value_mse": 0.8987, "eval_top1": 0.3174, "eval_n": 2048}
+{"step": 2400, "epoch": 2, "train_ce": 1.9221, "train_top1": 0.4531, "train_value_mse": 0.9171, "elapsed_s": 2423.1633, "eval_ce": 2.4357, "eval_value_mse": 0.8942, "eval_top1": 0.3042, "eval_n": 2048}
+{"step": 2600, "epoch": 2, "train_ce": 1.9653, "train_top1": 0.3711, "train_value_mse": 0.9186, "elapsed_s": 2607.5771, "eval_ce": 2.4742, "eval_value_mse": 0.9015, "eval_top1": 0.3066, "eval_n": 2048}
+{"step": 2800, "epoch": 2, "train_ce": 1.8323, "train_top1": 0.4727, "train_value_mse": 0.9361, "elapsed_s": 2792.539, "eval_ce": 2.4277, "eval_value_mse": 0.8947, "eval_top1": 0.3174, "eval_n": 2048}
+{"step": 3000, "epoch": 2, "train_ce": 1.9899, "train_top1": 0.3789, "train_value_mse": 0.9345, "elapsed_s": 2977.335, "eval_ce": 2.4576, "eval_value_mse": 0.9001, "eval_top1": 0.312, "eval_n": 2048}
+{"step": 3200, "epoch": 2, "train_ce": 2.0677, "train_top1": 0.3672, "train_value_mse": 0.9604, "elapsed_s": 3161.0985, "eval_ce": 2.412, "eval_value_mse": 0.9143, "eval_top1": 0.3154, "eval_n": 2048}
+{"step": 3400, "epoch": 2, "train_ce": 2.0277, "train_top1": 0.3945, "train_value_mse": 0.9161, "elapsed_s": 3345.9651, "eval_ce": 2.3854, "eval_value_mse": 0.8917, "eval_top1": 0.3164, "eval_n": 2048}
+final held-out: {"eval_ce": 2.3007159648096174, "eval_value_mse": 0.9257346297737369, "eval_top1": 0.3413341644547527, "eval_n": 16040}
+saved experiments/human-pretraining/sl/model_20260916235658_episodes_3504.pth
+=== SL eval 23:57:24
+}
+}
+}
+=== PPO-from-SL start 23:57:54
+done in 8417s; last log: {"episode": 600, "loss": 0.1656428868882358, "empty_masks": 0, "illegal_samples": 0, "white_wins": 7, "black_wins": 4, "draws": 40, "total_games": 51, "white_win_rate": 0.13725490196078433, "black_win_rate": 0.0784313725490196, "draw_rate": 0.7843137254901961, "mean_entropy_raw": 0.6590775513788685, "mean_entropy_normalized": 0.2204912031069398, "mean_entropy_normalized_game": 0.2821596079273149, "mean_entropy_normalized_puzzle": 0.09715438281127717, "puzzle_attempts": 1674, "puzzle_solved_rate": 0.472520908004779, "mean_policy_loss": -0.026467268468544303, "mean_value_loss": 0.38572653932496903, "mean_clip_fraction": 0.16070963591628243, "mean_approx_kl": 0.03607354937507408, "puzzle_solved_rate_m1": 0.55819774718398, "puzzle_solved_rate_m2": 0.3942857142857143, "puzzle_attempts_m1": 799, "puzzle_attempts_m2": 875, "mean_terminal_return": -0.27450980392156865, "lichess_top1": 0.5695, "lichess_mate_prob": 0.5607743011751681, "lichess_count": 2000, "lichess_m2_top1": 0.51, "lichess_m2_mate_prob": 0.49197569532980484, "lichess_m2_count": 2000, "selfplay_top1": 0.12, "selfplay_mate_prob": 0.12269939826749768, "selfplay_count": 300}
+}
+=== all done 02:18:37
