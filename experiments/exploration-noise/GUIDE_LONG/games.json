@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 28,
+  "black_win": 4,
+  "unfinished": 4,
+  "white_win": 4
+ },
+ "draw_rate": 0.7,
+ "decisive_rate": 0.2,
+ "mate_in_one_opportunities": 33,
+ "mate_in_one_found": 8,
+ "mate_in_one_rate": 0.24242424242424243,
+ "mean_plies": 186.5,
+ "checkpoints": {
+  "model": "experiments/exploration-noise/GUIDE_LONG/model_20260917183200_episodes_300.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

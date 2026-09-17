@@ -129,3 +129,9 @@ over 420 guided updates from CONTROL: m1 +8 points, m2 +6, own-game +11, depth
 6 -> 18. Conversion from 10-20 plies out remains near 0.10: the human line helps
 the attacker start, but the defender is the same network and deviates, after
 which only a rules mate-in-one is demonstrated.
+
+Probe after GUIDE_LONG: Lichess m1 histogram <0.05 / mid / >0.8 = 0.19 / 0.14 /
+0.67 (CONTROL 0.30 / 0.13 / 0.57; supervised upper bound reached 0.90 top-1).
+Human-mate d0 top-1 0.46 -> 0.58, value +0.32 -> +0.76. Own-game m1 <0.05
+0.80 -> 0.59, top-1 0.12 -> 0.23. 40 sampled games: mate found 16/66 (0.24),
+against 7/100 for the original SL+PPO checkpoint.
