@@ -162,3 +162,13 @@ Probe after CLEAN_GUIDE: Lichess m1 histogram <0.05 / mid / >0.8 = 0.17 / 0.16 /
 0.67 (day start 0.30 / 0.11 / 0.59). Human-mate d0 top-1 0.52, value +0.76.
 Own-game m1 top-1 0.22, <0.05 share 0.62 (from 0.80). 40 sampled games: 20 decisive (13 black, 7 white), 15 draws, mean 148 plies;
 mate found in 20 of 54 chances (0.37). Day start: 7 decisive, 7 of 100.
+
+# Greedy-attacker check (2026-09-17, night)
+
+Is deep conversion low because sampling loses a ten-move plan? No. With the
+attacker playing argmax (AlphaZero evaluates greedily) and the defender still
+sampling: CLEAN_GUIDE d2 / d10 / d20 = 0.27 / 0.17 / 0.13 (sampled 0.28 / 0.18 /
+0.07); day-start checkpoint 0.13 / 0.04 / 0.08. The policy does not know the
+conversion; it is not a sampling artefact. Note also that d2 is capped well
+below 1 even for a good player: the human defender often blundered into the
+mate, so after the network's different reply a forced mate need not exist.

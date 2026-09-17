@@ -21,8 +21,10 @@ BLACK = 0
 
 
 @torch.no_grad()
-def play_finishes(white_model, black_model, starts, oriented: bool, generator) -> List[str]:
-    """Play every (fen, cap) start in lockstep; return the result string per start."""
+def play_finishes(white_model, black_model, starts, oriented: bool, generator, greedy_for=None) -> List[str]:
+    """Play every (fen, cap) start in lockstep; return the result string per start.
+    `greedy_for`: optional list of player ids (per start) that pick the argmax move
+    instead of sampling (the attacker in the finishing evaluation)."""
     envs = [OpenSpielEnv() for _ in starts]
     for env, (fen, cap) in zip(envs, starts):
         env.reset(fen, max_plies=cap)
@@ -40,7 +42,11 @@ def play_finishes(white_model, black_model, starts, oriented: bool, generator) -
             m = players == pid
             if m.any():
                 probs, _ = model(obs_in[m], legal[m])
-                actions[m] = torch.multinomial(probs, 1, generator=generator).squeeze(1)
+                sampled = torch.multinomial(probs, 1, generator=generator).squeeze(1)
+                if greedy_for is not None:
+                    g = torch.tensor([greedy_for[i] == pid for i in active])[m]
+                    sampled = torch.where(g, probs.argmax(dim=1), sampled)
+                actions[m] = sampled
         for j, i in enumerate(active):
             envs[i].step(int(actions[j]))
     return [e.game_result() for e in envs]
@@ -55,7 +61,10 @@ def evaluate_finishes(
     cap_margin: int = 20,
     oriented: bool = False,
     seed: int = 0,
+    greedy_attacker: bool = False,
 ) -> Dict[str, float]:
+    """`greedy_attacker`: the record's winner plays argmax moves (AlphaZero evaluates
+    greedily); the defender still samples."""
     models = {WHITE: white_model, BLACK: black_model}
     was_training = {pid: m.training for pid, m in models.items()}
     for m in models.values():
@@ -66,7 +75,8 @@ def evaluate_finishes(
         for depth in depths:
             usable = [r for r in records if r.max_depth() >= depth][:games]
             starts = [(r.rewind(depth), depth + cap_margin) for r in usable]
-            results = play_finishes(white_model, black_model, starts, oriented, gen) if starts else []
+            greedy_for = [r.winner for r in usable] if greedy_attacker else None
+            results = play_finishes(white_model, black_model, starts, oriented, gen, greedy_for) if starts else []
             won = sum(
                 res == ("white_win" if r.winner == WHITE else "black_win")
                 for r, res in zip(usable, results)

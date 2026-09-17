@@ -21,11 +21,13 @@ def main():
     ap.add_argument("--cap-margin", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--greedy-attacker", action="store_true")
     args = ap.parse_args()
     white, black, oriented, paths = load_models(args.ckpt_dir)
     result = evaluate_finishes(white, black, load_finishes(args.records), depths=args.depths, games=args.games,
-                               cap_margin=args.cap_margin, oriented=oriented, seed=args.seed)
-    summary = {**result, "checkpoints": paths, "records": args.records, "seed": args.seed}
+                               cap_margin=args.cap_margin, oriented=oriented, seed=args.seed,
+                               greedy_attacker=args.greedy_attacker)
+    summary = {**result, "checkpoints": paths, "records": args.records, "seed": args.seed, "greedy_attacker": args.greedy_attacker}
     print(json.dumps(summary, indent=1))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
