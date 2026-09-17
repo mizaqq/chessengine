@@ -1,0 +1,267 @@
+{
+ "names": [
+  "SL",
+  "PPO_SL",
+  "FIN3",
+  "CLEAN",
+  "GUIDE",
+  "CLEAN_GUIDE"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "PPO_SL": "experiments/human-pretraining/ppo_from_sl",
+  "FIN3": "experiments/finishing-curriculum/FIN3",
+  "CLEAN": "experiments/exploration-noise/CLEAN",
+  "GUIDE": "experiments/exploration-noise/GUIDE",
+  "CLEAN_GUIDE": "experiments/exploration-noise/CLEAN_GUIDE"
+ },
+ "games_per_colour": 30,
+ "seed": 0,
+ "table": {
+  "SL": {
+   "PPO_SL": 0.5916666666666667,
+   "FIN3": 0.6666666666666666,
+   "CLEAN": 0.6166666666666667,
+   "GUIDE": 0.6583333333333333,
+   "CLEAN_GUIDE": 0.625
+  },
+  "PPO_SL": {
+   "SL": 0.4083333333333333,
+   "FIN3": 0.5583333333333333,
+   "CLEAN": 0.4583333333333333,
+   "GUIDE": 0.5333333333333333,
+   "CLEAN_GUIDE": 0.5
+  },
+  "FIN3": {
+   "SL": 0.33333333333333337,
+   "PPO_SL": 0.44166666666666665,
+   "CLEAN": 0.5333333333333333,
+   "GUIDE": 0.49166666666666664,
+   "CLEAN_GUIDE": 0.5083333333333333
+  },
+  "CLEAN": {
+   "SL": 0.3833333333333333,
+   "PPO_SL": 0.5416666666666667,
+   "FIN3": 0.4666666666666667,
+   "GUIDE": 0.49166666666666664,
+   "CLEAN_GUIDE": 0.5
+  },
+  "GUIDE": {
+   "SL": 0.3416666666666667,
+   "PPO_SL": 0.4666666666666667,
+   "FIN3": 0.5083333333333333,
+   "CLEAN": 0.5083333333333333,
+   "CLEAN_GUIDE": 0.5083333333333333
+  },
+  "CLEAN_GUIDE": {
+   "SL": 0.375,
+   "PPO_SL": 0.5,
+   "FIN3": 0.4916666666666667,
+   "CLEAN": 0.5,
+   "GUIDE": 0.4916666666666667
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "PPO_SL",
+   "counts": {
+    "a_white_draw": 21,
+    "a_black_draw": 17,
+    "a_white_white_win": 7,
+    "a_black_unfinished": 3,
+    "a_black_black_win": 8,
+    "a_black_white_win": 2,
+    "a_white_black_win": 2
+   }
+  },
+  {
+   "a": "SL",
+   "b": "FIN3",
+   "counts": {
+    "a_white_white_win": 11,
+    "a_black_draw": 21,
+    "a_white_unfinished": 1,
+    "a_black_black_win": 9,
+    "a_white_draw": 18
+   }
+  },
+  {
+   "a": "SL",
+   "b": "CLEAN",
+   "counts": {
+    "a_white_white_win": 10,
+    "a_black_draw": 20,
+    "a_black_black_win": 6,
+    "a_white_unfinished": 3,
+    "a_white_draw": 16,
+    "a_black_white_win": 1,
+    "a_white_black_win": 1,
+    "a_black_unfinished": 3
+   }
+  },
+  {
+   "a": "SL",
+   "b": "GUIDE",
+   "counts": {
+    "a_white_draw": 21,
+    "a_black_black_win": 11,
+    "a_white_white_win": 8,
+    "a_black_draw": 16,
+    "a_white_unfinished": 1,
+    "a_black_unfinished": 3
+   }
+  },
+  {
+   "a": "SL",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_draw": 18,
+    "a_black_draw": 18,
+    "a_white_white_win": 9,
+    "a_black_white_win": 2,
+    "a_black_unfinished": 1,
+    "a_black_black_win": 9,
+    "a_white_black_win": 1,
+    "a_white_unfinished": 2
+   }
+  },
+  {
+   "a": "PPO_SL",
+   "b": "FIN3",
+   "counts": {
+    "a_white_draw": 22,
+    "a_black_draw": 22,
+    "a_white_unfinished": 2,
+    "a_black_black_win": 6,
+    "a_white_black_win": 2,
+    "a_white_white_win": 4,
+    "a_black_unfinished": 1,
+    "a_black_white_win": 1
+   }
+  },
+  {
+   "a": "PPO_SL",
+   "b": "CLEAN",
+   "counts": {
+    "a_white_draw": 26,
+    "a_black_draw": 15,
+    "a_black_white_win": 9,
+    "a_white_black_win": 1,
+    "a_black_black_win": 4,
+    "a_white_white_win": 1,
+    "a_black_unfinished": 2,
+    "a_white_unfinished": 2
+   }
+  },
+  {
+   "a": "PPO_SL",
+   "b": "GUIDE",
+   "counts": {
+    "a_white_draw": 26,
+    "a_black_draw": 20,
+    "a_black_unfinished": 2,
+    "a_white_unfinished": 2,
+    "a_black_white_win": 3,
+    "a_white_white_win": 2,
+    "a_black_black_win": 5
+   }
+  },
+  {
+   "a": "PPO_SL",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_draw": 19,
+    "a_black_draw": 26,
+    "a_white_black_win": 4,
+    "a_white_unfinished": 4,
+    "a_black_black_win": 2,
+    "a_black_unfinished": 1,
+    "a_white_white_win": 3,
+    "a_black_white_win": 1
+   }
+  },
+  {
+   "a": "FIN3",
+   "b": "CLEAN",
+   "counts": {
+    "a_white_draw": 21,
+    "a_black_white_win": 4,
+    "a_white_white_win": 4,
+    "a_black_draw": 13,
+    "a_black_unfinished": 6,
+    "a_black_black_win": 7,
+    "a_white_black_win": 3,
+    "a_white_unfinished": 2
+   }
+  },
+  {
+   "a": "FIN3",
+   "b": "GUIDE",
+   "counts": {
+    "a_white_draw": 23,
+    "a_black_white_win": 5,
+    "a_black_draw": 21,
+    "a_black_unfinished": 2,
+    "a_white_unfinished": 3,
+    "a_black_black_win": 2,
+    "a_white_white_win": 3,
+    "a_white_black_win": 1
+   }
+  },
+  {
+   "a": "FIN3",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_draw": 20,
+    "a_black_draw": 21,
+    "a_white_white_win": 6,
+    "a_black_unfinished": 2,
+    "a_white_unfinished": 2,
+    "a_white_black_win": 2,
+    "a_black_black_win": 2,
+    "a_black_white_win": 5
+   }
+  },
+  {
+   "a": "CLEAN",
+   "b": "GUIDE",
+   "counts": {
+    "a_white_unfinished": 4,
+    "a_black_draw": 17,
+    "a_white_draw": 24,
+    "a_black_unfinished": 6,
+    "a_black_black_win": 4,
+    "a_white_black_win": 2,
+    "a_black_white_win": 3
+   }
+  },
+  {
+   "a": "CLEAN",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_unfinished": 4,
+    "a_black_draw": 17,
+    "a_white_draw": 17,
+    "a_black_black_win": 8,
+    "a_white_white_win": 3,
+    "a_white_black_win": 6,
+    "a_black_white_win": 5
+   }
+  },
+  {
+   "a": "GUIDE",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_draw": 18,
+    "a_black_draw": 19,
+    "a_black_black_win": 3,
+    "a_white_black_win": 5,
+    "a_white_white_win": 4,
+    "a_white_unfinished": 3,
+    "a_black_unfinished": 7,
+    "a_black_white_win": 1
+   }
+  }
+ ]
+}
