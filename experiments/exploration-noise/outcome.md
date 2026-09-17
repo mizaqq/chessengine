@@ -33,3 +33,23 @@ most likely came from the finishing boards. Candidate fixes: noise on puzzle
 boards only; no advantage normalisation on noisy samples; label-guided behaviour
 (play the known mate with probability eps) where labels exist. The clean arm
 (SL -> outcome-only, 600 updates, running) gives an unpolluted base first.
+
+# Arm PUZNOISE (2026-09-17): noise on the one-move puzzle boards only, from CONTROL
+
+Mechanism test for the flattening. From the CONTROL checkpoint (m1 0.653, m2
+0.571), 120 updates, eps 0.25 on puzzle boards only.
+
+| Dial | CONTROL start | PUZNOISE @50 | @100 | @120 |
+|---|---|---|---|---|
+| Lichess m1 top-1 | 0.653 | 0.629 | 0.631 | 0.628 |
+| Lichess m2 top-1 | 0.571 | 0.529 | 0.534 | 0.532 |
+| Own-game mate positions | 0.12 | 0.09 | 0.13 | 0.12 |
+| Entropy, puzzle / game boards | 0.10 / 0.31 | 0.12 / 0.32 | 0.16 / 0.33 | 0.17 / 0.34 |
+
+Reading: milder than NOISE but the same sign. Noise confined to boards where a
+random miss is unambiguously negative still cost 2-4 points and raised puzzle
+entropy; the game-board entropy barely moved, so the finishing boards explain the
+size of the NOISE flattening but not its existence. Behaviour noise with an
+importance-corrected, clipped PPO update is out as a remedy here. What is left
+for the confident-wrong third: search as the teacher (AlphaZero), or
+label-guided behaviour on labelled boards.
