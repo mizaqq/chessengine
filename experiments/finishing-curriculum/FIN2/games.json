@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 32,
+  "unfinished": 3,
+  "white_win": 2,
+  "black_win": 3
+ },
+ "draw_rate": 0.8,
+ "decisive_rate": 0.125,
+ "mate_in_one_opportunities": 41,
+ "mate_in_one_found": 5,
+ "mate_in_one_rate": 0.12195121951219512,
+ "mean_plies": 190.675,
+ "checkpoints": {
+  "model": "experiments/finishing-curriculum/FIN2/model_20260917113600_episodes_300.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
