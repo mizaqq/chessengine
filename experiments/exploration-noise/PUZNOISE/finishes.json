@@ -1,0 +1,13 @@
+{
+ "finish_rate_d2": 0.2,
+ "finish_games_d2": 100,
+ "finish_rate_d10": 0.05,
+ "finish_games_d10": 100,
+ "finish_rate_d20": 0.08,
+ "finish_games_d20": 100,
+ "checkpoints": {
+  "model": "experiments/exploration-noise/PUZNOISE/model_20260917155056_episodes_120.pth"
+ },
+ "records": "data/finishes/finish_eval.csv",
+ "seed": 0
+}
