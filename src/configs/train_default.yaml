@@ -48,9 +48,14 @@ puzzle_boards: 4
 # Mate-in-two added 2026-09-16 (next curriculum rung): the win counts only when
 # the first move is the verified forcing move; a wrong first move ends the
 # episode at once as a miss.
+# Mate-in-three and -four added 2026-09-17 (owner: forced mates stay won whatever
+# the defender replies, unlike human-game mates, so they are the clean conversion
+# rung); first move trusted from Lichess, solution line used as the demonstrator.
 puzzle_train_files:
-  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.5}
-  - {file: data/puzzles/mate_in_2_train.csv, weight: 0.5}
+  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.25}
+  - {file: data/puzzles/mate_in_2_train.csv, weight: 0.25}
+  - {file: data/puzzles/mate_in_3_train.csv, weight: 0.25}
+  - {file: data/puzzles/mate_in_4_train.csv, weight: 0.25}
 # Terminal reward for a missed mate on a puzzle board. 0 (default) keeps the value
 # head honest about still-winning positions; try negative values as an experiment.
 puzzle_miss_reward: 0.0
@@ -59,6 +64,8 @@ puzzle_miss_reward: 0.0
 puzzle_eval_files:
   lichess: data/puzzles/mate_in_1_eval.csv
   lichess_m2: data/puzzles/mate_in_2_eval.csv
+  lichess_m3: data/puzzles/mate_in_3_eval.csv
+  lichess_m4: data/puzzles/mate_in_4_eval.csv
   selfplay: data/puzzles/selfplay_mate_in_1_eval.csv
 eval_interval: 50
 

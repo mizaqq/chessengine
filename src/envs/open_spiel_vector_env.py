@@ -92,7 +92,8 @@ class OpenSpielVectorEnv:
         if self.is_puzzle_env(i):
             p = self.start_sampler.sample()
             self.puzzle_depth[i] = p.mate_in
-            self.envs[i].reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves)
+            self.envs[i].reset(p.fen, puzzle_moves=p.mate_in, key_moves=p.key_moves,
+                               solution=getattr(p, "solution", ()))
         elif self.is_finish_env(i):
             s = self.finish_sampler.sample()
             self.finish_start[i] = s

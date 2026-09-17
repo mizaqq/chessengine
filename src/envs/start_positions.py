@@ -18,6 +18,7 @@ class Puzzle:
     key_moves: List[str]     # UCI: all mating moves (mate_in 1) or the forcing first move(s) (mate_in 2)
     rating: int
     mate_in: int = 1
+    solution: tuple = ()     # UCI line from `fen` to the mate, both sides (depth >= 3 files)
 
     @property
     def mating_moves(self) -> List[str]:   # legacy name
@@ -35,6 +36,7 @@ def load_puzzles(path) -> List[Puzzle]:
                 key_moves=(row.get("key_moves") or row.get("mating_moves") or "").split(),
                 rating=int(row["rating"]),
                 mate_in=int(row.get("mate_in") or 1),
+                solution=tuple((row.get("solution") or "").split()),
             )
             for row in csv.DictReader(fh)
         ]

@@ -5,6 +5,41 @@ from open_spiel.python import rl_environment
 import chess
 
 
+def _leaves_mate_in_one(board: chess.Board) -> bool:
+    for m in board.legal_moves:
+        board.push(m)
+        mate = board.is_checkmate()
+        board.pop()
+        if mate:
+            return True
+    return False
+
+
+def forcing_mate_actions_of(env) -> set[int]:
+    """Legal actions after which every reply leaves a mate in one (a forced mate in
+    two, checked with python-chess); empty if none. Demonstrator fallback."""
+    state = env.env.get_state
+    if state.current_player() not in (0, 1):
+        return set()
+    board = chess.Board(state.to_string())
+    ucis = []
+    for move in list(board.legal_moves):
+        board.push(move)
+        forced = not board.is_game_over()
+        if forced:
+            for reply in list(board.legal_moves):
+                board.push(reply)
+                ok = _leaves_mate_in_one(board)
+                board.pop()
+                if not ok:
+                    forced = False
+                    break
+        board.pop()
+        if forced:
+            ucis.append(move.uci())
+    return env.actions_for_uci(ucis) if ucis else set()
+
+
 def mating_actions_of(env) -> list[int]:
     """Legal actions that mate at once (rules engine); [] if none."""
     state = env.env.get_state
@@ -53,10 +88,13 @@ class OpenSpielEnv:
             ids = self.actions_for_uci([self.demo_line[self.demo_index]])
             if ids:
                 return ids
-        return set(mating_actions_of(self))
+        mates = set(mating_actions_of(self))
+        if mates:
+            return mates
+        return forcing_mate_actions_of(self) if getattr(self, "demo_forcing", True) else set()
 
     def reset(self, fen: str | None = None, puzzle_moves: int = 0, key_moves=None,
-              max_plies: int | None = None):
+              max_plies: int | None = None, solution=None):
         """Start a new game from the opening, or from `fen` when given.
 
         OpenSpiel's chess game has no FEN parameter, so a custom start is built
@@ -86,7 +124,7 @@ class OpenSpielEnv:
         self.mover = self.get_current_player()
         if self.puzzle_moves > 1 and key_moves:
             self.key_actions = self.actions_for_uci(key_moves)
-        self.set_demo_line(key_moves if self.puzzle_moves > 1 else None)
+        self.set_demo_line(solution if solution else (key_moves if self.puzzle_moves > 1 else None))
         return time_step
 
     def actions_for_uci(self, ucis) -> set[int]:

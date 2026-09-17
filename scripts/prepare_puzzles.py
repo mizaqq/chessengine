@@ -8,7 +8,14 @@ Depth 2 (`--depth 2`, theme mateIn2): the stored FEN is after the opponent's fir
 move; `key_moves` is the puzzle's forcing move, kept only if a rules-engine check
 confirms every reply leaves a mate in one.
 
-Usage: python -m scripts.prepare_puzzles [--depth 1|2] [--train 20000] [--eval 2000] [--seed 0]
+Depth 3+ (`--depth 3|4`, themes mateIn3 / mateIn4; owner 2026-09-17): a full forced
+mate check by rules is millions of positions per puzzle in Python, so the first
+move is trusted from Lichess (engine-verified puzzles) and only checked to be
+legal and not an immediate blunder of the mate (the reply must still leave a
+forced mate is NOT verified). The whole solution line is stored in `solution`
+(UCI, both sides, from the stored FEN) so training can use it as a demonstration.
+
+Usage: python -m scripts.prepare_puzzles [--depth 1|2|3|4] [--train 20000] [--eval 2000] [--seed 0]
 """
 import argparse
 import csv
@@ -23,7 +30,7 @@ import zstandard
 DUMP_URL = "https://database.lichess.org/lichess_db_puzzle.csv.zst"
 RAW_DIR = Path("data/raw")
 OUT_DIR = Path("data/puzzles")
-FIELDS = ["puzzle_id", "fen", "key_moves", "mate_in", "rating"]
+FIELDS = ["puzzle_id", "fen", "key_moves", "mate_in", "rating", "solution"]
 
 
 def download(url: str, dest: Path) -> Path:
@@ -80,8 +87,19 @@ def convert_row(row: dict, depth: int = 1) -> dict | None:
         key = mating_moves(board)
         if moves[1] not in key:
             return None
-    else:
+    elif depth == 2:
         if not forces_mate_in_two(board, moves[1]):
+            return None
+        key = [moves[1]]
+    else:
+        # Trust Lichess for the forced line; check it is legal and ends in mate.
+        probe = board.copy()
+        try:
+            for uci in moves[1:]:
+                probe.push_uci(uci)
+        except ValueError:
+            return None
+        if not probe.is_checkmate():
             return None
         key = [moves[1]]
     return {
@@ -90,6 +108,7 @@ def convert_row(row: dict, depth: int = 1) -> dict | None:
         "key_moves": " ".join(key),
         "mate_in": str(depth),
         "rating": row["Rating"],
+        "solution": " ".join(moves[1:]),
     }
 
 
@@ -110,7 +129,7 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--depth", type=int, default=1, choices=(1, 2))
+    ap.add_argument("--depth", type=int, default=1, choices=(1, 2, 3, 4))
     ap.add_argument("--train", type=int, default=20000)
     ap.add_argument("--eval", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)

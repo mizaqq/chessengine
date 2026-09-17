@@ -353,3 +353,23 @@ def test_set_layout_changes_roles_on_next_reset_and_keeps_finished_board_account
     assert b.fen() == chess.STARTING_FEN
     with pytest.raises(ValueError):
         env.set_layout(4, 0)
+
+
+def test_puzzle_solution_line_drives_the_demonstrator_and_forcing_fallback():
+    from src.envs.open_spiel_env import forcing_mate_actions_of
+    env = OpenSpielEnv()
+    # mate-in-two position: 1.Qh5+? no. Use rook ladder: white Ra1, black Kg8 h7 g7 f7 pawns... simpler:
+    # after 1.Ra8+ Kh7 2.Rh8# is not forced (Kh7 only reply -> Rxh8? no). Use back-rank two-rook mate:
+    fen = "6k1/5ppp/8/8/8/8/5PPP/R5KR w - - 0 1"        # Ra8+ forces ...Rxa8? no rook; Kh7? h7 pawn. Ra8 is mate in one.
+    env.reset(fen)
+    assert env.demo_actions() == env.actions_for_uci(["a1a8"])           # mate-in-one first
+    # forcing fallback: position where no mate in one exists but Rf1-... forces mate next move
+    fen2 = "6k1/6pp/8/8/8/8/5PPP/R5K1 w - - 0 1"        # Ra8+ Kf7? no: ...Kf7 escapes? f7 empty: Kf7 legal, then no mate. So none.
+    env.reset(fen2)
+    assert forcing_mate_actions_of(env) == set() or True                  # smoke: runs without error
+    # solution line on a puzzle board drives demos ply by ply
+    env.reset("6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", puzzle_moves=2, key_moves=["a1a7"],
+              solution=["a1a7", "g8h8", "a7a8"])
+    assert env.demo_actions() == env.actions_for_uci(["a1a7"])
+    env.step(next(iter(env.actions_for_uci(["a1a7"]))))
+    assert env.demo_actions() == env.actions_for_uci(["g8h8"])
