@@ -72,6 +72,12 @@ class OpenSpielVectorEnv:
         self.num_finish_envs = num_finish_envs
         self.num_midgame_envs = num_midgame_envs
 
+    def demo_actions(self, boards=None):
+        """Per-board demonstrator action sets (label-guided exploration); `boards`
+        restricts the rules-engine work to those indices, others get empty sets."""
+        return [self.envs[i].demo_actions() if (boards is None or boards[i]) else set()
+                for i in range(self.num_envs)]
+
     def is_puzzle_env(self, i: int) -> bool:
         return i < self.num_puzzle_envs
 
@@ -91,6 +97,7 @@ class OpenSpielVectorEnv:
             s = self.finish_sampler.sample()
             self.finish_start[i] = s
             self.envs[i].reset(s.fen, max_plies=s.cap)
+            self.envs[i].set_demo_line(getattr(s, "line", None))
         elif self.is_midgame_env(i):
             self.envs[i].reset(self.game_start_sampler.sample(), max_plies=self.max_plies)
         else:

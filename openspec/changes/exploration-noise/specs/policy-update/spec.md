@@ -33,3 +33,22 @@ noisy-board moves whose network probability was below 0.05.
 #### Scenario: opening boards untouched
 - **WHEN** `explore_boards` is `curriculum` and a board starts from the opening
 - **THEN** that board's moves are drawn from pi
+
+### Requirement: Label-guided exploration on curriculum boards
+When `guide_epsilon` > 0, moves on the selected boards SHALL be drawn from
+`(1 - guide_epsilon) * pi + guide_epsilon * uniform(demonstration)` whenever a
+demonstration exists for the position, and from `pi` otherwise. The
+demonstration SHALL be: on puzzle boards the puzzle's key moves (or the rules
+mating moves), on finishing boards the human's next move while the game still
+follows the human line, and on any board the rules mating moves when the side to
+move has one. The stored log-probability SHALL be the mixture's. `guide_epsilon`
+and `explore_epsilon` SHALL NOT both be positive. The summary SHALL report the
+share of guided moves that were the demonstrated move.
+
+#### Scenario: finishing board follows the line, then deviates
+- **WHEN** a finishing board starts 4 plies before a human mate and the first two plies follow the human moves, then the defender deviates
+- **THEN** the demonstration for plies one and two is the human's move, and afterwards it is empty unless a mate in one exists
+
+#### Scenario: puzzle with one mating move
+- **WHEN** guide_epsilon = 0.5, the network gives the mate 0.1 and there are 20 legal moves
+- **THEN** the behaviour probability of the mate is 0.55 and the stored log-probability is log(0.55)

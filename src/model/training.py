@@ -61,6 +61,20 @@ def behaviour_probs(p, legal, epsilon, alpha, generator=None):
 OFFPRIOR_THRESHOLD = 0.05   # a pick counts as "against the prior" below this network probability
 
 
+def guided_probs(p, demos, epsilon):
+    """Label-guided behaviour mixture: for each row i with a non-empty demonstration
+    set demos[i], b = (1 - epsilon) * p + epsilon * uniform(demos[i]); rows without a
+    demonstration keep p. Salimans & Chen 2018 (demonstration-guided starts) turned
+    into a behaviour policy; the update stays outcome-driven."""
+    b = p.clone()
+    for i, demo in enumerate(demos):
+        if demo:
+            idx = torch.tensor(sorted(demo), dtype=torch.long)
+            b[i] = (1.0 - epsilon) * p[i]
+            b[i, idx] += epsilon / len(idx)
+    return b
+
+
 def _collect_rollout(
     envs,
     white_model,
@@ -72,6 +86,7 @@ def _collect_rollout(
     metrics,
     oriented=False,
     explore=None,
+    guide=None,
 ):
     """Play `num_steps` plies on every board and record what the update needs.
 
@@ -89,6 +104,9 @@ def _collect_rollout(
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
     noisy = explore["mask"] if explore is not None and explore.get("epsilon", 0) > 0 else None
+    guided = guide["mask"] if guide is not None and guide.get("epsilon", 0) > 0 else None
+    if noisy is not None and guided is not None:
+        raise ValueError("explore (noise) and guide (labels) cannot both be active")
 
     with torch.no_grad():
         for _ in range(num_steps):
@@ -102,6 +120,10 @@ def _collect_rollout(
             old_log_prob = torch.zeros(num_envs)
             entropy = torch.zeros(num_envs)
             num_legal = legal.sum(dim=1).float().clamp(min=1.0)
+            demos = envs.demo_actions(guided) if guided is not None else None
+            guided_rows = None
+            if demos is not None:
+                guided_rows = torch.tensor([bool(guided[i]) and bool(demos[i]) for i in range(num_envs)])
 
             for model_id in (WHITE, BLACK):
                 mask = players == model_id
@@ -118,6 +140,15 @@ def _collect_rollout(
                     old_log_prob[mask] = bdist.log_prob(a)
                     picked = p.gather(1, a[:, None]).squeeze(1)[rows]
                     metrics.add_explore(count=int(rows.sum()), offprior=int((picked < OFFPRIOR_THRESHOLD).sum()))
+                elif guided_rows is not None and guided_rows[mask].any():
+                    env_ids = mask.nonzero().squeeze(1).tolist()
+                    row_demos = [demos[e] if guided_rows[e] else set() for e in env_ids]
+                    b = guided_probs(p, row_demos, guide["epsilon"])
+                    bdist = Categorical(probs=b)
+                    a = bdist.sample()
+                    old_log_prob[mask] = bdist.log_prob(a)
+                    hits = sum(int(a[j].item()) in row_demos[j] for j in range(len(env_ids)) if row_demos[j])
+                    metrics.add_guide(count=int(guided_rows[mask].sum()), demo_picks=hits)
                 else:
                     a = dist.sample()
                     old_log_prob[mask] = dist.log_prob(a)
@@ -178,7 +209,8 @@ def _collect_rollout(
                     done=env_step.done.clone(),
                     terminal_r_white=tr_white,
                     terminal_r_black=tr_black,
-                    noisy=(noisy.clone() if noisy is not None else torch.zeros(num_envs, dtype=torch.bool)),
+                    noisy=(noisy.clone() if noisy is not None else
+                           (guided_rows.clone() if guided_rows is not None else torch.zeros(num_envs, dtype=torch.bool))),
                 )
             )
 
@@ -426,6 +458,7 @@ def run_chess_training(
     algorithm=None,
     layout_schedule=None,
     explore=None,
+    guide=None,
 ):
     """Run A2C or PPO self-play.
 
@@ -434,6 +467,8 @@ def run_chess_training(
     (`envs.set_layout`), e.g. to hand finishing boards back to opening play.
     `explore`: None or dict(epsilon, alpha, boards) with boards `curriculum`
     (puzzle + finishing boards) or `all`; the board mask is rebuilt every update.
+    `guide`: None or dict(epsilon, boards): label-guided behaviour, the demonstrator
+    (puzzle key move / human line / rules mate) is played with probability epsilon.
 
     `algorithm`: dict of update settings (`epochs`, `minibatches`, `clip_epsilon`,
     `normalize_advantage`, `value_coef`, `gae_lambda`); default `A2C_PRESET`.
@@ -480,6 +515,16 @@ def run_chess_training(
             print(f"update {episode}: layout -> finish {change['finish_boards']}, mid-game {change['midgame_boards']}")
         if finish_sampler is not None:
             metrics.set_finish_depth(finish_sampler.current_depth)
+        def _board_mask(which):
+            if which == "all":
+                return torch.ones(num_envs, dtype=torch.bool)
+            if which == "puzzle":
+                return torch.tensor([envs.is_puzzle_env(i) for i in range(num_envs)])
+            is_finish = getattr(envs, "is_finish_env", lambda i: False)
+            return torch.tensor([envs.is_puzzle_env(i) or is_finish(i) for i in range(num_envs)])
+        guide_now = None
+        if guide is not None and guide.get("epsilon", 0) > 0:
+            guide_now = {"epsilon": guide["epsilon"], "mask": _board_mask(guide.get("boards", "curriculum"))}
         explore_now = None
         if explore is not None and explore.get("epsilon", 0) > 0:
             which = explore.get("boards", "curriculum")
@@ -502,6 +547,7 @@ def run_chess_training(
             metrics,
             oriented=shared,
             explore=explore_now,
+            guide=guide_now,
         )
 
         bootstrap_white = _compute_bootstrap(

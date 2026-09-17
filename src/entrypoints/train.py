@@ -205,6 +205,24 @@ def resolve_exploration(config: Dict[str, Any]):
     return {"epsilon": eps, "alpha": alpha, "boards": boards}
 
 
+def resolve_guide(config: Dict[str, Any]):
+    """Label-guided exploration: `guide_epsilon` in [0, 1) (0 = off), `guide_boards`
+    `puzzle` | `curriculum` | `all`. The demonstrator is the puzzle key move, the
+    human line on finishing boards, or a rules-engine mate. Mutually exclusive with
+    `explore_epsilon` > 0."""
+    eps = float(config.get("guide_epsilon", 0.0) or 0.0)
+    if not 0.0 <= eps < 1.0:
+        raise ValueError(f"guide_epsilon must be in [0, 1), got {eps}")
+    if eps == 0.0:
+        return None
+    if float(config.get("explore_epsilon", 0.0) or 0.0) > 0:
+        raise ValueError("guide_epsilon and explore_epsilon cannot both be > 0")
+    boards = config.get("guide_boards", "curriculum")
+    if boards not in ("puzzle", "curriculum", "all"):
+        raise ValueError(f"guide_boards must be 'puzzle', 'curriculum' or 'all', got {boards!r}")
+    return {"epsilon": eps, "boards": boards}
+
+
 def resolve_layout_schedule(config: Dict[str, Any], num_puzzle_envs: int):
     """`layout_schedule: [{from_update, finish_boards, midgame_boards}, ...]`: board
     roles after the puzzle boards switch at those updates (boards beyond the three
@@ -293,6 +311,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     game_start_sampler, num_midgame_envs = resolve_midgame_boards(config, num_puzzle_envs + num_finish_envs)
     layout_schedule = resolve_layout_schedule(config, num_puzzle_envs)
     explore = resolve_exploration(config)
+    guide = resolve_guide(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
         finish_sampler = resolve_finish_boards({**config, "finish_boards": 1}, num_puzzle_envs)[0]
     if any(e["midgame_boards"] > 0 for e in layout_schedule) and game_start_sampler is None:
@@ -343,6 +362,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         algorithm=algorithm,
         layout_schedule=layout_schedule,
         explore=explore,
+        guide=guide,
     )
 
     return {

@@ -34,6 +34,8 @@ class MetricsAggregator:
         self.finish_success = 0
         self.explore_count = 0
         self.explore_offprior = 0
+        self.guide_count = 0
+        self.guide_demo_picks = 0
         self._finish_by_depth = {}   # depth -> [attempts, successes]
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
@@ -75,6 +77,12 @@ class MetricsAggregator:
         less than 5% (picks against the prior)."""
         self.explore_count += int(count)
         self.explore_offprior += int(offprior)
+
+    def add_guide(self, count: int, demo_picks: int):
+        """Moves drawn on guided boards with a demonstration available, and how many
+        of them were the demonstrated move."""
+        self.guide_count += int(count)
+        self.guide_demo_picks += int(demo_picks)
 
     def set_finish_depth(self, depth):
         """Current curriculum depth (state, not a window count)."""
@@ -139,6 +147,8 @@ class MetricsAggregator:
             **{f"puzzle_attempts_m{d}": v[0] for d, v in sorted(self._puzzle_by_depth.items())},
             "explore_moves": self.explore_count,
             "explore_offprior_share": (self.explore_offprior / self.explore_count if self.explore_count else None),
+            "guide_moves": self.guide_count,
+            "guide_demo_share": (self.guide_demo_picks / self.guide_count if self.guide_count else None),
             "finish_attempts": self.finish_attempts,
             "finish_success_rate": (self.finish_success / self.finish_attempts if self.finish_attempts else None),
             "finish_depth": getattr(self, "finish_depth", None),

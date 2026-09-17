@@ -158,6 +158,7 @@ class FinishStart:
     depth: int
     cap: int      # plies allowed from `fen` before the game is a draw
     winner: int
+    line: tuple = ()   # the human moves (UCI) from `fen` to the mate, both sides
 
 
 class FinishCurriculum:
@@ -195,7 +196,8 @@ class FinishCurriculum:
         rec = self._rng.choice(self.records)
         depth = 2 * self._rng.randint(0, self.current_depth // 2)
         depth = min(depth, rec.max_depth())
-        return FinishStart(rec.rewind(depth), depth, depth + self.cap_margin, rec.winner)
+        line = tuple(rec.moves[len(rec.moves) - 1 - depth:])
+        return FinishStart(rec.rewind(depth), depth, depth + self.cap_margin, rec.winner, line)
 
     def report(self, depth: int, success: bool) -> None:
         self._recent.append(bool(success))

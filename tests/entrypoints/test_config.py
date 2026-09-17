@@ -238,3 +238,15 @@ def test_exploration_resolver():
                 {"explore_epsilon": 0.2, "explore_boards": "puzzles"}):
         with pytest.raises(ValueError):
             resolve_exploration(bad)
+
+
+from src.entrypoints.train import resolve_guide  # noqa: E402
+
+
+def test_guide_resolver():
+    assert resolve_guide({}) is None
+    assert resolve_guide({"guide_epsilon": 0.25}) == {"epsilon": 0.25, "boards": "curriculum"}
+    with pytest.raises(ValueError, match="both"):
+        resolve_guide({"guide_epsilon": 0.25, "explore_epsilon": 0.1})
+    with pytest.raises(ValueError):
+        resolve_guide({"guide_epsilon": 1.0})

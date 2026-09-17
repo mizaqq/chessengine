@@ -123,6 +123,16 @@ explore_alpha: 0.3
 # policy (see experiments/exploration-noise/outcome.md); `puzzle` is the mechanism test.
 explore_boards: curriculum
 
+# Label-guided exploration (owner, 2026-09-17: "okay, agreed on it"). Instead of
+# random noise, the behaviour policy plays a demonstrator's move with probability
+# guide_epsilon: the puzzle's key move, the human's next move on a finishing board
+# while the game still follows the human line, or a rules-engine mate when one
+# exists. The update is unchanged and outcome-driven (the stored log-prob is the
+# mixture's); the label only lowers the cost of trying the good move (Salimans &
+# Chen 2018). Random noise (explore_epsilon) flattened the policy in both arms.
+guide_epsilon: 0.0
+guide_boards: curriculum
+
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").
 # Training games ran 200-220 plies into repetition draws; 120 is a first guess.

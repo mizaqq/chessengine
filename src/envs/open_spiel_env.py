@@ -5,6 +5,15 @@ from open_spiel.python import rl_environment
 import chess
 
 
+def mating_actions_of(env) -> list[int]:
+    """Legal actions that mate at once (rules engine); [] if none."""
+    state = env.env.get_state
+    player = state.current_player()
+    if player not in (0, 1):
+        return []
+    return [a for a in state.legal_actions() if state.child(a).is_terminal() and state.child(a).returns()[player] > 0]
+
+
 class OpenSpielEnv:
     """Single OpenSpiel chess environment wrapper."""
     
@@ -25,6 +34,26 @@ class OpenSpielEnv:
             chess.ROOK: 5,
             chess.QUEEN: 9,
         }
+
+    def set_demo_line(self, ucis) -> None:
+        """Demonstration line for label-guided exploration: the moves (UCI) a
+        demonstrator played from the current position onwards, both sides. While the
+        game follows the line, `demo_actions()` returns the next demonstrated move."""
+        self.demo_line = list(ucis or [])
+        self.demo_index = 0
+        self.demo_alive = bool(self.demo_line)
+
+    def demo_actions(self) -> set[int]:
+        """Action ids the demonstrator would play now: the next move of the line while
+        the game still follows it; otherwise, the mating moves if the side to move has
+        one (rules); otherwise empty."""
+        if self.is_done():
+            return set()
+        if getattr(self, "demo_alive", False) and self.demo_index < len(self.demo_line):
+            ids = self.actions_for_uci([self.demo_line[self.demo_index]])
+            if ids:
+                return ids
+        return set(mating_actions_of(self))
 
     def reset(self, fen: str | None = None, puzzle_moves: int = 0, key_moves=None,
               max_plies: int | None = None):
@@ -57,6 +86,7 @@ class OpenSpielEnv:
         self.mover = self.get_current_player()
         if self.puzzle_moves > 1 and key_moves:
             self.key_actions = self.actions_for_uci(key_moves)
+        self.set_demo_line(key_moves if self.puzzle_moves > 1 else None)
         return time_step
 
     def actions_for_uci(self, ucis) -> set[int]:
@@ -81,6 +111,12 @@ class OpenSpielEnv:
     def step(self, action):
         if not isinstance(action, list):
             action = [action]
+        if getattr(self, "demo_alive", False):
+            if self.demo_index < len(self.demo_line) and \
+                    action[0] in self.actions_for_uci([self.demo_line[self.demo_index]]):
+                self.demo_index += 1
+            else:
+                self.demo_alive = False
         if self.get_current_player() == self.mover:
             self.mover_moves += 1
             if self.mover_moves == 1 and self.key_actions is not None and action[0] not in self.key_actions:
