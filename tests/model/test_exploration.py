@@ -59,5 +59,6 @@ def test_rollout_stores_behaviour_log_prob():
     num_legal = int(step.legal_actions_mask[0].sum())      # 20 in the opening
     assert abs(steps[0].old_log_prob[0].item() - math.log(1 / num_legal)) < 0.2
     assert steps[0].old_log_prob[1].item() > math.log(0.5)  # untouched board: log pi(a) of the peaky move
+    assert steps[0].noisy.tolist() == [True, False]
     s = m.episode_summary()
     assert s["explore_moves"] == 1 and s["explore_offprior_share"] in (0.0, 1.0)

@@ -178,6 +178,7 @@ def _collect_rollout(
                     done=env_step.done.clone(),
                     terminal_r_white=tr_white,
                     terminal_r_black=tr_black,
+                    noisy=(noisy.clone() if noisy is not None else torch.zeros(num_envs, dtype=torch.bool)),
                 )
             )
 
@@ -257,6 +258,9 @@ def _gather_side(steps_data, advantages, targets, model_id, puzzle_env_mask=None
         parts["is_puzzle"].append(
             puzzle_env_mask[is_mine] if puzzle_env_mask is not None
             else torch.zeros(int(is_mine.sum()), dtype=torch.bool)
+        )
+        parts.setdefault("noisy", []).append(
+            step.noisy[is_mine] if step.noisy is not None else torch.zeros(int(is_mine.sum()), dtype=torch.bool)
         )
     if not parts["obs"]:
         return None
@@ -359,9 +363,15 @@ def update_model(
                 sums["total_loss"] += composed["total_loss"].item()
                 sums["policy_loss"] += policy_loss.item()
                 sums["value_loss"] += value_loss.item()
+                # Diagnostics over clean samples only: on noisy boards the stored
+                # log-prob is the behaviour mixture's, so ratio and KL there measure
+                # the noise, not how far the policy moved.
+                clean = ~batch["noisy"][idx] if "noisy" in batch else torch.ones(len(idx), dtype=torch.bool)
+                if not clean.any():
+                    clean = torch.ones(len(idx), dtype=torch.bool)
                 if clip_epsilon is not None:
-                    sums["clip_fraction"] += ((ratio - 1.0).abs() > clip_epsilon).float().mean().item()
-                sums["approx_kl"] += (batch["old_log_prob"][idx] - new_log_prob).mean().item()
+                    sums["clip_fraction"] += ((ratio[clean] - 1.0).abs() > clip_epsilon).float().mean().item()
+                sums["approx_kl"] += (batch["old_log_prob"][idx][clean] - new_log_prob[clean]).mean().item()
     out = {k: v / steps for k, v in sums.items()}
     if clip_epsilon is None:
         out["clip_fraction"] = None

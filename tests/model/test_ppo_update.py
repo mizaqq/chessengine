@@ -188,3 +188,32 @@ def test_forced_move_has_zero_normalized_entropy():
     assert out[0] == 0.0
     assert_close(out[1], torch.tensor(0.5 / torch.log(torch.tensor(2.0)).item()))
     assert (out <= 1.0 + 1e-6).all()
+
+
+def test_diagnostics_use_clean_samples_only():
+    """Noisy samples carry the behaviour log-prob, so ratio and KL there are not
+    policy movement; with no parameter change the clean-sample clip fraction and KL
+    must be ~0 even when noisy rows have ratios far from 1."""
+    import torch
+    from src.model.training import update_model
+
+    class Const(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w = torch.nn.Parameter(torch.zeros(1))
+        def forward(self, obs, mask):
+            probs = mask / mask.sum(dim=1, keepdim=True)
+            return probs + 0 * self.w, torch.zeros(obs.shape[0], 1) + self.w
+
+    n = 8
+    mask = torch.zeros(n, 4674); mask[:, :4] = 1.0
+    action = torch.zeros(n, dtype=torch.long)
+    old_lp = torch.full((n,), float(torch.log(torch.tensor(0.25))))
+    old_lp[:4] = float(torch.log(torch.tensor(0.9)))           # noisy rows: behaviour gave the move 0.9
+    batch = {"obs": torch.zeros(n, 20, 8, 8), "legal_mask": mask, "action": action, "old_log_prob": old_lp,
+             "old_value": torch.zeros(n), "entropy": torch.zeros(n), "num_legal": torch.full((n,), 4.0),
+             "adv": torch.ones(n), "target": torch.zeros(n), "is_puzzle": torch.zeros(n, dtype=torch.bool),
+             "noisy": torch.tensor([True] * 4 + [False] * 4)}
+    m = Const()
+    out = update_model(m, torch.optim.SGD(m.parameters(), lr=0.0), batch, epochs=1, minibatches=1, clip_epsilon=0.2)
+    assert out["clip_fraction"] == 0.0 and abs(out["approx_kl"]) < 1e-6
