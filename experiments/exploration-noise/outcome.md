@@ -86,3 +86,27 @@ Probe after GUIDE: Lichess m1 histogram <0.05 / mid / >0.8 = 0.25 / 0.12 / 0.62
 the confident-right bucket grew five, the first arm to move the histogram in the
 wanted direction. Human-mate d0: <0.05 0.47 -> 0.35, top-1 0.46 -> 0.48, value
 +0.32 -> +0.49. Own-game m1 <0.05 0.80 -> 0.70, top-1 0.12 -> 0.17.
+
+# Arm CLEAN (2026-09-17): outcome-only from the pure SL checkpoint, 600 updates
+
+Owner's question: "isn't the FIN3 start already polluted with previous evaluation
+using material also?" Answer arm: SL (m1 0.17, m2 0.13) -> PPO with shaping off
+from update one, FIN3 layout, no guidance, 600 updates (169 min).
+
+| Update | CLEAN m1 / m2 (outcome only) | Shaped ppo_from_sl m1 / m2 |
+|---|---|---|
+| 100 | 0.443 / 0.337 | - |
+| 200 | 0.531 / 0.423 | - |
+| 300 | 0.560 / 0.465 | 0.524 / 0.437 |
+| 400 | 0.595 / 0.516 | - |
+| 500 | 0.630 / 0.545 | - |
+| 600 | **0.647 / 0.565** | 0.570 / 0.510 |
+
+Own-game mate positions 0.05 -> 0.11; held-out conversion d2 / d10 / d20 at 600:
+0.25 / 0.09 / 0.12 (best d2 and d20 of any arm); depth 6; entropy sharp.
+
+Reading: shaping never helped from the prior. Outcome-only is ahead at 300 and
+at 600, and CLEAN at 600 matches what the shaped path needed 1,020 updates for
+(FIN3 + CONTROL: 0.653 / 0.571). Still rising at 600 (+1.7 points over the last
+100). This is the unpolluted base: future arms start from CLEAN or its
+continuation, not from the shaped lineage.
