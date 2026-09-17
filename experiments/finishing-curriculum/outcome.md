@@ -80,3 +80,31 @@ limit; the update's exploration is. Options, in order: exploration noise on the
 curriculum boards (AlphaZero root Dirichlet is the same device; PPO ratio must use
 the behaviour log-prob), search as teacher (the agreed AlphaZero step), supervised
 target on labelled boards (fallback), bigger network (not needed).
+
+# Arm FIN3 (2026-09-17): FIN2 with material shaping OFF (owner's proposal)
+
+First arm that moved anything, and it moved the things shaping was suspected of
+holding back.
+
+| Dial | Start | FIN2 (shaping 0.2) | FIN3 (shaping off) |
+|---|---|---|---|
+| Lichess m1 / m2 top-1 | 0.570 / 0.510 | 0.559 / 0.477 | **0.638 / 0.545** |
+| Own-game mate-in-one, held-out top-1 | 0.07 | 0.05 | **0.12** |
+| Own-game mate rate, 40 sampled games | 0.07 | 0.12 (5/41) | 0.13 (10/79) |
+| Decisive games of 40 | 7 | 5 | **10** (mean 151 plies vs 176) |
+| Value on own-game mate positions | -2.61 | (FIN: -2.4) | **+0.06** |
+| Value one ply before a human mate | -0.85 | (FIN: -1.31) | **+0.51** |
+| Mate mass one ply before a human mate | 0.35 | 0.31 | 0.41 |
+| Held-out conversion d2 / d10 / d20 | 0.18 / 0.05 / 0.08 | 0.15 / 0.04 / 0.07 | 0.20 / 0.04 / 0.06 |
+| Curriculum depth reached | - | 4 | 6 |
+
+Reading: with the material term gone the value head stopped counting material
+and started predicting outcomes (own-game mate positions -2.6 -> +0.1), and the
+policy broke through the 0.57 plateau that 900 shaped PPO updates never moved
+(0.638 at update 300, still rising at the last three evaluations: 0.610, 0.621,
+0.621, 0.638). Mechanism: with a zero terminal potential, delivering mate handed
+back the banked material credit (reward 2 - 0.2 x material), so for a side far
+ahead the mate was worth little more than shuffling; and the value head's
+material estimate swamped the outcome signal. Conversion from 10-20 plies out is
+still flat: the exploration ceiling (confident-wrong positions) remains and is
+the next lever.

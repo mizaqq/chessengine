@@ -22,11 +22,11 @@
 
 ## 5. Experiment
 
-- [ ] 5.0 Arm FIN2 (owner, 2026-09-17): 4 puzzle / 6 finishing / 2 mid-game, threshold 0.4, 300 updates (named exception to the standard budget), schedule 4 finishing / 2 mid-game / 2 opening from update 200. Verify: run.json, games.json, finishes.json committed; compared with FIN and the baseline in outcome.md.
+- [x] 5.0 (FIN2 flat, FIN3 with shaping off: m1 0.64, values fixed; see outcome.md) Arm FIN2 (owner, 2026-09-17): 4 puzzle / 6 finishing / 2 mid-game, threshold 0.4, 300 updates (named exception to the standard budget), schedule 4 finishing / 2 mid-game / 2 opening from update 200. Verify: run.json, games.json, finishes.json committed; compared with FIN and the baseline in outcome.md.
 
 - [x] 5.1 (arm FIN, flat; see outcome.md) `experiments/finishing-curriculum/run.sh`: 120 updates from the SL + PPO 600 checkpoint with the default layout, then `scripts.eval_games` (40 games) and `scripts.eval_finishes`. Verify: `run.json`, `games.json`, `finishes.json` written and committed; results compared with the baselines in chat and recorded in `experiments/finishing-curriculum/outcome.md`.
 - [ ] 5.2 `learning/`: RESOURCES entry for Florensa et al. 2017 (fetched 2026-09-17), NOTES section on reverse curriculum and the finishing diagnosis, session file. Verify: files updated and committed.
 
 ## 6. Comprehension
 
-- [ ] 6.1 Comprehension check with owner (CLAUDE.md "Diagnose from symptoms"): with the run's `finish_success_rate_d<k>` and `finish_depth` curves pasted in chat, the owner names whether the curriculum stalled because of the defender or the attacker and which code region to inspect. Recorded in `learning/records/` only if demonstrated.
+- [x] 6.1 (done 2026-09-17: owner named the draw games and the dilution; capacity hypothesis corrected; record 0012) Comprehension check with owner (CLAUDE.md "Diagnose from symptoms"): with the run's `finish_success_rate_d<k>` and `finish_depth` curves pasted in chat, the owner names whether the curriculum stalled because of the defender or the attacker and which code region to inspect. Recorded in `learning/records/` only if demonstrated.
