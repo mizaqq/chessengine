@@ -38,3 +38,4 @@ data/raw/
 
 # human-game pretraining sets are rebuilt by scripts/prepare_games.py
 data/games/*.npz
+*.gif
