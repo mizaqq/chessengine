@@ -55,6 +55,17 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Fair comparison of two value heads needs the same fixed positions, not games
   each model played itself.
 
+**Update 2026-09-17 (finishing curriculum).** Probed directly: the SL+PPO value
+head predicted -2.6 (below the loss reward) for a side that could mate next move
+in its own games, +1.3 on curated puzzles. Outcomes span -2..+2, so the number
+came from the material term: the head had become a material counter. Two arms of
+the finishing curriculum were flat with shaping on; the same arm with shaping off
+moved the value on those positions to +0.1, broke the mate-in-one plateau
+(0.57 -> 0.64) and doubled decisive games. Rule of thumb: dense shaping is a
+bootstrap for a blank network; once a prior (here 300k human positions) supplies
+the density, turn it off and let the outcome be the only reward (AlphaZero's
+setting). See records 0013 and experiments/finishing-curriculum/outcome.md.
+
 ## Terminal states and bootstrapping
 
 - On `done`, the future value is replaced by the terminal reward and the running
@@ -141,6 +152,17 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Under potential shaping a mid-game start charges the start potential and never
   repays it; values shift, policy does not.
 
+**Finishing boards (2026-09-17).** Reverse curriculum from human checkmates
+(Florensa et al. 2017): start k plies before the mate, winner to move, cap
+k + 20, depth rises with the success rate. 6 finishing boards for 300 updates did
+not lift conversion from 10-20 plies out (held-out 0.05 -> 0.04-0.06) in any of
+three arms; with shaping off the near-mate values and puzzle accuracy improved
+instead. Lessons: (1) one ply before a 1500-rated human's mate the model found the
+mate 38% of the time against 58% on curated puzzles -- the curriculum's own
+positions are a third distribution; (2) an advance threshold must be set from the
+measured starting rate, not assumed (0.6 was unreachable, the adaptive part never
+ran); (3) more boards did not help because the ceiling was not sample count.
+
 ## Pretraining on human moves, then RL (Sep 2026)
 
 - AlphaGo's first stage: predict the human move by cross-entropy, then start RL
@@ -177,6 +199,20 @@ are in `RESOURCES.md`; demonstrated understanding is in `records/`.
 - Ply cap at 120 (AlphaZero terminated over-long games as draws): 2.3x more
   finished games per update; training draws 0.98 (the cap ends most games);
   evaluation games shorter (186 plies) with fewer mate chances (31 vs ~100).
+
+## Exploration ceiling: confident and wrong (Sep 2026)
+
+Mate-in-one accuracy sat at 0.57 for 900 PPO updates from the pretrained
+checkpoint. The histogram of probability mass on the mating move over 1,000
+puzzles was bimodal: 52% above 0.8, 35% below 0.05. Policy gradient learns from
+what it plays; on the confident-wrong third the mate is sampled less than once in
+twenty and each hit is one clipped step, so those positions never get fixed. The
+same network trained with cross-entropy on the mating moves reached 0.90 held-out
+in 12 epochs, so capacity was not the limit. Remedies, in order: exploration noise
+on curriculum boards (AlphaZero's root Dirichlet noise exists for exactly this;
+PPO's ratio then uses the behaviour log-prob), search as the teacher (finds the
+mate whatever the prior says), supervised targets where labels exist. Business
+analogue: a recommender that never shows an item cannot learn that users want it.
 
 ## Distribution shift in start states (Sep 2026)
 
