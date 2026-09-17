@@ -39,3 +39,30 @@ Open before the owner (recorded, not decided): longer run as the named exception
 (the mate-in-two rung needed 200+ updates); more finishing boards and fewer
 game boards so finishing episodes are a larger share of each batch; a
 threshold relative to the starting rate; a frozen or greedy defender.
+
+# Arm FIN2 (2026-09-17): 6 finishing boards, threshold 0.4, 300 updates, switch at 200
+
+Flat again. Depth reached 4 near update 70 and stayed. Held-out conversion d2 /
+d10 / d20: 0.15 / 0.04 / 0.07 (start 0.18 / 0.05 / 0.08). Own-game mate-in-one 5/41.
+Lichess m1 0.578 -> 0.559, m2 0.51 -> 0.477 (slight forgetting).
+
+# Probe (scripts/probe_finish_values.py): the value head is a material counter
+
+Value from the mover's view on positions where the mover mates next move:
+Lichess puzzles +1.32 (mate mass 0.57); human games one ply before the mate
+-0.85 (mass 0.35); the model's own games -2.61 (mass 0.06). Outcomes alone span
+-2..+2; -2.6 is reachable only through the material term. The network learned
+material, and mates in puzzles come with a material lead; mates without one are
+invisible to both heads.
+
+# Isolation run ISO_d0: 12 boards of depth-0 human-mate positions only, 30 updates
+
+Rules out dilution as the whole story: with 100% finishing positions in every
+batch (about 66 episodes per update, 2,000 in total) depth-0 success stayed
+0.39-0.46, mate mass 0.35 -> 0.37, value -0.85 -> -0.68, while clip fraction
+0.17-0.20 and KL 0.02-0.04 show the policy moving every update. Also relevant:
+Lichess m1 puzzle accuracy has not risen above 0.57-0.58 across 900 PPO updates
+from the SL checkpoint despite ~150k puzzle episodes, so a plateau of this
+network-plus-update on mate recognition is on the table, not only sample count.
+
+Next (owner): shaping off (arm FIN3), pretrained prior supplies the density.
