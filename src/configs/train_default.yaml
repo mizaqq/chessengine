@@ -21,10 +21,14 @@ grad_clip: 1.0
 # shaping_scale * (gamma * material(next own position) - material(this position)),
 # terminal position counts as 0, so shaping nets to zero over a game and only the
 # terminal outcome is real reward. `none`: outcome-only reward (scale 0).
-shaping: potential
-# 0.2 chosen 2026-09-15 from a single-seed 500-update comparison against 1.0:
-# value head started to absorb the material offset (corr flipped negative) and
-# decisive games rose 13% -> 24%. Revisit with more seeds.
+# `none` is the default since 2026-09-17 (owner: "fin3 with shaping off lays the best
+# results ... we should make it default"): from the pretrained network the material
+# term made the value head a material counter (-2.6 for a side that can mate next
+# move) and delivering mate handed back the banked material credit; with shaping
+# off, mate-in-one broke a 900-update plateau (0.57 -> 0.64) and decisive games
+# doubled (experiments/finishing-curriculum/outcome.md). `potential` remains the
+# bootstrap for a blank network (2026-09-15: 0.2 vs 1.0, decisive 13% -> 24%).
+shaping: none
 shaping_scale: 0.2
 
 # Start-position curriculum (Florensa et al. 2017; Salimans & Chen 2018).
