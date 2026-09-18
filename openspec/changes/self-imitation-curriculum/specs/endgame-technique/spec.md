@@ -28,6 +28,8 @@ current level; when off, every start SHALL be level 3.
 - **THEN** the weak king stands on a1, a8, h1 or h8, the strong king is exactly two
   squares away, and the queen is within two squares of the weak king
 
+## ADDED Requirements
+
 ### Requirement: Technique level curriculum
 Each material set SHALL keep a current level starting at `technique_level_start`.
 When the success rate over the last `technique_window` finished boards of that set is
