@@ -75,12 +75,16 @@ class MetricsAggregator:
         entry[0] += 1
         entry[1] += int(success)
 
-    def add_technique_result(self, label: str, success: bool):
+    def add_technique_result(self, label: str, success: bool, clean: bool = True):
         """Record a finished technique board (generated bare-king start) under its
-        material label; kept out of the game and finishing rates."""
-        entry = self._technique_by_label.setdefault(str(label), [0, 0])
+        material label; kept out of the game and finishing rates. `clean`: the
+        demonstrator never fired in the episode (the curriculum counts only these)."""
+        entry = self._technique_by_label.setdefault(str(label), [0, 0, 0, 0])
         entry[0] += 1
         entry[1] += int(success)
+        if clean:
+            entry[2] += 1
+            entry[3] += int(success)
 
     def add_pool_result(self, name: str, score: float):
         """Record a finished pool-board game: learner's score (win 1, draw 0.5, loss 0)
@@ -181,6 +185,9 @@ class MetricsAggregator:
             **{f"technique_level_{k}": v for k, v in sorted(getattr(self, "technique_levels", {}).items())},
             **{f"technique_attempts_{k}": v[0] for k, v in sorted(self._technique_by_label.items())},
             **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},
+            **{f"technique_clean_attempts_{k}": v[2] for k, v in sorted(self._technique_by_label.items())},
+            **{f"technique_clean_success_rate_{k}": (v[3] / v[2] if v[2] else None)
+               for k, v in sorted(self._technique_by_label.items())},
             **({"sil_buffer_size": self.sil_buffer_size,
                 **{k: (self._sil_sums.get(k, 0.0) / self._sil_count if self._sil_count else None)
                    for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share", "sil_positive_share")}}

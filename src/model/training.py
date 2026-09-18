@@ -171,13 +171,22 @@ def _collect_rollout(
                     row_demos = [demos[e] if guided_rows[e] else set() for e in env_ids]
                     b = guided_probs(p, row_demos, guide["epsilon"])
                     bdist = Categorical(probs=b)
-                    a = bdist.sample()
-                    old_log_prob[mask] = bdist.log_prob(a)
+                    # Sample the mixture by its components so we know when the demonstrator
+                    # fired: with probability epsilon (rows with a demo) a uniform demo move,
+                    # otherwise the network's own draw. Same distribution as b; the stored
+                    # log-prob is still the mixture's. A network-chosen move that happens to
+                    # be the demo move counts as the network's (arm CURSIL2: flagging by
+                    # action made every mate "teacher-made" and froze the curriculum).
+                    a = dist.sample()
+                    fire = torch.rand(len(env_ids)) < guide["epsilon"]
                     hits = 0
                     for j, e in enumerate(env_ids):
-                        if row_demos[j] and int(a[j].item()) in row_demos[j]:
+                        if row_demos[j] and bool(fire[j]):
+                            choices = sorted(row_demos[j])
+                            a[j] = choices[int(torch.randint(len(choices), (1,)))]
                             hits += 1
                             demo_acted[e] = True
+                    old_log_prob[mask] = bdist.log_prob(a)
                     metrics.add_guide(count=int(guided_rows[mask].sum()), demo_picks=hits)
                 else:
                     a = dist.sample()
@@ -219,10 +228,11 @@ def _collect_rollout(
                         label = env_step.info.get("finish_config", {}).get(env_idx, "")
                         if label:
                             success = env_step.info["finish_success"][env_idx]
-                            metrics.add_technique_result(label, success)
+                            clean = not demo_acted[env_idx]
+                            metrics.add_technique_result(label, success, clean=clean)
                             report_label = getattr(getattr(envs, "finish_sampler", None), "report_label", None)
                             if report_label is not None:
-                                report_label(label, success, clean=not demo_acted[env_idx])
+                                report_label(label, success, clean=clean)
                             demo_acted[env_idx] = False
                         else:
                             metrics.add_finish_result(

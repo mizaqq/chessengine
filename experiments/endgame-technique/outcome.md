@@ -145,3 +145,30 @@ Advance on **clean episodes only**: count an episode toward the window only if t
 demonstrator never acted in it (the rollout knows which boards took a guided pick), or
 equivalently measure advancement with guidance off. Raise the threshold to 0.7 over 40
 clean boards. Also log `sil_positive_share` (share of the buffer with priority > 0).
+
+# Arm CURSIL2: clean-episode advancement (2026-09-18, 12:26-13:11)
+
+Owner: "Ok, agreed on those." Levels advance on clean episodes only, 0.7 over 40;
+sil_positive_share logged. Same start, budget, layout as CURSIL.
+
+Held-out at 120: Q 0.02, R 0.02, RR 0.12, QR 0.08 (unchanged). Levels: every set stayed
+at 0 for all 120 updates. Training success at level 0 (all episodes, guided): Q 0.68 ->
+0.92, QR 0.93 -> 0.94, RR 0.70 -> 0.80, R 0.52 -> 0.52. sil_positive_share 0.35-0.40
+(a third of the buffer still beats the value estimate). Other dials held; prior_score
+0.45 / 0.43 / 0.39; game entropy 0.33. Games 11 decisive of 40.
+
+## Reading
+
+- The level-0 positions are being learned: queen wins rose from 0.68 to 0.92 with only
+  a quarter of the moves guided. That is the first evidence the network can acquire
+  technique when the reward is near.
+- The curriculum never advanced because of how "clean" was measured: an episode was
+  flagged as teacher-made whenever the played move was in the demonstrator's set. Every
+  win ends with a mating move, and the mating move is the demonstrator's move by
+  definition, so every win was flagged and only losses and draws counted as clean. The
+  window held failures only and the threshold could never be met.
+- Fix (CURSIL3): sample the guided mixture by its components (a Bernoulli epsilon draw
+  decides whether the demonstrator fires, then the move); flag the episode only when it
+  fired. Same distribution and the same stored mixture log-prob, so the PPO ratio is
+  unchanged; a network-chosen mating move now counts as the network's. Also log
+  `technique_clean_attempts_<set>` and `technique_clean_success_rate_<set>`.

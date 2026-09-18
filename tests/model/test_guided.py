@@ -61,3 +61,40 @@ def test_rollout_stores_mixture_log_prob_and_counts_demo_picks():
     assert steps[0].noisy.tolist() == [True, False]
     s = m.episode_summary()
     assert s["guide_moves"] == 1 and s["guide_demo_share"] in (0.0, 1.0)
+
+
+def test_guided_sampling_flags_only_demonstrator_fires_and_keeps_mixture_log_prob():
+    """With epsilon 0 the demonstrator never fires (all episodes clean) and the stored
+    log-prob is the network's; with epsilon ~1 it always fires and the move is a demo move."""
+    from src.envs.start_positions import FinishStart, WHITE
+
+    class Uniform(torch.nn.Module):
+        def forward(self, obs, mask):
+            return mask / mask.sum(dim=1, keepdim=True), torch.zeros(obs.shape[0], 1)
+
+    class Rec:
+        current_depth = 0
+        def __init__(self, s): self.s, self.calls = s, []
+        def sample(self): return self.s
+        def report(self, d, s): pass
+        def report_label(self, label, success, clean=True): self.calls.append(clean)
+        def levels(self): return {"Q": 0}
+
+    fen = "7k/8/5K2/8/8/8/8/6Q1 w - - 0 1"      # Qg7 is mate in one
+    puzzles = StartPositionSampler([Puzzle("p", "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", ["a1a8"], 0)])
+    for eps, expect_clean in ((0.0, True), (0.999, False)):
+        rec = Rec(FinishStart(fen, 0, 4, WHITE, (), "Q"))
+        env = OpenSpielVectorEnv(1, puzzles, 0, None, None, 0, rec, 1)
+        step = env.reset()
+        torch.manual_seed(3)
+        m = MetricsAggregator()
+        guide = {"epsilon": eps, "mask": torch.tensor([True])} if eps > 0 else None
+        steps, _ = _collect_rollout(env, Uniform(), Uniform(), step, 4, 1, {"win": 2, "loss": -2, "draw": -0.5}, m,
+                                    oriented=True, guide=guide)
+        if eps > 0:
+            mate = next(iter(env.envs[0].actions_for_uci(["g1g7"]))) if False else None
+            n_legal = int(step.legal_actions_mask[0].sum())
+            # the first ply is the demo move with mixture prob ~ eps + (1-eps)/n_legal
+            assert abs(steps[0].old_log_prob[0].item() - math.log(eps + (1 - eps) / n_legal)) < 1e-3
+            assert m.episode_summary()["technique_clean_attempts_Q"] == 0
+        assert rec.calls and all(c is expect_clean for c in rec.calls[:1])
