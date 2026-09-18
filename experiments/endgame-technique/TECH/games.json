@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 17,
+  "black_win": 9,
+  "unfinished": 3,
+  "white_win": 11
+ },
+ "draw_rate": 0.425,
+ "decisive_rate": 0.5,
+ "mate_in_one_opportunities": 72,
+ "mate_in_one_found": 20,
+ "mate_in_one_rate": 0.2777777777777778,
+ "mean_plies": 132.15,
+ "checkpoints": {
+  "model": "experiments/endgame-technique/TECH/model_20260918093629_episodes_120.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
