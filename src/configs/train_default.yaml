@@ -206,3 +206,19 @@ opponent_prior: experiments/human-pretraining/sl
 # prior_score in the periodic evaluation: games per colour vs opponent_prior, both
 # sampling (0 = off). Success for the pool change: >= 0.5 at the end of the run.
 prior_eval_games: 20
+
+# Self-imitation (Oh, Guo, Singh & Lee, ICML 2018; owner 2026-09-18: "lets continue with
+# self imitation"). The learner's own plies are stored when their episode ends with the
+# Monte Carlo return R from the mover's side; after each PPO update sil_updates
+# minibatches of sil_batch plies are drawn with priority (R - V)+ and trained with
+# -log pi(a|s) (R - V)+ + sil_value_weight * 1/2 (R - V)+^2, weighted by sil_loss_weight,
+# so only plies whose past return beat the current value estimate teach, and a rare
+# win is learned from many times. Paper's PPO table: 10 x 512 per 20k on-policy samples,
+# weight 0.1, value weight 0.01, buffer 50k; scaled to our ~1k samples per update.
+# 0 = off. Diagnostics: sil_buffer_size, sil_valid_share, sil_policy_loss, sil_value_loss.
+# Risk (paper 5.4): lock-in on a sub-optimal habit; watch game entropy and prior_score.
+sil_updates: 4
+sil_batch: 256
+sil_loss_weight: 0.1
+sil_value_weight: 0.01
+sil_buffer: 50000

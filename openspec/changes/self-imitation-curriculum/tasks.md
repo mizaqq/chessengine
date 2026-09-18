@@ -5,9 +5,9 @@
 
 ## 2. Self-imitation
 
-- [ ] 2.1 `src/training/sil.py`: `EpisodeAccumulator` (per-board learner plies, returns on done), `ReplayBuffer` (ring, priorities, proportional sampling with bias weights), `sil_loss(model, batch, value_weight)`. Tests: three-ply-win returns scenario, opponent plies excluded, only-better-than-expected-plies-train scenario, buffer ring drops oldest.
-- [ ] 2.2 Training loop: feed the accumulator from the rollout's `StepRecord`s and terminal rewards; after the PPO update run `sil_updates` minibatches; diagnostics into metrics; `sil_updates: 0` leaves the update sequence identical (test with a fixed seed).
-- [ ] 2.3 Config keys and resolver (`resolve_sil`), defaults per design; tests.
+- [x] 2.1 `src/training/sil.py`: `EpisodeAccumulator` (per-board learner plies, returns on done), `ReplayBuffer` (ring, priorities, proportional sampling with bias weights), `sil_loss(model, batch, value_weight)`. Tests: three-ply-win returns scenario, opponent plies excluded, only-better-than-expected-plies-train scenario, buffer ring drops oldest.
+- [x] 2.2 Training loop: feed the accumulator from the rollout's `StepRecord`s and terminal rewards; after the PPO update run `sil_updates` minibatches; diagnostics into metrics; `sil_updates: 0` leaves the update sequence identical (test with a fixed seed).
+- [x] 2.3 Config keys and resolver (`resolve_sil`), defaults per design; tests.
 
 ## 3. Run and record
 

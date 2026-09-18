@@ -497,6 +497,7 @@ def run_chess_training(
     explore=None,
     guide=None,
     pool=None,
+    sil=None,
 ):
     """Run A2C or PPO self-play.
 
@@ -511,6 +512,10 @@ def run_chess_training(
     `pool`: None or a `PoolBoards` (src/training/opponent_pool.py): its boards play
     the learner against a frozen pool member; after each update the pool may take
     a snapshot of the learner (`opponent_snapshot_every`).
+
+    `sil`: None or dict(updates, batch, loss_weight, value_weight, buffer): self-imitation
+    (Oh et al. 2018, src/training/sil.py) after each update on the learner's own finished
+    episodes; shared network only.
 
     `algorithm`: dict of update settings (`epochs`, `minibatches`, `clip_epsilon`,
     `normalize_advantage`, `value_coef`, `gae_lambda`); default `A2C_PRESET`.
@@ -547,6 +552,14 @@ def run_chess_training(
     losses = []
     env_step = envs.reset()
     pbar = tqdm(range(1, episodes + 1))
+
+    sil_state = None
+    if sil is not None and int(sil.get("updates", 0)) > 0:
+        if not shared:
+            raise ValueError("self-imitation needs the shared network")
+        from src.training.sil import EpisodeAccumulator, ReplayBuffer
+        buffer = ReplayBuffer(int(sil["buffer"]), seed=int(sil.get("seed", 0)))
+        sil_state = {"buffer": buffer, "acc": EpisodeAccumulator(num_envs, gamma, buffer)}
 
     finish_sampler = getattr(envs, "finish_sampler", None)
     pending_layouts = sorted(layout_schedule or [], key=lambda d: d["from_update"])
@@ -620,6 +633,14 @@ def run_chess_training(
             updates = [update_model(white_model, optimizer_white, batch, **update_kwargs)]
             if batch is not None:
                 refresh_norm_stats(white_model, batch["obs"], batch["legal_mask"])
+            if sil_state is not None:
+                from src.training.sil import sil_update
+                for step in steps_data:
+                    sil_state["acc"].add_step(step)
+                stats = sil_update(white_model, optimizer_white, sil_state["buffer"], updates=int(sil["updates"]),
+                                   batch=int(sil["batch"]), loss_weight=float(sil["loss_weight"]),
+                                   value_weight=float(sil["value_weight"]), grad_clip=grad_clip)
+                metrics.add_sil_stats(len(sil_state["buffer"]), stats)
         else:
             updates = []
             for model, opt, g in ((white_model, optimizer_white, g_w), (black_model, optimizer_black, g_b)):

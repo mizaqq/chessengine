@@ -175,6 +175,24 @@ def resolve_prior_match(config: Dict[str, Any]):
     return match
 
 
+def resolve_sil(config: Dict[str, Any]):
+    """Self-imitation (Oh et al. 2018): `sil_updates` minibatches (0 = off) of `sil_batch`
+    plies per update, drawn from a `sil_buffer`-ply replay of finished episodes with
+    priority (R - V)+; loss weight `sil_loss_weight`, value weight `sil_value_weight`."""
+    updates = int(config.get("sil_updates", 0) or 0)
+    if updates == 0:
+        return None
+    out = {"updates": updates, "batch": int(config.get("sil_batch", 256)),
+           "loss_weight": float(config.get("sil_loss_weight", 0.1)),
+           "value_weight": float(config.get("sil_value_weight", 0.01)),
+           "buffer": int(config.get("sil_buffer", 50000)), "seed": int(config.get("seed", 42)) + 6000}
+    if updates < 0 or out["batch"] < 1 or out["buffer"] < out["batch"] or out["loss_weight"] < 0 or out["value_weight"] < 0:
+        raise ValueError("sil_updates >= 0, sil_batch >= 1, sil_buffer >= sil_batch, weights >= 0")
+    if not bool(config.get("shared_network", True)):
+        raise ValueError("self-imitation requires shared_network")
+    return out
+
+
 def resolve_opponent_pool(config: Dict[str, Any], num_curriculum_envs: int):
     """Frozen-opponent pool (Bansal et al. 2017): the first `opponent_pool_boards`
     game boards after the puzzle and finishing boards play the learner against the
@@ -411,6 +429,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     explore = resolve_exploration(config)
     guide = resolve_guide(config)
     pool = resolve_opponent_pool(config, num_puzzle_envs + num_finish_envs)
+    sil = resolve_sil(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
         finish_sampler = resolve_finish_boards({**config, "finish_boards": 1}, num_puzzle_envs)[0]
     if any(e["midgame_boards"] > 0 for e in layout_schedule) and game_start_sampler is None:
@@ -463,6 +482,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         explore=explore,
         guide=guide,
         pool=pool,
+        sil=sil,
     )
 
     return {

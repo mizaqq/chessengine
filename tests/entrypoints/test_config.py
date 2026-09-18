@@ -299,3 +299,16 @@ def test_technique_curriculum_config():
     with pytest.raises(ValueError):
         resolve_finish_boards({"num_envs": 16, "finish_boards": 4, "finish_source": "technique",
                                "technique_curriculum": True, "technique_level_start": 7}, 3)
+
+
+from src.entrypoints.train import resolve_sil  # noqa: E402
+
+
+def test_sil_resolver():
+    assert resolve_sil({"sil_updates": 0}) is None
+    out = resolve_sil({"sil_updates": 4, "sil_batch": 256, "sil_buffer": 50000})
+    assert out["updates"] == 4 and out["loss_weight"] == 0.1 and out["value_weight"] == 0.01
+    with pytest.raises(ValueError):
+        resolve_sil({"sil_updates": 4, "sil_batch": 300, "sil_buffer": 100})
+    with pytest.raises(ValueError):
+        resolve_sil({"sil_updates": 4, "shared_network": False})

@@ -39,6 +39,7 @@ class MetricsAggregator:
         self._finish_by_depth = {}   # depth -> [attempts, successes]
         self._pool_by_name = {}      # opponent name -> [games, points]
         self._technique_by_label = {}  # material label -> [attempts, successes]
+        self._sil_sums = {}; self._sil_count = 0; self.sil_buffer_size = None
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
 
@@ -99,6 +100,14 @@ class MetricsAggregator:
         of them were the demonstrated move."""
         self.guide_count += int(count)
         self.guide_demo_picks += int(demo_picks)
+
+    def add_sil_stats(self, buffer_size: int, stats):
+        """Self-imitation diagnostics for one update (`stats` None = nothing drawn)."""
+        self.sil_buffer_size = int(buffer_size)
+        if stats:
+            for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share"):
+                self._sil_sums[k] = self._sil_sums.get(k, 0.0) + float(stats[k])
+            self._sil_count += 1
 
     def set_technique_levels(self, levels):
         """Current technique curriculum level per material set (state, not a window count)."""
@@ -172,6 +181,10 @@ class MetricsAggregator:
             **{f"technique_level_{k}": v for k, v in sorted(getattr(self, "technique_levels", {}).items())},
             **{f"technique_attempts_{k}": v[0] for k, v in sorted(self._technique_by_label.items())},
             **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},
+            **({"sil_buffer_size": self.sil_buffer_size,
+                **{k: (self._sil_sums.get(k, 0.0) / self._sil_count if self._sil_count else None)
+                   for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share")}}
+               if self.sil_buffer_size is not None else {}),
             "pool_games": sum(v[0] for v in self._pool_by_name.values()),
             "pool_score": (sum(v[1] for v in self._pool_by_name.values()) / sum(v[0] for v in self._pool_by_name.values())
                            if self._pool_by_name else None),

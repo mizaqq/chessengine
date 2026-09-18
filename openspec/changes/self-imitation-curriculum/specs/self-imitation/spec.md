@@ -9,7 +9,8 @@ beat the current value estimate (Oh, Guo, Singh & Lee, ICML 2018).
 Every learner ply (observation as the network saw it, legal mask, action) SHALL be
 held per board until that board's episode ends; then each ply SHALL be stored with its
 discounted return R from the mover's side (the episode's terminal reward for the mover,
-discounted by gamma per ply to the end; a ply of the side that lost has a negative R).
+discounted by gamma once per own ply to the end, the game-ending ply included, as the
+PPO value targets are; a ply of the side that lost has a negative R).
 Plies chosen by a pool opponent SHALL NOT be stored. The buffer SHALL hold at most
 `sil_buffer` plies and SHALL drop the oldest beyond that.
 
@@ -17,7 +18,8 @@ Plies chosen by a pool opponent SHALL NOT be stored. The buffer SHALL hold at mo
 - **WHEN** a board's episode is white, black, white and ends in white's mate, terminal
   reward +2 for the winner and -2 for the loser, gamma 0.99
 - **THEN** the stored returns are 2 * 0.99^2 for the first white ply, -2 * 0.99 for the
-  black ply, and 2 for the mating ply
+  black ply, and 2 * 0.99 for the mating ply (gamma once per own ply including the
+  game-ending one, the convention of the PPO value targets, so R is on V's scale)
 
 #### Scenario: opponent plies excluded
 - **WHEN** a pool board's episode has plies by the frozen opponent
