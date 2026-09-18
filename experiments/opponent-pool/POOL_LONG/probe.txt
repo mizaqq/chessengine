@@ -1,0 +1,6 @@
+experiments/opponent-pool/POOL_LONG
+  human mate d0 : {'value': 0.744, 'mate_mass': 0.598, 'top1': 0.637, 'hist': {'<0.05': 0.233, '<0.5': 0.147, '<0.8': 0.107, '<1.01': 0.513}}
+  human mate d2 : {'value': 0.492}
+  human mate d10: {'value': 0.265}
+  lichess m1    : {'value': 1.09, 'mate_mass': 0.78, 'top1': 0.807, 'hist': {'<0.05': 0.127, '<0.5': 0.08, '<0.8': 0.063, '<1.01': 0.73}}
+  own-game m1   : {'value': 0.168, 'mate_mass': 0.282, 'top1': 0.297, 'hist': {'<0.05': 0.55, '<0.5': 0.177, '<0.8': 0.063, '<1.01': 0.21}}

@@ -1,0 +1,120 @@
+{
+ "names": [
+  "SL",
+  "CLEAN_GUIDE",
+  "M34",
+  "POOL_LONG"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "CLEAN_GUIDE": "experiments/exploration-noise/CLEAN_GUIDE",
+  "M34": "experiments/exploration-noise/M34",
+  "POOL_LONG": "experiments/opponent-pool/POOL_LONG"
+ },
+ "games_per_colour": 30,
+ "seed": 3,
+ "table": {
+  "SL": {
+   "CLEAN_GUIDE": 0.6333333333333333,
+   "M34": 0.5583333333333333,
+   "POOL_LONG": 0.5583333333333333
+  },
+  "CLEAN_GUIDE": {
+   "SL": 0.3666666666666667,
+   "M34": 0.38333333333333336,
+   "POOL_LONG": 0.39166666666666666
+  },
+  "M34": {
+   "SL": 0.44166666666666665,
+   "CLEAN_GUIDE": 0.6166666666666667,
+   "POOL_LONG": 0.38333333333333336
+  },
+  "POOL_LONG": {
+   "SL": 0.44166666666666665,
+   "CLEAN_GUIDE": 0.6083333333333334,
+   "M34": 0.6166666666666667
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "CLEAN_GUIDE",
+   "counts": {
+    "a_white_white_win": 10,
+    "a_black_draw": 19,
+    "a_white_draw": 16,
+    "a_white_black_win": 3,
+    "a_black_black_win": 10,
+    "a_black_white_win": 1,
+    "a_white_unfinished": 1
+   }
+  },
+  {
+   "a": "SL",
+   "b": "M34",
+   "counts": {
+    "a_white_white_win": 9,
+    "a_black_white_win": 7,
+    "a_white_draw": 15,
+    "a_black_draw": 14,
+    "a_white_black_win": 4,
+    "a_black_black_win": 9,
+    "a_white_unfinished": 2
+   }
+  },
+  {
+   "a": "SL",
+   "b": "POOL_LONG",
+   "counts": {
+    "a_white_white_win": 9,
+    "a_black_draw": 24,
+    "a_white_unfinished": 1,
+    "a_white_black_win": 2,
+    "a_white_draw": 18,
+    "a_black_white_win": 3,
+    "a_black_black_win": 3
+   }
+  },
+  {
+   "a": "CLEAN_GUIDE",
+   "b": "M34",
+   "counts": {
+    "a_white_unfinished": 1,
+    "a_black_draw": 17,
+    "a_white_white_win": 4,
+    "a_black_white_win": 10,
+    "a_black_black_win": 3,
+    "a_white_black_win": 11,
+    "a_white_draw": 14
+   }
+  },
+  {
+   "a": "CLEAN_GUIDE",
+   "b": "POOL_LONG",
+   "counts": {
+    "a_white_draw": 10,
+    "a_black_black_win": 4,
+    "a_black_white_win": 8,
+    "a_white_black_win": 13,
+    "a_black_draw": 15,
+    "a_white_white_win": 4,
+    "a_white_unfinished": 3,
+    "a_black_unfinished": 3
+   }
+  },
+  {
+   "a": "M34",
+   "b": "POOL_LONG",
+   "counts": {
+    "a_white_unfinished": 1,
+    "a_black_draw": 13,
+    "a_white_draw": 20,
+    "a_black_white_win": 10,
+    "a_white_black_win": 8,
+    "a_black_unfinished": 4,
+    "a_black_black_win": 3,
+    "a_white_white_win": 1
+   }
+  }
+ ]
+}
