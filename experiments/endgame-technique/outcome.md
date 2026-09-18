@@ -255,3 +255,29 @@ Games: 19 decisive of 40, mate 19 of 85.
 3. Accept technique as a slow background rung, and turn to the conversion target
    directly: SIL is on all boards already, so the next lever there is the demonstrator
    quality on finishing boards (own past wins as the line) or the puzzle mix.
+
+# Arm QONLY: all four technique boards on queen v king (2026-09-18, 16:39-17:24)
+
+Owner: "i would test 2. Im wondering if we didnt reach the limit of current architecture
+size." 120 updates from CURSIL_LONG, technique_sets [Q], level start 1, threshold 0.7
+over 40 unchanged, so only the queen's sample rate changed (about 4x: 165-281 attempts
+per 20 updates, 116-177 of them clean, vs 12-40 clean before).
+
+Held-out Q (level 3, 50 games): 0.06 (start) -> 0.08 (50) -> **0.22** (100) -> 0.12 (120).
+Level: 1 -> 2 at about update 60. Clean success: 0.51 / 0.48 at level 1 (was 0.27-0.44
+at the same level with a quarter of the games), then 0.31 / 0.31 / 0.33 / 0.29 with
+level-2 starts in the mix. Other dials: m1 0.777-0.786, m3 0.647-0.654, own-game
+0.28-0.32, finishing d10 / d20 0.17 / 0.10 (0.20 / 0.19 at 100), prior_score 0.43-0.54,
+game entropy 0.30 (down from 0.33; watch). Games: 19 decisive of 40, mate 0.28.
+
+## Reading
+
+- Sample rate was a limit. With four times the queen games, the queen cleared the level
+  it had sat on for 300 updates, moved to level 2, and the held-out rate left the noise
+  floor (0.06 -> 0.12-0.22). The architecture is not yet the binding constraint for
+  the queen; the network learns the technique when it sees enough of it.
+- The learning is still slow in absolute terms (about 0.3 clean at level 2 after 60
+  updates there), which is what the good-starts curriculum and lambda 1 are for.
+- Decision: the GSL arm starts from CURSIL_LONG with the same queen-only layout and
+  budget as QONLY, so QONLY is the exact control for (good starts + lambda 1.0) vs
+  (levels + lambda 0.95).

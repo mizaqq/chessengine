@@ -1,0 +1,19 @@
+{
+ "games": 40,
+ "results": {
+  "white_win": 9,
+  "draw": 21,
+  "black_win": 10
+ },
+ "draw_rate": 0.525,
+ "decisive_rate": 0.475,
+ "mate_in_one_opportunities": 68,
+ "mate_in_one_found": 19,
+ "mate_in_one_rate": 0.27941176470588236,
+ "mean_plies": 145.875,
+ "checkpoints": {
+  "model": "experiments/endgame-technique/QONLY/model_20260918172316_episodes_120.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
