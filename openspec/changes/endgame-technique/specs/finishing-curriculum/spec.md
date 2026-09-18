@@ -19,6 +19,10 @@ the technique dials, not the finishing dials.
 - **WHEN** k = 10, cap_margin = 20 and 30 plies pass without a rules ending
 - **THEN** the game ends as a draw and a failure at depth 10 is reported
 
+#### Scenario: depth exceeds the record
+- **WHEN** a record holds 7 moves and the sampled depth is 10
+- **THEN** the depth used is the largest even value not exceeding 6
+
 #### Scenario: labelled start counted apart
 - **WHEN** the slot is fed by a technique sampler and a `Q` start ends in mate for the queen's side
 - **THEN** a technique success for `Q` is reported and the finishing success counters are unchanged
