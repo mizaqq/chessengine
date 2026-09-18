@@ -150,6 +150,14 @@ reach for it. Prune anything that turns out shallow or wrong.
   single state in which the task is achieved". Use for: the finishing boards
   (start k plies before a human checkmate, depth rises with the success rate);
   the puzzle boards are the k = 0 special case.
+  Read 2026-09-18 (pp. 3-6, A.1, B.1): Algorithm 1 keeps a list of "good starts"
+  S_i^0 = {s0 : R_min < R(pi_i, s0) < R_max}, success estimated from the training
+  trajectories themselves; new starts by Brownian rollouts from good starts
+  (SampleNearby, T_B = 50); N_old = 100 old good starts replayed with N_new = 200
+  each iteration ("the replay buffer is an important feature to avoid catastrophic
+  forgetting"); R_min = 0.1, R_max = 0.9, gamma 0.998. B.1: adding a distance-to-goal
+  shaping reward "does not actually improve training" and hurt the key task. Use for:
+  the good-starts bucket curriculum on technique boards (change `good-starts-lambda`).
 
 - [Paper: "Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm" (AlphaZero preprint) — Silver et al. (2017)](https://arxiv.org/abs/1712.01815)
   Read 2026-09-17 (pp. 3-4, 13-15): loss (z - v)^2 - pi^T log p + c||theta||^2
