@@ -54,3 +54,48 @@ Q 0.00-0.14, R 0.00-0.09, RR 0.17-0.67, QR 0.09-0.40. Far above the held-out rat
 
 Files: `TECH/run.json, games.json, finishes.json, probe.txt, baseline_end.json,
 baseline_technique.txt`, `run_tech.sh`, `run_tech.log`, `prepare_endgame.log`.
+
+# Arm TECH2: 3 puzzle / 4 technique / 5 mid-game / 4 opening (2026-09-18, 09:47-10:24)
+
+Owner: "tables is perfect environment, i dont like it. I think more technique boards
+should be there ... make puzzle 3, technique 4, mid game 5, opening 4." Same recipe and
+the same POOL_LONG start as TECH; only the layout differs. 37 min. Technique attempts
+per set per 20 updates rose from 12-20 to 19-39 (about 150-200 per set over the arm).
+
+| set | POOL_LONG | TECH 120 | TECH2 50 | TECH2 100 | TECH2 120 |
+|---|---|---|---|---|---|
+| Q | 0.00 | 0.00 | 0.00 | 0.02 | 0.00 |
+| R | 0.00 | 0.02 | 0.06 | 0.04 | 0.02 |
+| RR | 0.06 | 0.10 | 0.08 | 0.10 | 0.06 |
+| QR | 0.04 | 0.04 | 0.14 | 0.14 | 0.12 |
+
+Training-window success (guided): Q 0.00-0.15, R 0.00-0.14, RR 0.18-0.34, QR 0.32-0.47.
+Other dials at 120: m1 0.782, m2 0.693, m3 0.626, m4 0.525, endgame-mate 0.702, own-game
+0.30, finishing 0.34 / 0.11 / 0.10, prior_score 0.48 / 0.49 / 0.54. Games: 17 decisive
+of 40, mate 17 of 59.
+
+## Reading
+
+- Doubling the technique games did not move the held-out dial for the single pieces;
+  queen-and-rook may have gained (0.04 -> 0.12-0.14, 50 games, borderline). Training
+  success stayed where it was, so more games from the same distribution produce the
+  same teacher-made wins and the same non-transfer.
+- The demonstrator acts only when a mate in one or a forcing mate in two is on the
+  board, i.e. in the last one or two plies. The 30-plus plies before that are the
+  network's own wandering, and a win at the end spreads its credit over all of them
+  with the GAE decay; the approach pattern (drive the king to the edge, keep the
+  queen a knight's move away) gets a faint, noisy signal.
+- Puzzle boards down from 4 to 3: m1-m4 held (0.782 / 0.693 / 0.626 / 0.525).
+
+## Next model-free levers (owner rejected tablebases)
+
+1. **Start-state curriculum on the generator** (Florensa 2017 without a ruler): draw
+   early starts with the weak king already on an edge or in a corner and the strong
+   pieces within a few squares, so the mate is a few plies away and the network's own
+   moves are what finish it; widen toward random placement as the held-out rate rises
+   (adaptive threshold like the finishing depth curriculum). No new RL machinery.
+2. **Self-imitation** (Oh et al. 2018, already cited): replay the technique wins the
+   network does achieve with the (R - V)+ loss so a rare win is learned from many
+   times instead of once. Queued change; fits the sparse-win shape exactly.
+3. Longer run on the current recipe: the flat curves over 240 technique updates (TECH
+   + TECH2 combined evidence) argue against it as the first move.

@@ -12,7 +12,7 @@
 ## 3. Run and record
 
 - [x] 3.1 Baselines on POOL_LONG: technique held-out per set, `lichess_end_top1`. Arm TECH: 120 updates from POOL_LONG, default config; games, finishes, probe; `experiments/endgame-technique/`.
-- [ ] 3.2 outcome.md against the dials; NOTES section on forced-win curricula; RESOURCES note (no new source; tablebases deferred); learning record if understanding is demonstrated.
+- [ ] 3.2 (outcome.md written for TECH and TECH2) outcome.md against the dials; NOTES section on forced-win curricula; RESOURCES note (no new source; tablebases deferred); learning record if understanding is demonstrated.
 
 ## 4. Comprehension check with owner
 
