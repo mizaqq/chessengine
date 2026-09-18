@@ -302,3 +302,21 @@ levels ahead of the skill (CURSIL); flagging "teacher acted" by the played move 
 the levels, because every win ends with the demonstrator's move by definition (CURSIL2).
 The fix was to sample the guided mixture by component so "the teacher fired" is an
 observed coin, not an inference from the action (CURSIL3).
+
+## GAE lambda and long plans — 2026-09-18
+
+With a terminal-only reward and plans of ten moves, lambda 0.95 shrinks the credit
+reaching the setup moves to (gamma*lambda)^10 = 0.54 against gamma^10 = 0.90 at lambda
+1. Three queen-only arms and the 600-update LONG2 run at lambda 1 raised decisive games,
+in-game mate rate and own-game mate-in-one with no change to the PPO clip band or KL, so
+lambda 1 is now the default. The bias-variance trade the GAE paper describes was, for
+this problem, on the wrong side at 0.95: the value head's bias on long conversions was
+worse than the Monte Carlo variance.
+
+## Consolidation run LONG2 — 2026-09-18
+
+600 updates on the full layout (pool, SIL, level ladder on four technique sets, lambda 1,
+LR floor 1e-4) produced the first RL checkpoint at par with the supervised prior in the
+win matrix (8-7) while beating every earlier RL checkpoint by a wide margin (36-4 over
+M34), and the best value on all puzzle sets. Finishing conversion from 10-20 plies in
+human middlegames did not move; that dial has now resisted fourteen arms.

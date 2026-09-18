@@ -87,6 +87,11 @@ eval_interval: 50
 # 64-ply rollouts it takes 4x fewer gradient steps and learned puzzles at 0.32
 # vs PPO's 0.42-0.44 from the same plies.
 algorithm: ppo
+# gae_lambda 1.0 since 2026-09-18 (arms GSL, LAMBDA, GSL2, LONG2): with terminal-only
+# rewards and ten-move plans, the win's full credit should reach the setup moves;
+# decisive games 21-23 of 40 vs 19, in-game mate 0.31-0.40 vs 0.28, own-game mate-in-one
+# up, clip fraction 0.19 and KL 0.03 unchanged. 0.95 was the PPO preset.
+gae_lambda: 1.0
 
 # Mid-game start boards (decided 2026-09-16): the boards after the puzzle boards
 # start full games from human positions at plies 20-60 (data/games/midgame_starts.csv,

@@ -374,3 +374,64 @@ run is moving slowly only"; "option 1")
 mid-game / 4 opening), pool, SIL, guidance 0.25, levels curriculum from level 0 for
 every set (levels persist from now on), gae_lambda 1.0, min_lr 1e-4 (no decay). Then
 games, finishes, probe, win matrix vs SL / M34 / POOL_LONG / CURSIL_LONG.
+
+# LONG2: consolidation run (2026-09-18 19:57 to 23:37)
+
+600 updates from LAMBDA on the real layout (3 puzzle / 4 technique on Q, R, RR, QR /
+5 mid-game / 4 opening), pool, SIL, guidance 0.25, level ladder from 0 (persisted),
+gae_lambda 1.0, min_lr 1e-4 (no decay; owner "option 1"). 3.6 h training, 4 min
+evaluations. Owner's prediction: none. Claude's (implicit, from the arms): puzzles hold
+or creep, own-game up, prior score par, technique pairs up, finishing unchanged.
+
+## Dials at 600 (best previous in brackets)
+
+| dial | LONG2 | best before |
+|---|---|---|
+| mate-in-1 | **0.802** | 0.796 (LAMBDA 0.791; POOL_LONG 0.785) |
+| mate-in-2 | **0.712** | 0.697 |
+| mate-in-3 | **0.665** | 0.663 |
+| mate-in-4 | **0.574** (0.587 at 500) | 0.566 |
+| endgame-mate | **0.742** | 0.737 |
+| own-game mate-in-one | 0.333 (0.343 at 400 / 500) | 0.357 (GSL, one eval) |
+| technique held-out Q / R / RR / QR | **0.26** / 0.02 / 0.18 / **0.28** (QR 0.34 at 550) | 0.22 / 0.06 / 0.18 / 0.28 |
+| levels reached | Q 2, R 1, RR 2, QR 2 | |
+| finishing d2 / d10 / d20 | 0.40 / 0.13 / 0.12 | unchanged band |
+| prior_score (20 games per colour) | 0.45 (0.44-0.59 across the run) | |
+| game entropy / clip / KL | 0.30 / 0.19 / 0.030 | healthy throughout at LR 1e-4 |
+| 40 sampled games | 17 decisive, 22 draws, mate 17 of 54 (0.31), 129 plies | |
+
+## Win matrix (30 games per colour, decisive W-L, rest drawn or capped)
+
+|  | vs SL | vs M34 | vs POOL_LONG | vs CURSIL_LONG | mean score |
+|---|---|---|---|---|---|
+| SL (prior) | - | 19-9 | 8-11 | 6-7 | 0.510 |
+| M34 | 9-19 | - | 6-17 | 7-28 | 0.346 |
+| POOL_LONG | 11-8 | 17-6 | - | 8-20 | 0.444 |
+| CURSIL_LONG | 7-6 | 28-7 | 20-8 | - | 0.542 |
+| LONG2 | **8-7** | **36-4** | **33-4** | **24-10** | **0.658** |
+
+## Reading
+
+- **LONG2 is the strongest checkpoint of the project on every axis but one.** It beats
+  M34 36-4, POOL_LONG 33-4 and CURSIL_LONG 24-10 in decisive games, is at par with the
+  supervised prior (8-7, score 0.51; the drift the win matrix exposed on 2026-09-17 is
+  closed), and holds the best value on all five puzzle sets. The RL family now orders
+  cleanly by training time (M34 < POOL_LONG < CURSIL_LONG < LONG2), the opposite of the
+  flat plateau seen in the first matrix.
+- **Lambda 1 and the LR floor held up over 600 updates**: clip fraction 0.18-0.21, KL
+  0.030-0.046, entropy 0.29-0.32, puzzle dials still rising at the end.
+- **Technique**: queen 0.16 -> 0.26 held-out, the pairs at 0.18-0.34; all sets except the
+  rook at level 2. The rook reached level 1 at update 500. The same "cornered king only"
+  ceiling is visible: clean success 0.3-0.5 at level 2 with the level-0 share inside it.
+- **Finishing conversion at depth 10 / 20 is unchanged for the fourteenth arm** (0.13 /
+  0.12, band 0.10-0.24). Every other dial moved; this one did not. It is the human-
+  middlegame conversion problem and neither technique nor lambda reached it.
+- Sampled games got drawier (22 of 40) while head-to-head decisive counts against the
+  other checkpoints rose sharply: LONG2 wins when there is a weaker side, and draws
+  itself.
+
+## Defaults after this run
+
+`gae_lambda` 1.0 becomes the PPO default (three arms plus LONG2). `min_lr` stays 3e-5 in
+the config; long runs set 1e-4 explicitly (owner's option 1) until a run at the default
+shows a difference.

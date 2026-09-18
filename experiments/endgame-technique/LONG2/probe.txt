@@ -1,0 +1,6 @@
+experiments/endgame-technique/LONG2
+  human mate d0 : {'value': 0.861, 'mate_mass': 0.616, 'top1': 0.63, 'hist': {'<0.05': 0.213, '<0.5': 0.173, '<0.8': 0.07, '<1.01': 0.543}}
+  human mate d2 : {'value': 0.595}
+  human mate d10: {'value': 0.37}
+  lichess m1    : {'value': 1.233, 'mate_mass': 0.793, 'top1': 0.817, 'hist': {'<0.05': 0.11, '<0.5': 0.09, '<0.8': 0.05, '<1.01': 0.75}}
+  own-game m1   : {'value': 0.364, 'mate_mass': 0.322, 'top1': 0.333, 'hist': {'<0.05': 0.5, '<0.5': 0.187, '<0.8': 0.073, '<1.01': 0.24}}

@@ -1,0 +1,14 @@
+{
+ "finish_rate_d2": 0.4,
+ "finish_games_d2": 100,
+ "finish_rate_d10": 0.13,
+ "finish_games_d10": 100,
+ "finish_rate_d20": 0.12,
+ "finish_games_d20": 100,
+ "checkpoints": {
+  "model": "experiments/endgame-technique/LONG2/model_20260918233217_episodes_600.pth"
+ },
+ "records": "data/finishes/finish_eval.csv",
+ "seed": 0,
+ "greedy_attacker": false
+}

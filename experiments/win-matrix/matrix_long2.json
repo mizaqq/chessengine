@@ -1,0 +1,182 @@
+{
+ "names": [
+  "SL",
+  "M34",
+  "POOL_LONG",
+  "CURSIL_LONG",
+  "LONG2"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "M34": "experiments/exploration-noise/M34",
+  "POOL_LONG": "experiments/opponent-pool/POOL_LONG",
+  "CURSIL_LONG": "experiments/endgame-technique/CURSIL_LONG",
+  "LONG2": "experiments/endgame-technique/LONG2"
+ },
+ "games_per_colour": 30,
+ "seed": 4,
+ "table": {
+  "SL": {
+   "M34": 0.5833333333333334,
+   "POOL_LONG": 0.475,
+   "CURSIL_LONG": 0.49166666666666664,
+   "LONG2": 0.49166666666666664
+  },
+  "M34": {
+   "SL": 0.41666666666666663,
+   "POOL_LONG": 0.4083333333333333,
+   "CURSIL_LONG": 0.325,
+   "LONG2": 0.23333333333333334
+  },
+  "POOL_LONG": {
+   "SL": 0.525,
+   "M34": 0.5916666666666667,
+   "CURSIL_LONG": 0.4,
+   "LONG2": 0.25833333333333336
+  },
+  "CURSIL_LONG": {
+   "SL": 0.5083333333333333,
+   "M34": 0.675,
+   "POOL_LONG": 0.6,
+   "LONG2": 0.38333333333333336
+  },
+  "LONG2": {
+   "SL": 0.5083333333333333,
+   "M34": 0.7666666666666666,
+   "POOL_LONG": 0.7416666666666667,
+   "CURSIL_LONG": 0.6166666666666667
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "M34",
+   "counts": {
+    "a_white_draw": 17,
+    "a_black_black_win": 8,
+    "a_black_draw": 15,
+    "a_white_white_win": 11,
+    "a_black_white_win": 7,
+    "a_white_black_win": 2
+   }
+  },
+  {
+   "a": "SL",
+   "b": "POOL_LONG",
+   "counts": {
+    "a_white_white_win": 3,
+    "a_black_white_win": 8,
+    "a_white_draw": 21,
+    "a_black_draw": 15,
+    "a_white_unfinished": 3,
+    "a_black_black_win": 5,
+    "a_white_black_win": 3,
+    "a_black_unfinished": 2
+   }
+  },
+  {
+   "a": "SL",
+   "b": "CURSIL_LONG",
+   "counts": {
+    "a_white_draw": 22,
+    "a_black_draw": 22,
+    "a_black_white_win": 5,
+    "a_white_unfinished": 3,
+    "a_white_white_win": 3,
+    "a_white_black_win": 2,
+    "a_black_black_win": 3
+   }
+  },
+  {
+   "a": "SL",
+   "b": "LONG2",
+   "counts": {
+    "a_white_draw": 24,
+    "a_black_draw": 21,
+    "a_white_black_win": 4,
+    "a_black_black_win": 5,
+    "a_black_white_win": 4,
+    "a_white_white_win": 2
+   }
+  },
+  {
+   "a": "M34",
+   "b": "POOL_LONG",
+   "counts": {
+    "a_white_draw": 15,
+    "a_black_draw": 15,
+    "a_white_black_win": 7,
+    "a_black_black_win": 3,
+    "a_white_white_win": 3,
+    "a_black_white_win": 10,
+    "a_black_unfinished": 2,
+    "a_white_unfinished": 5
+   }
+  },
+  {
+   "a": "M34",
+   "b": "CURSIL_LONG",
+   "counts": {
+    "a_white_draw": 9,
+    "a_black_white_win": 11,
+    "a_white_black_win": 17,
+    "a_black_black_win": 4,
+    "a_black_unfinished": 1,
+    "a_black_draw": 14,
+    "a_white_white_win": 3,
+    "a_white_unfinished": 1
+   }
+  },
+  {
+   "a": "M34",
+   "b": "LONG2",
+   "counts": {
+    "a_white_draw": 9,
+    "a_black_draw": 11,
+    "a_white_black_win": 19,
+    "a_black_white_win": 17,
+    "a_black_black_win": 2,
+    "a_white_white_win": 2
+   }
+  },
+  {
+   "a": "POOL_LONG",
+   "b": "CURSIL_LONG",
+   "counts": {
+    "a_white_white_win": 5,
+    "a_black_white_win": 10,
+    "a_white_draw": 13,
+    "a_black_black_win": 3,
+    "a_white_black_win": 10,
+    "a_black_draw": 14,
+    "a_white_unfinished": 2,
+    "a_black_unfinished": 3
+   }
+  },
+  {
+   "a": "POOL_LONG",
+   "b": "LONG2",
+   "counts": {
+    "a_white_black_win": 16,
+    "a_black_draw": 10,
+    "a_white_white_win": 3,
+    "a_black_white_win": 17,
+    "a_white_draw": 11,
+    "a_black_black_win": 1,
+    "a_black_unfinished": 2
+   }
+  },
+  {
+   "a": "CURSIL_LONG",
+   "b": "LONG2",
+   "counts": {
+    "a_white_draw": 13,
+    "a_black_white_win": 12,
+    "a_black_black_win": 5,
+    "a_black_draw": 13,
+    "a_white_black_win": 12,
+    "a_white_white_win": 5
+   }
+  }
+ ]
+}
