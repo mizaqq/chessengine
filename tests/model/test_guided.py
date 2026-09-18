@@ -77,7 +77,7 @@ def test_guided_sampling_flags_only_demonstrator_fires_and_keeps_mixture_log_pro
         def __init__(self, s): self.s, self.calls = s, []
         def sample(self): return self.s
         def report(self, d, s): pass
-        def report_label(self, label, success, clean=True): self.calls.append(clean)
+        def report_label(self, label, success, clean=True, depth=None): self.calls.append(clean)
         def levels(self): return {"Q": 0}
 
     fen = "7k/8/5K2/8/8/8/8/6Q1 w - - 0 1"      # Qg7 is mate in one

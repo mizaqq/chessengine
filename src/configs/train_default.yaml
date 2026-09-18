@@ -130,7 +130,22 @@ technique_eval_games: 50
 # Arm CURSIL (0.6 over 30, all episodes counted) raced to level 3 on teacher-made wins
 # while the held-out rate stayed at zero, hence clean-only and 0.7 over 40.
 # false = every start at level 3 (arms TECH, TECH2).
-technique_curriculum: true
+# `good_starts` (default since 2026-09-18 evening, Florensa et al. 2017 Algorithm 1):
+# generated positions are bucketed by geometry (weak king's edge distance 0-3, king
+# distance 2/3/4+, nearest piece 1-2/3-4/5+; 36 buckets per set); each bucket's clean
+# success over the last technique_bucket_window episodes decides its draw weight: 1 if
+# unknown or inside [technique_r_min, technique_r_max] ("good starts": won sometimes),
+# technique_replay_share if above (do not forget), technique_probe_share if below (let
+# hard starts enter). `levels`: the four-rung ladder of arms CURSIL3 / CURSIL_LONG
+# (single pieces stalled at one rung). `off`: unconstrained placement. Curriculum state
+# is saved as curriculum.json with the checkpoint and reloaded by init_from.
+technique_curriculum: good_starts
+technique_r_min: 0.1
+technique_r_max: 0.9
+technique_bucket_window: 20
+technique_replay_share: 0.2
+technique_probe_share: 0.1
+# levels mode only:
 technique_level_start: 0
 technique_advance_rate: 0.7
 technique_window: 40

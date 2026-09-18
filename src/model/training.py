@@ -232,7 +232,8 @@ def _collect_rollout(
                             metrics.add_technique_result(label, success, clean=clean)
                             report_label = getattr(getattr(envs, "finish_sampler", None), "report_label", None)
                             if report_label is not None:
-                                report_label(label, success, clean=clean)
+                                report_label(label, success, clean=clean,
+                                             depth=env_step.info.get("finish_depth", {}).get(env_idx))
                             demo_acted[env_idx] = False
                         else:
                             metrics.add_finish_result(
@@ -600,7 +601,9 @@ def run_chess_training(
             print(f"update {episode}: layout -> finish {change['finish_boards']}, mid-game {change['midgame_boards']}")
         if finish_sampler is not None:
             metrics.set_finish_depth(finish_sampler.current_depth)
-            if hasattr(finish_sampler, "levels"):
+            if hasattr(finish_sampler, "dials"):
+                metrics.set_technique_dials(finish_sampler.dials())
+            elif hasattr(finish_sampler, "levels"):
                 metrics.set_technique_levels(finish_sampler.levels())
         def _board_mask(which):
             if which == "all":

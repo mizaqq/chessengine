@@ -72,7 +72,7 @@ def test_rollout_reports_clean_flag_to_sampler():
             self.start = start; self.calls = []
         def sample(self): return self.start
         def report(self, d, s): pass
-        def report_label(self, label, success, clean=True): self.calls.append((label, success, clean))
+        def report_label(self, label, success, clean=True, depth=None): self.calls.append((label, success, clean))
         def levels(self): return {"Q": 0}
 
     # white: K a1, Q b2 ... black K h8; Qb2-h8 is mate? Use a position with a mate in one: Q g7 mates? build: K f6, Q g1, k h8 -> Qg7# 

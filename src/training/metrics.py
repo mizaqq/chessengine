@@ -115,7 +115,11 @@ class MetricsAggregator:
 
     def set_technique_levels(self, levels):
         """Current technique curriculum level per material set (state, not a window count)."""
-        self.technique_levels = dict(levels)
+        self.technique_dials = {f"technique_level_{k}": v for k, v in levels.items()}
+
+    def set_technique_dials(self, dials):
+        """Curriculum state keys already named (technique_level_<set> or the good-starts counts)."""
+        self.technique_dials = dict(dials)
 
     def set_finish_depth(self, depth):
         """Current curriculum depth (state, not a window count)."""
@@ -182,7 +186,7 @@ class MetricsAggregator:
             "explore_offprior_share": (self.explore_offprior / self.explore_count if self.explore_count else None),
             "guide_moves": self.guide_count,
             "guide_demo_share": (self.guide_demo_picks / self.guide_count if self.guide_count else None),
-            **{f"technique_level_{k}": v for k, v in sorted(getattr(self, "technique_levels", {}).items())},
+            **dict(sorted(getattr(self, "technique_dials", {}).items())),
             **{f"technique_attempts_{k}": v[0] for k, v in sorted(self._technique_by_label.items())},
             **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},
             **{f"technique_clean_attempts_{k}": v[2] for k, v in sorted(self._technique_by_label.items())},

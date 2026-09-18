@@ -239,13 +239,25 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
     if source == "technique":
         sets, caps = resolve_technique_sets(config)
         try:
+            raw_mode = config.get("technique_curriculum", False)
+            mode = {True: "levels", False: "off"}.get(raw_mode, raw_mode) if isinstance(raw_mode, bool) else str(raw_mode)
             sampler = TechniqueSampler(
                 sets, caps, seed=int(config.get("seed", 42)) + 2000,
-                curriculum=bool(config.get("technique_curriculum", False)),
+                mode=mode,
                 level_start=int(config.get("technique_level_start", 0)),
                 advance_rate=float(config.get("technique_advance_rate", 0.7)),
                 window=int(config.get("technique_window", 40)),
+                r_min=float(config.get("technique_r_min", 0.1)),
+                r_max=float(config.get("technique_r_max", 0.9)),
+                bucket_window=int(config.get("technique_bucket_window", 20)),
+                replay_share=float(config.get("technique_replay_share", 0.2)),
+                probe_share=float(config.get("technique_probe_share", 0.1)),
             )
+            state_path = Path(str(config.get("init_from", ""))) / "curriculum.json" if config.get("init_from") else None
+            if state_path is not None and state_path.exists():
+                import json as _json
+                sampler.load_state(_json.loads(state_path.read_text()))
+                print("curriculum state loaded from", state_path)
         except ValueError as e:
             raise ValueError(f"technique curriculum config: {e}") from e
         return sampler, n
@@ -485,6 +497,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         sil=sil,
     )
 
+    sampler_state = finish_sampler.state() if hasattr(finish_sampler, "state") else None
     return {
         "logs": logs,
         "losses": losses,
@@ -492,6 +505,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "black_model": black_model,
         "shared": shared,
         "model": white_model if shared else None,
+        "curriculum_state": sampler_state,
     }
 
 

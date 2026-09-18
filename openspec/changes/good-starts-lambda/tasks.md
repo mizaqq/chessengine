@@ -1,8 +1,8 @@
 ## 1. Good-starts curriculum
 
-- [ ] 1.1 `bucket_of(board, strong)`, `generate_position_in_bucket(material, bucket, rng)`; `GoodStartsCurriculum(sets, r_min, r_max, window, replay_share, probe_share)` with `weights(label)`, `draw(label)`, `report(label, bucket, success)`, `state()` / `load_state()`; `TechniqueSampler(mode=good_starts|levels|off)`. Tests: band-selects scenario, geometry-honoured scenario, infeasible bucket retired, teacher-made wins ignored.
-- [ ] 1.2 Dials `technique_known_buckets_<set>`, `technique_good_buckets_<set>`, `technique_graduated_<set>`; config keys and resolver (`technique_curriculum: good_starts` default). Tests.
-- [ ] 1.3 Curriculum state saved as `curriculum.json` with the checkpoint and reloaded by `init_from`. Test: resume scenario.
+- [x] 1.1 `bucket_of(board, strong)`, `generate_position_in_bucket(material, bucket, rng)`; `GoodStartsCurriculum(sets, r_min, r_max, window, replay_share, probe_share)` with `weights(label)`, `draw(label)`, `report(label, bucket, success)`, `state()` / `load_state()`; `TechniqueSampler(mode=good_starts|levels|off)`. Tests: band-selects scenario, geometry-honoured scenario, infeasible bucket retired, teacher-made wins ignored.
+- [x] 1.2 Dials `technique_known_buckets_<set>`, `technique_good_buckets_<set>`, `technique_graduated_<set>`; config keys and resolver (`technique_curriculum: good_starts` default). Tests.
+- [x] 1.3 Curriculum state saved as `curriculum.json` with the checkpoint and reloaded by `init_from`. Test: resume scenario.
 
 ## 2. Run and record
 

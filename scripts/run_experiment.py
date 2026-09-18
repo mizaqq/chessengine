@@ -41,6 +41,8 @@ def main():
         paths = [save_model(result["model"], args.out, config["max_updates"])]
     else:
         paths = save_models(result["white_model"], result["black_model"], args.out, config["max_updates"])
+    if result.get("curriculum_state"):
+        (args.out / "curriculum.json").write_text(json.dumps(result["curriculum_state"]))
     run = {
         "config": config,
         "elapsed_s": elapsed,

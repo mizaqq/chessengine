@@ -19,7 +19,7 @@ positions stay in the mix.
 """
 import random
 from collections import deque
-from typing import Dict, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 import chess
 
@@ -105,13 +105,167 @@ def generate_position(material: str, rng: random.Random, level: int = MAX_LEVEL,
     raise RuntimeError(f"could not generate a position for material {material!r} at level {level}")
 
 
+
+# ---- Good-starts curriculum (Florensa et al. 2017, Algorithm 1 / §4.1) -----------------
+# Buckets over board geometry: weak king's distance to the nearest edge (0-3), king-to-king
+# distance class (2 / 3 / 4+), nearest strong piece's distance to the weak king (1-2 / 3-4 /
+# 5+). 36 buckets per material set. A bucket is a "good start" while its clean success
+# rate lies in [r_min, r_max]; graduated buckets keep a replay share (the paper's
+# starts_old), too-hard ones a probe share (our stand-in for Brownian expansion).
+EDGE_CLASSES, KING_CLASSES, PIECE_CLASSES = 4, 3, 3
+N_BUCKETS = EDGE_CLASSES * KING_CLASSES * PIECE_CLASSES
+
+
+def edge_distance(sq: int) -> int:
+    f, r = chess.square_file(sq), chess.square_rank(sq)
+    return min(f, 7 - f, r, 7 - r)
+
+
+def _king_class(d: int) -> int:
+    return 0 if d <= 2 else (1 if d == 3 else 2)
+
+
+def _piece_class(d: int) -> int:
+    return 0 if d <= 2 else (1 if d <= 4 else 2)
+
+
+def bucket_of(board: chess.Board, strong: bool) -> int:
+    weak = board.king(not strong)
+    kd = chess.square_distance(weak, board.king(strong))
+    pieces = [sq for sq, p in board.piece_map().items() if p.color == strong and p.piece_type != chess.KING]
+    pd = min(chess.square_distance(weak, sq) for sq in pieces)
+    return min(edge_distance(weak), 3) * 9 + _king_class(kd) * 3 + _piece_class(pd)
+
+
+def bucket_features(bucket: int):
+    """(edge class, king class, piece class) of a bucket id."""
+    return bucket // 9, (bucket % 9) // 3, bucket % 3
+
+
+def generate_position_in_bucket(material: str, bucket: int, rng: random.Random, max_tries: int = 200):
+    """Position whose geometry falls in `bucket`, with the usual rejections; None if
+    none was found in `max_tries` (an infeasible bucket, e.g. two rooks both within
+    two squares of a cornered king without a mate in one)."""
+    ec, kc, pc = bucket_features(bucket)
+    weak_squares = [sq for sq in range(64) if min(edge_distance(sq), 3) == ec]
+    for _ in range(max_tries):
+        strong_colour = rng.choice((chess.WHITE, chess.BLACK))
+        weak = rng.choice(weak_squares)
+        kings = [sq for sq in range(64) if _king_class(chess.square_distance(sq, weak)) == kc
+                 and chess.square_distance(sq, weak) >= 2]
+        if not kings:
+            return None
+        strong = rng.choice(kings)
+        lo = (1, 3, 5)[pc]
+        in_class = [sq for sq in range(64) if sq not in (weak, strong)
+                    and _piece_class(chess.square_distance(sq, weak)) == pc]
+        others = [sq for sq in range(64) if sq not in (weak, strong)
+                  and chess.square_distance(sq, weak) >= lo]
+        if not in_class or len(others) < len(material):
+            return None
+        first = rng.choice(in_class)
+        rest_pool = [sq for sq in others if sq != first]
+        squares = [first] + rng.sample(rest_pool, len(material) - 1)
+        board = chess.Board(None)
+        board.set_piece_at(strong, chess.Piece(chess.KING, strong_colour))
+        board.set_piece_at(weak, chess.Piece(chess.KING, not strong_colour))
+        ok = True
+        for sq, sym in zip(squares, material):
+            piece = _PIECE[sym]
+            if piece == chess.PAWN and chess.square_rank(sq) in (0, 7):
+                ok = False
+                break
+            board.set_piece_at(sq, chess.Piece(piece, strong_colour))
+        if not ok:
+            continue
+        board.turn = strong_colour
+        board.castling_rights = 0
+        if not board.is_valid() or board.is_check() or board.is_game_over():
+            continue
+        if board.is_attacked_by(strong_colour, weak) or _has_mate_in_one(board):
+            continue
+        return board
+    return None
+
+
+class GoodStartsCurriculum:
+    """Per (set, bucket) windowed clean success; draw weights by band membership."""
+
+    def __init__(self, sets: Sequence[str], r_min: float = 0.1, r_max: float = 0.9, window: int = 20,
+                 replay_share: float = 0.2, probe_share: float = 0.1):
+        if not 0 <= r_min < r_max <= 1:
+            raise ValueError("need 0 <= technique_r_min < technique_r_max <= 1")
+        if window < 1 or replay_share < 0 or probe_share < 0:
+            raise ValueError("technique_bucket_window >= 1 and shares >= 0")
+        self.r_min, self.r_max, self.window = float(r_min), float(r_max), int(window)
+        self.replay_share, self.probe_share = float(replay_share), float(probe_share)
+        self._recent = {s: [deque(maxlen=self.window) for _ in range(N_BUCKETS)] for s in sets}
+        self._infeasible = {s: set() for s in sets}
+
+    def rate(self, label: str, bucket: int):
+        r = self._recent[label][bucket]
+        return sum(r) / len(r) if len(r) >= self.window else None
+
+    def status(self, label: str, bucket: int) -> str:
+        rt = self.rate(label, bucket)
+        if rt is None:
+            return "unknown"
+        if rt > self.r_max:
+            return "graduated"
+        if rt < self.r_min:
+            return "hard"
+        return "good"
+
+    def weights(self, label: str) -> List[float]:
+        out = []
+        for b in range(N_BUCKETS):
+            if b in self._infeasible[label]:
+                out.append(0.0)
+                continue
+            st = self.status(label, b)
+            out.append({"unknown": 1.0, "good": 1.0, "graduated": self.replay_share, "hard": self.probe_share}[st])
+        return out
+
+    def draw(self, label: str, rng: random.Random) -> int:
+        w = self.weights(label)
+        if sum(w) <= 0:
+            return rng.randrange(N_BUCKETS)
+        return rng.choices(range(N_BUCKETS), weights=w, k=1)[0]
+
+    def report(self, label: str, bucket: int, success: bool) -> None:
+        self._recent[label][bucket].append(bool(success))
+
+    def mark_infeasible(self, label: str, bucket: int) -> None:
+        self._infeasible[label].add(int(bucket))
+
+    def dials(self, label: str) -> Dict[str, int]:
+        st = [self.status(label, b) for b in range(N_BUCKETS) if b not in self._infeasible[label]]
+        return {"known_buckets": sum(x != "unknown" for x in st), "good_buckets": st.count("good"),
+                "graduated": st.count("graduated")}
+
+    def state(self) -> dict:
+        return {"recent": {s: [list(d) for d in ds] for s, ds in self._recent.items()},
+                "infeasible": {s: sorted(v) for s, v in self._infeasible.items()}}
+
+    def load_state(self, state: dict) -> None:
+        for s, lists in state.get("recent", {}).items():
+            if s in self._recent:
+                for b, vals in enumerate(lists[:N_BUCKETS]):
+                    self._recent[s][b] = deque((bool(v) for v in vals), maxlen=self.window)
+        for s, vals in state.get("infeasible", {}).items():
+            if s in self._infeasible:
+                self._infeasible[s] = set(int(v) for v in vals)
+
+
 class TechniqueSampler:
     """Feeds the finishing slot with technique starts (`FinishStart` with a `config`
     label and the level in `depth`). With `curriculum=False` every start is level 3 and
     `report_label` does nothing."""
 
     def __init__(self, sets: Sequence[str], caps: Dict[str, int] | None = None, seed: int = 0,
-                 curriculum: bool = False, level_start: int = 0, advance_rate: float = 0.7, window: int = 40):
+                 curriculum: bool = False, level_start: int = 0, advance_rate: float = 0.7, window: int = 40,
+                 mode: Optional[str] = None, r_min: float = 0.1, r_max: float = 0.9, bucket_window: int = 20,
+                 replay_share: float = 0.2, probe_share: float = 0.1):
         if not sets:
             raise ValueError("technique sets must not be empty")
         caps = {**DEFAULT_CAPS, **(caps or {})}
@@ -124,16 +278,25 @@ class TechniqueSampler:
             raise ValueError(f"technique_level_start must be in [0, {MAX_LEVEL}]")
         if not 0 < advance_rate <= 1 or window < 1:
             raise ValueError("technique_advance_rate must be in (0, 1] and technique_window >= 1")
+        if mode is None:
+            mode = "levels" if curriculum else "off"
+        if mode not in ("off", "levels", "good_starts"):
+            raise ValueError(f"technique_curriculum must be off, levels or good_starts, got {mode!r}")
+        self.mode = mode
         self.sets = list(sets)
         self.caps = {s: int(caps[s]) for s in sets}
-        self.curriculum = bool(curriculum)
+        self.curriculum = mode == "levels"
         self.advance_rate = float(advance_rate)
         self.window = int(window)
-        self._level = {s: (int(level_start) if curriculum else MAX_LEVEL) for s in sets}
+        self._level = {s: (int(level_start) if self.curriculum else MAX_LEVEL) for s in sets}
         self._recent = {s: deque(maxlen=self.window) for s in sets}
+        self.good = GoodStartsCurriculum(sets, r_min, r_max, bucket_window, replay_share, probe_share) \
+            if mode == "good_starts" else None
         self._rng = random.Random(seed)
         self._seed = seed
-        self._init = dict(curriculum=curriculum, level_start=level_start, advance_rate=advance_rate, window=window)
+        self._init = dict(curriculum=curriculum, level_start=level_start, advance_rate=advance_rate, window=window,
+                          mode=mode, r_min=r_min, r_max=r_max, bucket_window=bucket_window,
+                          replay_share=replay_share, probe_share=probe_share)
 
     @property
     def current_depth(self) -> int:
@@ -147,20 +310,62 @@ class TechniqueSampler:
 
     def sample(self) -> FinishStart:
         label = self._rng.choice(self.sets)
+        if self.good is not None:
+            # Good-starts mode: `depth` carries the bucket id; infeasible buckets are retired.
+            for _ in range(N_BUCKETS):
+                bucket = self.good.draw(label, self._rng)
+                board = generate_position_in_bucket(label, bucket, self._rng)
+                if board is not None:
+                    winner = WHITE if board.turn == chess.WHITE else BLACK
+                    return FinishStart(board.fen(), bucket, self.caps[label], winner, (), label)
+                self.good.mark_infeasible(label, bucket)
+            board = generate_position(label, self._rng, MAX_LEVEL)
+            winner = WHITE if board.turn == chess.WHITE else BLACK
+            return FinishStart(board.fen(), bucket_of(board, board.turn), self.caps[label], winner, (), label)
         level = self._rng.randint(0, self._level[label]) if self.curriculum else MAX_LEVEL
         board = generate_position(label, self._rng, level)
         winner = WHITE if board.turn == chess.WHITE else BLACK
         return FinishStart(board.fen(), level, self.caps[label], winner, (), label)
 
+    def dials(self) -> Dict[str, int]:
+        """Summary keys: technique_level_<set> (levels mode) or the good-starts counts."""
+        if self.good is not None:
+            out = {}
+            for s in self.sets:
+                for k, v in self.good.dials(s).items():
+                    out[f"technique_{k}_{s}"] = v
+            return out
+        return {f"technique_level_{s}": v for s, v in self._level.items()}
+
+    def state(self) -> Optional[dict]:
+        return {"mode": self.mode, "good": self.good.state()} if self.good is not None else \
+            {"mode": self.mode, "levels": dict(self._level)}
+
+    def load_state(self, state: dict) -> None:
+        if not state or state.get("mode") != self.mode:
+            return
+        if self.good is not None and "good" in state:
+            self.good.load_state(state["good"])
+        elif "levels" in state:
+            for s, v in state["levels"].items():
+                if s in self._level:
+                    self._level[s] = int(v)
+
     def report(self, depth: int, success: bool) -> None:
         return None
 
-    def report_label(self, label: str, success: bool, clean: bool = True) -> None:
+    def report_label(self, label: str, success: bool, clean: bool = True, depth: Optional[int] = None) -> None:
         """Curriculum step: after `window` clean results for `label` (episodes in which
         the demonstrator never acted), advance its level when the success rate reaches
         `advance_rate`; the window then restarts. Episodes with a demonstrator move are
         ignored here (arm CURSIL 2026-09-18: counting them let levels race ahead of skill)."""
-        if not self.curriculum or label not in self._recent or not clean:
+        if not clean or label not in self._recent:
+            return
+        if self.good is not None:
+            if depth is not None:
+                self.good.report(label, int(depth), success)
+            return
+        if not self.curriculum:
             return
         recent = self._recent[label]
         recent.append(bool(success))
