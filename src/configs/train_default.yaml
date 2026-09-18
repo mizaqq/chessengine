@@ -1,9 +1,11 @@
 # One network plays both colours on observations oriented to the mover (AlphaZero,
 # Silver et al. 2017). false = legacy separate white/black networks.
 shared_network: true
-# 16 boards since 2026-09-17 (owner: "go with 16 boards"): 4 puzzle, 2 finishing,
-# 5 mid-game, 5 opening. The checkpoint win matrix showed the supervised prior beating
-# every RL checkpoint 88-9 while only 4 of 12 boards played whole games.
+# 16 boards since 2026-09-17 (owner: "go with 16 boards"). The checkpoint win matrix
+# showed the supervised prior beating every RL checkpoint 88-9 while only 4 of 12
+# boards played whole games. Layout since 2026-09-18 (owner: "make puzzle 3, technique 4,
+# mid game 5, opening 4") after arm TECH: two technique boards gave ~75 games per
+# material set in 120 updates and the held-out technique dial did not leave zero.
 num_envs: 16
 # Standard budget (owner, 2026-09-16): 7,500 plies per board = 120 updates x 64 plies.
 max_updates: 120
@@ -43,7 +45,7 @@ shaping_scale: 0.2
 # the owner 2026-09-16. Puzzle files: scripts/prepare_puzzles.py (Lichess DB, CC0).
 puzzle_fraction: 0.5
 # Explicit board count wins over the fraction. 4 of 12 chosen by the owner 2026-09-16.
-puzzle_boards: 4
+puzzle_boards: 3
 # Puzzle sources with weights. Lichess only (50k human-game positions) is the
 # default after the 2026-09-16 A/B: mixing in positions harvested from the models'
 # own games (scripts/harvest_positions.py) raised accuracy on those positions but
@@ -104,7 +106,7 @@ game_start_file: data/games/midgame_starts.csv
 # values up to the current depth, which starts at finish_depth_start and rises by 2
 # (up to finish_depth_max) whenever the success rate over the last finish_window
 # finishing episodes reaches finish_advance_rate. Sync env only.
-finish_boards: 2
+finish_boards: 4
 # What the finishing boards play. `technique` (default since 2026-09-18, owner: "mating
 # with queen, mating with rook ... the bare king stuff should be generated"): generated
 # bare-king starts with a forced win by rule, strong side to move, no mate in one,
