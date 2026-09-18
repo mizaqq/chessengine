@@ -13,8 +13,9 @@ technique rate never left zero; Florensa et al. 2017 without a ruler): each set 
 level, 0 = weak king in a corner with the strong king at distance 2 and the pieces
 within 4, 1 = weak king on an edge with the strong king within 3, 2 = weak king one
 square from an edge, 3 = unconstrained. The level rises when the last `window`
-boards of that set were won at `advance_rate` or better; starts draw a level
-uniformly in [0, current] so easy positions stay in the mix.
+clean boards of that set (no demonstrator move in the episode) were won at
+`advance_rate` or better; starts draw a level uniformly in [0, current] so easy
+positions stay in the mix.
 """
 import random
 from collections import deque
@@ -110,7 +111,7 @@ class TechniqueSampler:
     `report_label` does nothing."""
 
     def __init__(self, sets: Sequence[str], caps: Dict[str, int] | None = None, seed: int = 0,
-                 curriculum: bool = False, level_start: int = 0, advance_rate: float = 0.6, window: int = 30):
+                 curriculum: bool = False, level_start: int = 0, advance_rate: float = 0.7, window: int = 40):
         if not sets:
             raise ValueError("technique sets must not be empty")
         caps = {**DEFAULT_CAPS, **(caps or {})}
@@ -154,10 +155,12 @@ class TechniqueSampler:
     def report(self, depth: int, success: bool) -> None:
         return None
 
-    def report_label(self, label: str, success: bool) -> None:
-        """Curriculum step: after `window` results for `label`, advance its level when
-        the success rate reaches `advance_rate`; the window then restarts."""
-        if not self.curriculum or label not in self._recent:
+    def report_label(self, label: str, success: bool, clean: bool = True) -> None:
+        """Curriculum step: after `window` clean results for `label` (episodes in which
+        the demonstrator never acted), advance its level when the success rate reaches
+        `advance_rate`; the window then restarts. Episodes with a demonstrator move are
+        ignored here (arm CURSIL 2026-09-18: counting them let levels race ahead of skill)."""
+        if not self.curriculum or label not in self._recent or not clean:
             return
         recent = self._recent[label]
         recent.append(bool(success))

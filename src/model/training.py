@@ -108,6 +108,15 @@ def _collect_rollout(
     are stored with `learner=False` and leave the batch in `_gather_side`."""
     models = {WHITE: white_model, BLACK: black_model}
     steps_data = []
+    # Per board: did the demonstrator's move get played in the current episode? Kept
+    # across rollouts on the env (technique curriculum advances on clean episodes only).
+    demo_acted = getattr(envs, "_demo_acted", None)
+    if demo_acted is None or len(demo_acted) != num_envs:
+        demo_acted = [False] * num_envs
+        try:
+            envs._demo_acted = demo_acted
+        except AttributeError:
+            pass
     noisy = explore["mask"] if explore is not None and explore.get("epsilon", 0) > 0 else None
     guided = guide["mask"] if guide is not None and guide.get("epsilon", 0) > 0 else None
     if noisy is not None and guided is not None:
@@ -164,7 +173,11 @@ def _collect_rollout(
                     bdist = Categorical(probs=b)
                     a = bdist.sample()
                     old_log_prob[mask] = bdist.log_prob(a)
-                    hits = sum(int(a[j].item()) in row_demos[j] for j in range(len(env_ids)) if row_demos[j])
+                    hits = 0
+                    for j, e in enumerate(env_ids):
+                        if row_demos[j] and int(a[j].item()) in row_demos[j]:
+                            hits += 1
+                            demo_acted[e] = True
                     metrics.add_guide(count=int(guided_rows[mask].sum()), demo_picks=hits)
                 else:
                     a = dist.sample()
@@ -205,7 +218,12 @@ def _collect_rollout(
                         # A labelled (technique) start is counted per label instead of depth.
                         label = env_step.info.get("finish_config", {}).get(env_idx, "")
                         if label:
-                            metrics.add_technique_result(label, env_step.info["finish_success"][env_idx])
+                            success = env_step.info["finish_success"][env_idx]
+                            metrics.add_technique_result(label, success)
+                            report_label = getattr(getattr(envs, "finish_sampler", None), "report_label", None)
+                            if report_label is not None:
+                                report_label(label, success, clean=not demo_acted[env_idx])
+                            demo_acted[env_idx] = False
                         else:
                             metrics.add_finish_result(
                                 depth=env_step.info["finish_depth"][env_idx],
@@ -228,6 +246,8 @@ def _collect_rollout(
                         metrics.add_terminal_result(draw=True)
                 if pool is not None and pool_done:
                     pool.redraw(pool_done)
+                for env_idx in env_step.info["game_results"]:
+                    demo_acted[env_idx] = False
 
             steps_data.append(
                 StepRecord(

@@ -42,7 +42,7 @@ beyond the paper's simple exponent.
 - **BatchNorm**: SIL passes run in eval mode like the PPO update; `refresh_norm_stats`
   stays on the on-policy batch only.
 - **Config**: `technique_curriculum: true`, `technique_level_start: 0`,
-  `technique_advance_rate: 0.6`, `technique_window: 30`; `sil_updates: 4`,
+  `technique_advance_rate: 0.7`, `technique_window: 40`; `sil_updates: 4`,
   `sil_batch: 256`, `sil_loss_weight: 0.1`, `sil_value_weight: 0.01`, `sil_buffer: 50000`.
 
 ## Hyperparameters

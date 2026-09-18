@@ -74,3 +74,11 @@ def test_sampling_skips_zero_priority_and_returns_none_when_all_zero():
     assert set(idx.tolist()) == {1} and w.shape[0] == len(idx)
     o, mk, a, r = buf.get(idx)
     assert o.shape[1:] == (20, 8, 8) and mk.shape[1] == 4674 and a.tolist() == [1] * len(idx)
+
+
+def test_positive_share_counts_whole_buffer():
+    buf = ReplayBuffer(4, seed=0)
+    obs = torch.zeros(20, 8, 8); mask = torch.zeros(4674); mask[:4] = 1
+    buf.add(obs, mask, 0, ret=-1.0, value=0.0)
+    buf.add(obs, mask, 1, ret=1.0, value=0.0)
+    assert buf.positive_share() == 0.5

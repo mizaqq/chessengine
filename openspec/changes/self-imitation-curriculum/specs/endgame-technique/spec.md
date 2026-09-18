@@ -33,13 +33,19 @@ current level; when off, every start SHALL be level 3.
 
 ### Requirement: Technique level curriculum
 Each material set SHALL keep a current level starting at `technique_level_start`.
-When the success rate over the last `technique_window` finished boards of that set is
-at least `technique_advance_rate`, the level SHALL rise by one up to 3 and the window
-SHALL reset. Levels SHALL never fall. The summary SHALL report `technique_level_<set>`.
+Only clean episodes, in which the demonstrator's move was never played, SHALL count
+toward the window. When the success rate over the last `technique_window` clean boards
+of that set is at least `technique_advance_rate`, the level SHALL rise by one up to 3
+and the window SHALL reset. Levels SHALL never fall. The summary SHALL report
+`technique_level_<set>`.
 
 #### Scenario: advance
-- **WHEN** set `Q` is at level 0, the window is 30 and 20 of the last 30 boards were won
+- **WHEN** set `Q` is at level 0, the window is 40 and 28 of the last 40 clean boards were won
 - **THEN** `Q` moves to level 1 and the next window starts empty
+
+#### Scenario: teacher-made wins do not count
+- **WHEN** a `Q` board is won after the demonstrator's mating move was played in that episode
+- **THEN** the episode is not added to the window and the level is unchanged
 
 #### Scenario: held-out unaffected
 - **WHEN** the periodic technique evaluation runs while `Q` is at level 1

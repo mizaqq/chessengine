@@ -105,7 +105,7 @@ class MetricsAggregator:
         """Self-imitation diagnostics for one update (`stats` None = nothing drawn)."""
         self.sil_buffer_size = int(buffer_size)
         if stats:
-            for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share"):
+            for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share", "sil_positive_share"):
                 self._sil_sums[k] = self._sil_sums.get(k, 0.0) + float(stats[k])
             self._sil_count += 1
 
@@ -183,7 +183,7 @@ class MetricsAggregator:
             **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},
             **({"sil_buffer_size": self.sil_buffer_size,
                 **{k: (self._sil_sums.get(k, 0.0) / self._sil_count if self._sil_count else None)
-                   for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share")}}
+                   for k in ("sil_policy_loss", "sil_value_loss", "sil_valid_share", "sil_positive_share")}}
                if self.sil_buffer_size is not None else {}),
             "pool_games": sum(v[0] for v in self._pool_by_name.values()),
             "pool_score": (sum(v[1] for v in self._pool_by_name.values()) / sum(v[0] for v in self._pool_by_name.values())

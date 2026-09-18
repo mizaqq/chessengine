@@ -86,6 +86,12 @@ class ReplayBuffer:
         return (_unpack_obs(self.obs[idx], self.nop[idx]), _unpack_mask(self.mask[idx]),
                 torch.tensor(self.action[idx]), torch.tensor(self.ret[idx]))
 
+    def positive_share(self) -> float:
+        """Share of stored plies whose return still beats the value estimate they were
+        last compared with (the informative SIL dial; the share among drawn plies is ~1
+        by construction of the prioritised draw)."""
+        return float((self.priority[: self.size] > 0).mean()) if self.size else 0.0
+
     def update_priority(self, idx, adv: torch.Tensor):
         self.priority[idx] = adv.clamp(min=0).numpy()
 
@@ -166,4 +172,5 @@ def sil_update(model, optimizer, buffer: ReplayBuffer, *, updates: int, batch: i
         return None
     out = {k: v / steps for k, v in sums.items()}
     out["sil_buffer_size"] = len(buffer)
+    out["sil_positive_share"] = buffer.positive_share()
     return out

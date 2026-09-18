@@ -89,3 +89,13 @@ def test_curriculum_draws_levels_up_to_current_only():
     s = TechniqueSampler(["R"], seed=2, curriculum=True, level_start=1)
     levels = {s.sample().depth for _ in range(40)}
     assert levels <= {0, 1} and 0 in levels and 1 in levels
+
+
+def test_teacher_made_wins_do_not_count():
+    s = TechniqueSampler(["Q"], seed=0, curriculum=True, level_start=0, advance_rate=0.7, window=40)
+    for _ in range(60):
+        s.report_label("Q", True, clean=False)
+    assert s.current_level("Q") == 0 and len(s._recent["Q"]) == 0
+    for i in range(40):
+        s.report_label("Q", i < 28, clean=True)        # 28 of 40 clean wins
+    assert s.current_level("Q") == 1

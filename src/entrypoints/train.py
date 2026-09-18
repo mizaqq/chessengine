@@ -243,8 +243,8 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
                 sets, caps, seed=int(config.get("seed", 42)) + 2000,
                 curriculum=bool(config.get("technique_curriculum", False)),
                 level_start=int(config.get("technique_level_start", 0)),
-                advance_rate=float(config.get("technique_advance_rate", 0.6)),
-                window=int(config.get("technique_window", 30)),
+                advance_rate=float(config.get("technique_advance_rate", 0.7)),
+                window=int(config.get("technique_window", 40)),
             )
         except ValueError as e:
             raise ValueError(f"technique curriculum config: {e}") from e

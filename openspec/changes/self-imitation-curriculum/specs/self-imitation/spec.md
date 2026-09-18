@@ -45,8 +45,9 @@ no gradient. The priority of a drawn ply SHALL be refreshed to its new (R - V)+.
 
 ### Requirement: Diagnostics
 The summary SHALL report `sil_buffer_size`, `sil_valid_share` (share of drawn plies
-with R > V), `sil_policy_loss` and `sil_value_loss` when the buffer is active.
+with R > V), `sil_positive_share` (share of all stored plies with positive priority),
+`sil_policy_loss` and `sil_value_loss` when the buffer is active.
 
 #### Scenario: keys present
 - **WHEN** `sil_updates` is 4 and one update has run
-- **THEN** the summary contains the four keys with finite values
+- **THEN** the summary contains the five keys with finite values

@@ -59,3 +59,31 @@ def test_evaluation_uses_fixed_positions_and_reports_keys():
     assert [x.fen for x in a] == [x.fen for x in b]
     out = evaluate_technique(Uniform(), Uniform(), ["Q"], {"Q": 4}, games=3, oriented=True, seed=0)
     assert set(out) == {"technique_rate_Q", "technique_games_Q"} and out["technique_games_Q"] == 3
+
+
+def test_rollout_reports_clean_flag_to_sampler():
+    """A technique board where the demonstrator (mate-in-one fallback) is played at
+    guidance 1.0 must report clean=False; without guidance clean=True."""
+    from src.envs.start_positions import BLACK
+
+    class Recorder:
+        current_depth = 0
+        def __init__(self, start):
+            self.start = start; self.calls = []
+        def sample(self): return self.start
+        def report(self, d, s): pass
+        def report_label(self, label, success, clean=True): self.calls.append((label, success, clean))
+        def levels(self): return {"Q": 0}
+
+    # white: K a1, Q b2 ... black K h8; Qb2-h8 is mate? Use a position with a mate in one: Q g7 mates? build: K f6, Q g1, k h8 -> Qg7# 
+    fen = "7k/8/5K2/8/8/8/8/6Q1 w - - 0 1"
+    start = FinishStart(fen, 0, 6, WHITE, (), "Q")
+    puzzles = StartPositionSampler([Puzzle("p", "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", ["a1a8"], 0)])
+    rec = Recorder(start)
+    env = OpenSpielVectorEnv(1, puzzles, 0, None, None, 0, rec, 1)
+    step = env.reset()
+    torch.manual_seed(0)
+    guide = {"epsilon": 0.999, "mask": torch.tensor([True])}
+    _collect_rollout(env, Uniform(), Uniform(), step, 2, 1, {"win": 2, "loss": -2, "draw": -0.5},
+                     MetricsAggregator(), oriented=True, guide=guide)
+    assert rec.calls and rec.calls[0][0] == "Q" and rec.calls[0][2] is False
