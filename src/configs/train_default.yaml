@@ -117,7 +117,12 @@ finish_boards: 4
 # bare-king starts with a forced win by rule, strong side to move, no mate in one,
 # success = mate within the set's cap. `human`: rewound human checkmates (nine arms,
 # depth 10/20 conversion never moved). The human finishing evaluation stays on either way.
+# `mixed`: each finishing board draws its start from finish_mix (technique / human by
+# weight); labelled results go to the technique curriculum, human ones to the depth
+# curriculum. Added 2026-09-19 for the overnight run LONG3: LONG2 had no human finishing
+# board and the conversion dial had nothing to train on.
 finish_source: technique
+finish_mix: {technique: 0.5, human: 0.5}
 technique_sets: [Q, R, RR, QR]
 # Plies allowed per set, about twice the perfect-play worst case (KQ 10 moves, KR 16,
 # KRR 7, KQR 6). At the exact distance the dial measures perfection; far above it,

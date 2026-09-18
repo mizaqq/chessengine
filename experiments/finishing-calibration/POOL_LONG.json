@@ -1,0 +1,55 @@
+{
+ "checkpoint": {
+  "model": "experiments/opponent-pool/POOL_LONG/model_20260918031853_episodes_800.pth"
+ },
+ "depths": {
+  "2": {
+   "sampled": {
+    "rate": 0.31,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.34,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.73,
+    "games": 100,
+    "defender_stayed_on_line": 0.45,
+    "mean_ply_defender_left_line": 1.0
+   }
+  },
+  "10": {
+   "sampled": {
+    "rate": 0.19,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.14,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.23,
+    "games": 100,
+    "defender_stayed_on_line": 0.02,
+    "mean_ply_defender_left_line": 1.2857142857142858
+   }
+  },
+  "20": {
+   "sampled": {
+    "rate": 0.13,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.17,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.17,
+    "games": 100,
+    "defender_stayed_on_line": 0.0,
+    "mean_ply_defender_left_line": 1.28
+   }
+  }
+ }
+}

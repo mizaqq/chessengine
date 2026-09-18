@@ -13,6 +13,7 @@ from src.eval.finishes import evaluate_finishes
 from src.eval.matches import play_match, summarize_match
 from src.eval.technique import evaluate_technique
 from src.envs.technique import DEFAULT_CAPS, TechniqueSampler
+from src.envs.finish_mix import MixedFinishSampler
 from src.training.opponent_pool import OpponentPool, PoolBoards, freeze
 from src.eval.puzzles import evaluate_mate_in_one
 
@@ -236,6 +237,15 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
     if n < 0 or num_puzzle_envs + n > num_envs:
         raise ValueError(f"finish_boards must be in [0, {num_envs - num_puzzle_envs}], got {n}")
     source = config.get("finish_source", "human")
+    if source == "mixed":
+        mix = config.get("finish_mix") or {"technique": 0.5, "human": 0.5}
+        parts, weights = [], []
+        for name, w in mix.items():
+            if name not in ("technique", "human"):
+                raise ValueError(f"finish_mix keys must be technique/human, got {name!r}")
+            sub, _ = resolve_finish_boards({**config, "finish_source": name}, num_puzzle_envs)
+            parts.append(sub); weights.append(float(w))
+        return MixedFinishSampler(parts, weights, seed=int(config.get("seed", 42)) + 2100), n
     if source == "technique":
         sets, caps = resolve_technique_sets(config)
         try:
@@ -263,7 +273,7 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
             raise ValueError(f"technique curriculum config: {e}") from e
         return sampler, n
     if source != "human":
-        raise ValueError(f"finish_source must be 'human' or 'technique', got {source!r}")
+        raise ValueError(f"finish_source must be 'human', 'technique' or 'mixed', got {source!r}")
     path = config.get("finish_train_file")
     if not path:
         raise ValueError("finish_boards > 0 requires finish_train_file")
