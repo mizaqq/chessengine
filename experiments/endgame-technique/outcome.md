@@ -99,3 +99,49 @@ of 40, mate 17 of 59.
    times instead of once. Queued change; fits the sparse-win shape exactly.
 3. Longer run on the current recipe: the flat curves over 240 technique updates (TECH
    + TECH2 combined evidence) argue against it as the first move.
+
+# Arm CURSIL: level curriculum + self-imitation (2026-09-18, 10:57-11:42)
+
+Owner: "lets continue with self imitation and start-state curriculum." Same start
+(POOL_LONG), budget (120) and layout as TECH2; technique levels 0-3 per set (advance at
+0.6 over 30 boards), SIL 4 x 256 per update (weight 0.1, value 0.01, buffer 50k). 44 min
+(+19% per update for SIL). Owner's prediction: none. Claude's: queen level 1-2 by 120,
+held-out queen 0.05-0.20. Actual: queen at level 3 by update 60, held-out queen 0.02.
+
+| set | TECH2 120 | CURSIL 50 | CURSIL 100 | CURSIL 120 | level reached |
+|---|---|---|---|---|---|
+| Q | 0.00 | 0.04 | 0.04 | 0.02 | 3 (by update 60) |
+| R | 0.02 | 0.02 | 0.06 | 0.00 | 1 (at update 100) |
+| RR | 0.06 | 0.08 | 0.06 | 0.12 | 3 (by 40) |
+| QR | 0.12 | 0.12 | 0.16 | 0.12 | 3 (by 20) |
+
+Training-window success (guided, mixed levels): Q 0.24-0.51, R 0.39-0.49, RR 0.29-0.55,
+QR 0.44-0.68. Other dials at 120: m1 0.778, m2 0.688, m3 0.630, m4 0.544, endgame-mate
+0.706, own-game 0.29, finishing 0.32 / 0.16 / 0.11, prior_score 0.44 / 0.50 / 0.53, game
+entropy 0.34-0.36 (no collapse). Games: 16 decisive of 40, mate 16 of 82.
+SIL: buffer full (50k) from update 60; sil_valid_share 0.96-0.99 throughout; policy loss
+0.74-0.89 flat.
+
+## Reading
+
+- **The curriculum raced ahead of the skill.** Queen, two rooks and queen-and-rook hit
+  the 0.6 threshold within a few windows and reached level 3, where the held-out dial
+  says the network still cannot win. The threshold counted wins the demonstrator made
+  (guidance 0.25 plays the mate-in-one / forcing move on these boards), so "60% won at
+  level k" measured teacher plus network, not the network. The design's own warning
+  ("levels race ahead of skill") came true. Rook v king, where the rules fallback rarely
+  finds a forcing line, stayed at level 0 and is the honest one.
+- **SIL valid share near 1 is not the alarm I said it was.** Plies are drawn proportional
+  to (R - V)+, so the drawn plies have positive advantage by construction; the share of
+  the whole buffer with positive priority is the informative number and is not logged.
+  SIL's effect on the dials in 120 updates is not visible either way: puzzles, games and
+  entropy unchanged. No lock-in, no gain.
+- Net: held-out technique unchanged (Q 0.02, R 0.00, RR 0.12, QR 0.12); curriculum
+  mechanics work, advancement rule wrong.
+
+## Proposed fix (design change, owner decides)
+
+Advance on **clean episodes only**: count an episode toward the window only if the
+demonstrator never acted in it (the rollout knows which boards took a guided pick), or
+equivalently measure advancement with guidance off. Raise the threshold to 0.7 over 40
+clean boards. Also log `sil_positive_share` (share of the buffer with priority > 0).

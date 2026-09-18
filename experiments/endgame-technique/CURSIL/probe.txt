@@ -1,0 +1,6 @@
+experiments/endgame-technique/CURSIL
+  human mate d0 : {'value': 0.885, 'mate_mass': 0.571, 'top1': 0.603, 'hist': {'<0.05': 0.227, '<0.5': 0.213, '<0.8': 0.067, '<1.01': 0.493}}
+  human mate d2 : {'value': 0.646}
+  human mate d10: {'value': 0.368}
+  lichess m1    : {'value': 1.042, 'mate_mass': 0.77, 'top1': 0.8, 'hist': {'<0.05': 0.113, '<0.5': 0.11, '<0.8': 0.05, '<1.01': 0.727}}
+  own-game m1   : {'value': 0.502, 'mate_mass': 0.266, 'top1': 0.29, 'hist': {'<0.05': 0.523, '<0.5': 0.223, '<0.8': 0.073, '<1.01': 0.18}}
