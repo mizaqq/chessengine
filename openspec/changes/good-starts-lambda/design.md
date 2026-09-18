@@ -27,7 +27,8 @@ directly, so the paper's SampleNearby is unnecessary); tablebase features; shapi
 - **Success estimate from training episodes**, as the paper does ("we use the
   trajectories collected by train_pol to estimate R"), clean episodes only; window 20 per
   bucket.
-- **Weights**: unknown 1, in band 1, graduated `technique_replay_share` 0.2 (the paper
+- **Weights**: unknown = edge-distance prior 1 / 0.5 / 0.25 / 0.1 (`technique_warm_start`;
+  arm GSL with a flat prior cold-started at random placement), in band 1, graduated `technique_replay_share` 0.2 (the paper
   appends N_old = 100 old starts to N_new = 200, a 1:2 ratio; we use 0.2 of weight),
   too hard `technique_probe_share` 0.1 (paper reaches hard starts by Brownian expansion
   from good ones; a probe share is the bucket analogue).

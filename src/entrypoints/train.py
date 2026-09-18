@@ -252,6 +252,7 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
                 bucket_window=int(config.get("technique_bucket_window", 20)),
                 replay_share=float(config.get("technique_replay_share", 0.2)),
                 probe_share=float(config.get("technique_probe_share", 0.1)),
+                warm_start=bool(config.get("technique_warm_start", True)),
             )
             state_path = Path(str(config.get("init_from", ""))) / "curriculum.json" if config.get("init_from") else None
             if state_path is not None and state_path.exists():

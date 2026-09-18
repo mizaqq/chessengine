@@ -191,14 +191,20 @@ def generate_position_in_bucket(material: str, bucket: int, rng: random.Random, 
 class GoodStartsCurriculum:
     """Per (set, bucket) windowed clean success; draw weights by band membership."""
 
+    # Weight of an unknown bucket by the weak king's edge-distance class: start near the
+    # goal (cornered / edge kings) and expand outward, as the paper starts from the goal
+    # state itself. Arm GSL (2026-09-18) with a flat prior cold-started at random placement.
+    UNKNOWN_PRIOR = (1.0, 0.5, 0.25, 0.1)
+
     def __init__(self, sets: Sequence[str], r_min: float = 0.1, r_max: float = 0.9, window: int = 20,
-                 replay_share: float = 0.2, probe_share: float = 0.1):
+                 replay_share: float = 0.2, probe_share: float = 0.1, warm_start: bool = True):
         if not 0 <= r_min < r_max <= 1:
             raise ValueError("need 0 <= technique_r_min < technique_r_max <= 1")
         if window < 1 or replay_share < 0 or probe_share < 0:
             raise ValueError("technique_bucket_window >= 1 and shares >= 0")
         self.r_min, self.r_max, self.window = float(r_min), float(r_max), int(window)
         self.replay_share, self.probe_share = float(replay_share), float(probe_share)
+        self.warm_start = bool(warm_start)
         self._recent = {s: [deque(maxlen=self.window) for _ in range(N_BUCKETS)] for s in sets}
         self._infeasible = {s: set() for s in sets}
 
@@ -223,7 +229,8 @@ class GoodStartsCurriculum:
                 out.append(0.0)
                 continue
             st = self.status(label, b)
-            out.append({"unknown": 1.0, "good": 1.0, "graduated": self.replay_share, "hard": self.probe_share}[st])
+            unknown_w = self.UNKNOWN_PRIOR[bucket_features(b)[0]] if self.warm_start else 1.0
+            out.append({"unknown": unknown_w, "good": 1.0, "graduated": self.replay_share, "hard": self.probe_share}[st])
         return out
 
     def draw(self, label: str, rng: random.Random) -> int:
@@ -265,7 +272,7 @@ class TechniqueSampler:
     def __init__(self, sets: Sequence[str], caps: Dict[str, int] | None = None, seed: int = 0,
                  curriculum: bool = False, level_start: int = 0, advance_rate: float = 0.7, window: int = 40,
                  mode: Optional[str] = None, r_min: float = 0.1, r_max: float = 0.9, bucket_window: int = 20,
-                 replay_share: float = 0.2, probe_share: float = 0.1):
+                 replay_share: float = 0.2, probe_share: float = 0.1, warm_start: bool = True):
         if not sets:
             raise ValueError("technique sets must not be empty")
         caps = {**DEFAULT_CAPS, **(caps or {})}
@@ -290,13 +297,13 @@ class TechniqueSampler:
         self.window = int(window)
         self._level = {s: (int(level_start) if self.curriculum else MAX_LEVEL) for s in sets}
         self._recent = {s: deque(maxlen=self.window) for s in sets}
-        self.good = GoodStartsCurriculum(sets, r_min, r_max, bucket_window, replay_share, probe_share) \
+        self.good = GoodStartsCurriculum(sets, r_min, r_max, bucket_window, replay_share, probe_share, warm_start) \
             if mode == "good_starts" else None
         self._rng = random.Random(seed)
         self._seed = seed
         self._init = dict(curriculum=curriculum, level_start=level_start, advance_rate=advance_rate, window=window,
                           mode=mode, r_min=r_min, r_max=r_max, bucket_window=bucket_window,
-                          replay_share=replay_share, probe_share=probe_share)
+                          replay_share=replay_share, probe_share=probe_share, warm_start=warm_start)
 
     @property
     def current_depth(self) -> int:

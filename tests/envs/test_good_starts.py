@@ -9,7 +9,8 @@ from src.envs.technique import (GoodStartsCurriculum, TechniqueSampler, N_BUCKET
 
 
 def test_band_selects_learnable_starts_scenario():
-    c = GoodStartsCurriculum(["Q"], r_min=0.1, r_max=0.9, window=20, replay_share=0.2, probe_share=0.1)
+    c = GoodStartsCurriculum(["Q"], r_min=0.1, r_max=0.9, window=20, replay_share=0.2, probe_share=0.1,
+                             warm_start=False)
     A, B, C, D = 5, 6, 7, 8
     for i in range(20):
         c.report("Q", A, i < 19)      # 0.95
@@ -67,3 +68,12 @@ def test_teacher_made_wins_ignored_and_state_roundtrip():
 def test_bad_band_rejected():
     with pytest.raises(ValueError):
         GoodStartsCurriculum(["Q"], r_min=0.9, r_max=0.1)
+
+
+def test_warm_start_weights_unknown_buckets_by_edge_distance():
+    c = GoodStartsCurriculum(["Q"])
+    w = c.weights("Q")
+    assert w[0] == 1.0 and w[9] == 0.5 and w[18] == 0.25 and w[27] == 0.1
+    for i in range(20):
+        c.report("Q", 27, i < 10)          # a known good bucket far from the edge weighs 1
+    assert c.weights("Q")[27] == 1.0

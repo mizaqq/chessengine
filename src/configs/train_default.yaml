@@ -145,6 +145,10 @@ technique_r_max: 0.9
 technique_bucket_window: 20
 technique_replay_share: 0.2
 technique_probe_share: 0.1
+# Unknown buckets are weighted 1 / 0.5 / 0.25 / 0.1 by the weak king's edge distance
+# (start near the goal, expand outward, as the paper starts from the goal state); false =
+# flat prior (arm GSL, which cold-started at random placement).
+technique_warm_start: true
 # levels mode only:
 technique_level_start: 0
 technique_advance_rate: 0.7

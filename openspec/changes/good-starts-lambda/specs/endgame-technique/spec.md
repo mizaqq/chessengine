@@ -14,16 +14,23 @@ the distance between the kings (2, 3, or 4 and more) and the nearest strong piec
 distance to the weak king (1-2, 3-4, or 5 and more). For each material set and bucket
 the sampler SHALL keep the clean success rate over the last `technique_bucket_window`
 clean episodes. A bucket with fewer results than the window SHALL count as unknown.
-Starts SHALL be drawn from buckets in proportion to a weight: 1 for unknown buckets and
-for buckets whose rate lies within [`technique_r_min`, `technique_r_max`];
+Starts SHALL be drawn from buckets in proportion to a weight: for unknown buckets a
+prior by the weak king's edge distance (1, 0.5, 0.25, 0.1 for distance 0, 1, 2, 3) when
+`technique_warm_start` is on, else 1; 1 for buckets whose rate lies within
+[`technique_r_min`, `technique_r_max`];
 `technique_replay_share` for buckets above `technique_r_max`; `technique_probe_share`
 for buckets below `technique_r_min`. The drawn bucket's geometry SHALL be honoured by
 the generator. Held-out evaluation SHALL keep unconstrained placement.
 
 #### Scenario: band selects the learnable starts
 - **WHEN** set `Q` has bucket A at rate 0.95, bucket B at rate 0.5, bucket C at rate 0.02
-  and bucket D unknown, with replay share 0.2 and probe share 0.1
+  and bucket D unknown, with replay share 0.2, probe share 0.1 and warm start off
 - **THEN** the draw weights are A 0.2, B 1, C 0.1, D 1
+
+#### Scenario: warm start begins near the goal
+- **WHEN** no bucket is known yet and warm start is on
+- **THEN** an unknown bucket with the weak king on an edge weighs 1 and one with the
+  weak king three squares from every edge weighs 0.1
 
 #### Scenario: geometry honoured
 - **WHEN** the drawn bucket is (edge distance 0, king distance 2, piece distance 1-2)

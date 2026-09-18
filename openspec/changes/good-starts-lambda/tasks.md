@@ -6,6 +6,7 @@
 
 ## 2. Run and record
 
+- [ ] 2.1b Follow-ups (owner: "okay agreed on both"): arm LAMBDA (levels + lambda 1.0, queen-only, from CURSIL_LONG; isolates lambda) and arm GSL2 (good starts with warm start + lambda 1.0); outcome.
 - [x] 2.1 Arm GSL: 120 updates from the strongest technique checkpoint, `gae_lambda: 1.0`, good-starts on; games; compare with CURSIL_LONG / QONLY in `experiments/endgame-technique/outcome.md`.
 - [ ] 2.2 RESOURCES (Florensa Algorithm 1, A.1 values, B.1 caution on distance shaping); NOTES; learning record if demonstrated.
 
