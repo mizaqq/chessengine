@@ -17,4 +17,4 @@
 
 ## 4. Comprehension check with owner
 
-- [ ] 4.1 Trace by hand (CLAUDE.md): given a 3-ply technique episode with rewards and current values pasted, compute R per ply, the SIL priorities, and which plies get policy gradient; then run the test from 2.1 and compare.
+- [x] 4.1 Trace by hand (CLAUDE.md): given a 3-ply technique episode with rewards and current values pasted, compute R per ply, the SIL priorities, and which plies get policy gradient; then run the test from 2.1 and compare.

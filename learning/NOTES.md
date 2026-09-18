@@ -283,3 +283,22 @@ now on. See experiments/exploration-noise/outcome.md.
   against the real outcome or the agent optimises the proxy.
 - Argmax vs sampling: a recommender evaluated only on its top pick can look worse
   or better than the policy actually deployed.
+
+## Self-imitation (Oh et al. 2018) — 2026-09-18
+
+Replay of the learner's own finished episodes with Monte Carlo returns; only plies whose
+return beats the current value estimate get gradient (the (R - V)+ clip), drawn in
+proportion to that gap. No importance ratio. The mechanism switches itself off per ply
+as the value head catches up (record 0015). In arms CURSIL-CURSIL3 it was neutral on the
+puzzle dials and did not collapse entropy; its contribution to technique is confounded
+with the curriculum (owner chose both at once).
+
+## Start-state curricula without a ruler — 2026-09-18
+
+Generated technique positions graded by a heuristic (weak king cornered / on the edge /
+near the edge / anywhere) stand in for a distance-to-goal ruler (Florensa 2017). Two
+failure modes met in one day: counting teacher-made wins toward advancement raced the
+levels ahead of the skill (CURSIL); flagging "teacher acted" by the played move froze
+the levels, because every win ends with the demonstrator's move by definition (CURSIL2).
+The fix was to sample the guided mixture by component so "the teacher fired" is an
+observed coin, not an inference from the action (CURSIL3).
