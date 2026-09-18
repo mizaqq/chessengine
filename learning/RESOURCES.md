@@ -169,8 +169,12 @@ reach for it. Prune anything that turns out shallow or wrong.
   from any past behaviour. M = 4 SIL updates per A2C update (Atari), 10 per PPO
   iteration (MuJoCo). Helped most on sparse/delayed-reward tasks; caveat (5.4):
   "sometimes gets stuck at a sub-optimal policy" when exploitation is excessive,
-  fixed by fewer SIL updates or a smaller weight later. Use for: replaying our own
-  won games on finishing boards (the demonstrator becomes the past self).
+  fixed by fewer SIL updates or a smaller weight later. Appendix A read 2026-09-18:
+  PPO+SIL (MuJoCo) M = 10 SIL updates per batch, SIL batch 512, loss weight 0.1,
+  value weight 0.01 or 0.05, buffer 50,000, prioritisation exponent 0.6 or 1.0, bias
+  correction 0.1; A2C+SIL (Atari) M = 4, batch 512, loss weight 1, value weight 0.01,
+  buffer 1e5. Use for: replaying our own won games on finishing boards (the
+  demonstrator becomes the past self); change `self-imitation-curriculum`.
 
 - [Paper: "Emergent Complexity via Multi-Agent Competition" — Bansal et al. (ICLR 2018)](https://arxiv.org/abs/1710.03748)
   Read 2026-09-17 (pp. 4-8): "training agents against the most recent opponent
