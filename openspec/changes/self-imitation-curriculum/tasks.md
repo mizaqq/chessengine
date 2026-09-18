@@ -1,7 +1,7 @@
 ## 1. Technique curriculum
 
-- [ ] 1.1 `generate_position(material, rng, level)` with the four level constraints; `TechniqueSampler` levels per set, `report_label`, `current_level`, `levels()`; `FinishStart.depth` carries the level for technique starts; env calls `report_label` when the start has a label. Tests: level-0 start scenario, advance scenario, held-out stays level 3, reproducible.
-- [ ] 1.2 Metrics `technique_level_<set>` from the sampler each update (like `finish_depth`); config keys and resolver; test.
+- [x] 1.1 `generate_position(material, rng, level)` with the four level constraints; `TechniqueSampler` levels per set, `report_label`, `current_level`, `levels()`; `FinishStart.depth` carries the level for technique starts; env calls `report_label` when the start has a label. Tests: level-0 start scenario, advance scenario, held-out stays level 3, reproducible.
+- [x] 1.2 Metrics `technique_level_<set>` from the sampler each update (like `finish_depth`); config keys and resolver; test.
 
 ## 2. Self-imitation
 

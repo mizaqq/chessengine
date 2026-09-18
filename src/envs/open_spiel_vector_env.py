@@ -156,7 +156,11 @@ class OpenSpielVectorEnv:
                     finish_depth[i] = start.depth
                     finish_success[i] = won
                     finish_config[i] = getattr(start, "config", "")
-                    self.finish_sampler.report(start.depth, won)
+                    report_label = getattr(self.finish_sampler, "report_label", None)
+                    if getattr(start, "config", "") and report_label is not None:
+                        report_label(start.config, won)
+                    else:
+                        self.finish_sampler.report(start.depth, won)
                     del self.finish_start[i]
                 self._reset_env(i)
 

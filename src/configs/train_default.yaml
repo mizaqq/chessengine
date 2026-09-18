@@ -118,8 +118,19 @@ technique_sets: [Q, R, RR, QR]
 # KRR 7, KQR 6). At the exact distance the dial measures perfection; far above it,
 # sloppy technique passes.
 technique_caps: {Q: 40, R: 60, RR: 40, QR: 40}
-# Held-out generated starts per set in the periodic evaluation (fixed positions).
+# Held-out generated starts per set in the periodic evaluation (fixed positions,
+# always level 3 = unconstrained placement).
 technique_eval_games: 50
+# Start-state curriculum on the generator (owner 2026-09-18, after TECH/TECH2 where the
+# held-out rate never left zero): per set, level 0 = weak king in a corner, strong king
+# two squares away, pieces within four; 1 = weak king on an edge; 2 = one square from
+# an edge; 3 = anywhere. The level rises when the last technique_window boards of the
+# set were won at technique_advance_rate or better; starts draw a level uniformly in
+# [0, current]. false = every start at level 3 (arms TECH, TECH2).
+technique_curriculum: true
+technique_level_start: 0
+technique_advance_rate: 0.6
+technique_window: 30
 finish_train_file: data/finishes/finish_train.csv
 finish_depth_start: 2
 finish_depth_max: 40

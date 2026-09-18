@@ -289,3 +289,13 @@ def test_technique_resolver_and_finish_source():
     assert n == 2 and isinstance(sampler, TechniqueSampler) and sampler.sample().config in sets + ["R", "RR", "QR"]
     with pytest.raises(ValueError):
         resolve_finish_boards({"num_envs": 16, "finish_boards": 2, "finish_source": "tablebase"}, 4)
+
+
+def test_technique_curriculum_config():
+    sampler, _ = resolve_finish_boards({"num_envs": 16, "finish_boards": 4, "finish_source": "technique",
+                                        "technique_curriculum": True, "technique_level_start": 1,
+                                        "technique_advance_rate": 0.5, "technique_window": 10}, 3)
+    assert sampler.curriculum and sampler.levels() == {"Q": 1, "R": 1, "RR": 1, "QR": 1}
+    with pytest.raises(ValueError):
+        resolve_finish_boards({"num_envs": 16, "finish_boards": 4, "finish_source": "technique",
+                               "technique_curriculum": True, "technique_level_start": 7}, 3)

@@ -220,7 +220,17 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
     source = config.get("finish_source", "human")
     if source == "technique":
         sets, caps = resolve_technique_sets(config)
-        return TechniqueSampler(sets, caps, seed=int(config.get("seed", 42)) + 2000), n
+        try:
+            sampler = TechniqueSampler(
+                sets, caps, seed=int(config.get("seed", 42)) + 2000,
+                curriculum=bool(config.get("technique_curriculum", False)),
+                level_start=int(config.get("technique_level_start", 0)),
+                advance_rate=float(config.get("technique_advance_rate", 0.6)),
+                window=int(config.get("technique_window", 30)),
+            )
+        except ValueError as e:
+            raise ValueError(f"technique curriculum config: {e}") from e
+        return sampler, n
     if source != "human":
         raise ValueError(f"finish_source must be 'human' or 'technique', got {source!r}")
     path = config.get("finish_train_file")

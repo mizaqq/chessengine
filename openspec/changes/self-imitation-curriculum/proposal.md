@@ -12,7 +12,7 @@ start-state curriculum".
 ## What Changes
 
 - **Start-state curriculum on the technique generator.** Each material set has a
-  difficulty level: 0 = weak king in a corner with the strong king and pieces close,
+  difficulty level: 0 = weak king in a corner with the strong king two squares away and the pieces within four,
   1 = weak king on an edge, 2 = weak king one step from an edge, 3 = fully random
   (today). A set's level rises when the windowed training success reaches a threshold;
   starts are drawn uniformly over levels 0..current so easy positions stay in the mix

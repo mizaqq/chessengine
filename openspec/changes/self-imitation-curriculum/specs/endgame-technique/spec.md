@@ -9,7 +9,8 @@ check on the strong king, and SHALL be drawn uniformly over the configured sets.
 strong side's colour SHALL be drawn at random. Each start SHALL carry the set's cap
 in plies and the set label. Each start SHALL also carry a difficulty level: 0 = weak
 king on a corner square with the strong king at distance 2 and every strong piece
-within distance 2 of the weak king; 1 = weak king on an edge square with the strong
+within distance 4 of the weak king (within 2, nearly every queen position is a mate in
+one or an illegal check and is rejected); 1 = weak king on an edge square with the strong
 king within distance 3; 2 = weak king one square from an edge; 3 = unconstrained.
 When the curriculum is on, a set's level SHALL be drawn uniformly from 0 to the set's
 current level; when off, every start SHALL be level 3.
@@ -26,7 +27,7 @@ current level; when off, every start SHALL be level 3.
 #### Scenario: level 0 start
 - **WHEN** a level-0 `Q` start is generated
 - **THEN** the weak king stands on a1, a8, h1 or h8, the strong king is exactly two
-  squares away, and the queen is within two squares of the weak king
+  squares away, and the queen is within four squares of the weak king
 
 ## ADDED Requirements
 

@@ -100,6 +100,10 @@ class MetricsAggregator:
         self.guide_count += int(count)
         self.guide_demo_picks += int(demo_picks)
 
+    def set_technique_levels(self, levels):
+        """Current technique curriculum level per material set (state, not a window count)."""
+        self.technique_levels = dict(levels)
+
     def set_finish_depth(self, depth):
         """Current curriculum depth (state, not a window count)."""
         self.finish_depth = depth
@@ -165,6 +169,7 @@ class MetricsAggregator:
             "explore_offprior_share": (self.explore_offprior / self.explore_count if self.explore_count else None),
             "guide_moves": self.guide_count,
             "guide_demo_share": (self.guide_demo_picks / self.guide_count if self.guide_count else None),
+            **{f"technique_level_{k}": v for k, v in sorted(getattr(self, "technique_levels", {}).items())},
             **{f"technique_attempts_{k}": v[0] for k, v in sorted(self._technique_by_label.items())},
             **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},
             "pool_games": sum(v[0] for v in self._pool_by_name.values()),

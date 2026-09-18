@@ -132,3 +132,10 @@ def test_explore_share():
     s = m.episode_summary()
     assert s["explore_moves"] == 10 and abs(s["explore_offprior_share"] - 0.3) < 1e-9
     assert m.episode_summary()["explore_offprior_share"] is None
+
+
+def test_technique_levels_reported():
+    m = MetricsAggregator()
+    m.set_technique_levels({"Q": 1, "R": 0})
+    s = m.episode_summary()
+    assert s["technique_level_Q"] == 1 and s["technique_level_R"] == 0

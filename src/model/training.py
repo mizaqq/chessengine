@@ -557,6 +557,8 @@ def run_chess_training(
             print(f"update {episode}: layout -> finish {change['finish_boards']}, mid-game {change['midgame_boards']}")
         if finish_sampler is not None:
             metrics.set_finish_depth(finish_sampler.current_depth)
+            if hasattr(finish_sampler, "levels"):
+                metrics.set_technique_levels(finish_sampler.levels())
         def _board_mask(which):
             if which == "all":
                 return torch.ones(num_envs, dtype=torch.bool)
