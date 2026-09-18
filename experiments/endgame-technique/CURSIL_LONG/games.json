@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 20,
+  "black_win": 9,
+  "white_win": 10,
+  "unfinished": 1
+ },
+ "draw_rate": 0.5,
+ "decisive_rate": 0.475,
+ "mate_in_one_opportunities": 85,
+ "mate_in_one_found": 19,
+ "mate_in_one_rate": 0.2235294117647059,
+ "mean_plies": 136.45,
+ "checkpoints": {
+  "model": "experiments/endgame-technique/CURSIL_LONG/model_20260918163123_episodes_360.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

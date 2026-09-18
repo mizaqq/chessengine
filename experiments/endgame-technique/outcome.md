@@ -205,3 +205,53 @@ Games: **21 decisive of 40** (TECH2 17, CURSIL2 11), mate 21 of 90. sil_positive
   with 800 updates). Puzzle dials held. No SIL lock-in (entropy 0.35).
 - Owner's suspicion from the morning holds: 120 updates show the direction, not the
   plateau. A longer run from CURSIL3 is the natural next step.
+
+# Arm CURSIL_LONG: 360 more updates from CURSIL3 (2026-09-18, 14:18-16:32)
+
+Owner: "continue." Named exception (480 technique updates in total from POOL_LONG).
+2.2 h. Note: `init_from` loads weights only, so the curriculum levels restarted at 0 and
+re-climbed (Q back to 1 by update 40, QR 1 -> 2 at 120 -> 3 at 280, RR 1 -> 2 at 240,
+R never left 0). Level state should persist with the checkpoint (follow-up).
+
+Held-out level 3 (50 games per set):
+
+| update | Q | R | RR | QR |
+|---|---|---|---|---|
+| CURSIL3 end | 0.06 | 0.04 | 0.04 | 0.20 |
+| +100 | 0.08 | 0.00 | 0.10 | 0.22 |
+| +200 | 0.06 | 0.04 | 0.16 | 0.20 |
+| +300 | 0.10 | 0.02 | 0.14 | 0.28 |
+| +360 | 0.06 | 0.06 | 0.18 | 0.16 |
+
+Clean success per 40-update window (network alone, levels 0..current mixed):
+Q 0.27-0.44 at level 1 for 320 updates (never reached the 0.7 threshold);
+R 0.24-0.58 at level 0 (never reached 0.7); RR 0.68 -> level 2, then 0.12-0.32;
+QR climbed to level 3 and sits at 0.31-0.53 there.
+Other dials at +360: m1 0.776, m2 0.688, m3 0.649, m4 0.549, endgame-mate 0.721 (all
+slightly up over POOL_LONG), own-game 0.33, finishing 0.40 / 0.18 / 0.16, prior_score
+0.35-0.59 (noisy), game entropy 0.32-0.34, sil_positive_share 0.38 -> 0.36.
+Games: 19 decisive of 40, mate 19 of 85.
+
+## Reading
+
+- The curriculum is honest and the learning is slow. Two rooks and queen-and-rook,
+  the pairs, climbed to levels 2 and 3 and their held-out rates rose (RR 0.04 -> 0.18,
+  QR 0.04 -> 0.28 peak); the single pieces stalled: queen at level 1 with a third of
+  clean games won for 300 updates, rook at level 0 at half.
+- Why slow: about 64 plies per set per update, roughly two games, half of them clean.
+  Over 480 updates the queen saw about 1,000 games, perhaps 500 unguided. A 0.7
+  threshold on that trickle is hard to meet; the plateau at 0.3-0.4 may be the skill
+  ceiling at this sample rate rather than a true ceiling.
+- Whole-game dials did not suffer: puzzles up a point or two, decisive games 19-21 of
+  40, no entropy collapse from SIL over 480 updates.
+- The finishing conversion target (depth 10 / 20) is unchanged at 0.18 / 0.16. Technique
+  on bare kings has not yet transferred to converting human middlegames.
+
+## Follow-ups (owner decides)
+
+1. Persist curriculum levels with the checkpoint (bug-class fix).
+2. Advance threshold 0.5 over 40 (the queen sat at 0.3-0.4 for 300 updates; 0.7 assumes a
+   faster learner than we have) or a Q-only technique layout to measure the ceiling.
+3. Accept technique as a slow background rung, and turn to the conversion target
+   directly: SIL is on all boards already, so the next lever there is the demonstrator
+   quality on finishing boards (own past wins as the line) or the puzzle mix.
