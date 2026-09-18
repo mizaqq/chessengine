@@ -281,3 +281,49 @@ game entropy 0.30 (down from 0.33; watch). Games: 19 decisive of 40, mate 0.28.
 - Decision: the GSL arm starts from CURSIL_LONG with the same queen-only layout and
   budget as QONLY, so QONLY is the exact control for (good starts + lambda 1.0) vs
   (levels + lambda 0.95).
+
+# Arm GSL: good-starts buckets + gae_lambda 1.0 (2026-09-18, 17:25-18:10)
+
+Owner: "okay so 1 and 2 is next arm." Same start (CURSIL_LONG), budget (120) and
+queen-only layout as QONLY, which is the control (levels + lambda 0.95).
+
+| dial | QONLY (control) | GSL |
+|---|---|---|
+| held-out Q at 50 / 100 / 120 | 0.08 / 0.22 / 0.12 | 0.12 / 0.10 / 0.18 |
+| clean training success, windows | 0.51, 0.48, 0.31, 0.31, 0.33, 0.29 | 0.03, 0.05, 0.18, 0.12, 0.12, 0.09 |
+| own-game mate-in-one (selfplay_top1) | 0.29 / 0.32 / 0.28 | **0.36 / 0.35 / 0.32** |
+| mate found in 40 games | 0.28 | **0.40** (21 of 52) |
+| decisive games of 40 | 19 | 21 |
+| finishing d10 / d20 at 120 | 0.17 / 0.10 | 0.24 / 0.12 |
+| game entropy | 0.30 | 0.29-0.31 |
+| clip fraction / approx KL | (not logged here) | 0.19 / 0.033 |
+
+Buckets: 33 of 36 known by update 80; 6-10 in the band at any time; none graduated
+(no bucket above 0.9). m1 0.783-0.789, m3 0.65, prior_score 0.48-0.54.
+
+## Reading
+
+- **Held-out queen: a tie** with the control (0.18 vs 0.12 at the end, 0.10 vs 0.22 at
+  100; 50 games each, all inside noise). Neither arm is clearly ahead on the target.
+- **The good-starts curriculum began at the hard end.** Unknown buckets all weigh 1, so
+  the first 40 updates were effectively uniform random placement, and clean success sat
+  near 0.05 while the bucket rates were being learned; the level ladder starts cornered
+  and had 0.5 clean success from update 1. Florensa starts from the goal state itself and
+  expands outward; our uniform prior over unknown buckets dropped that. Then no bucket
+  ever exceeded 0.9, so the replay share never engaged, and the band held 6-10 buckets
+  at a time: the curriculum was doing its job but from a cold start.
+- **Whole-game dials moved**: own-game mate-in-one 0.36 (best of the project, from
+  0.30-0.33), mate found in own games 0.40 (from 0.22-0.28), decisive 21 of 40. The
+  candidate cause is lambda 1.0 on every board: the win's full credit reaches the moves
+  that set up the mate. Both levers changed at once, so this is a hypothesis, and 40
+  games is a small sample.
+- PPO stayed healthy at lambda 1: clip fraction 0.19, KL 0.033, entropy unchanged.
+
+## Follow-ups (owner decides)
+
+1. **Lambda ablation**: levels curriculum + lambda 1.0, queen-only, same start and budget.
+   If own-game mate and in-game mate rate repeat their rise, lambda 1 becomes the
+   default for every board (a real gain on the owner's original complaint).
+2. **Warm start for good-starts**: weight unknown buckets by an easiness prior (edge
+   distance 0 -> 1, 1 -> 0.5, 2 -> 0.25, 3 -> 0.1) until they are known, so the
+   curriculum starts near the goal as the paper does and expands outward.
