@@ -1,0 +1,10 @@
+{
+ "puzzle_top1": 0.7105,
+ "puzzle_mate_prob": 0.6854529929966313,
+ "puzzle_count": 2000,
+ "checkpoints": {
+  "model": "experiments/opponent-pool/POOL_LONG/model_20260918031853_episodes_800.pth"
+ },
+ "oriented": true,
+ "eval_file": "data/puzzles/endgame_mate_eval.csv"
+}

@@ -1,0 +1,1 @@
+baseline technique {"technique_rate_Q": 0.0, "technique_games_Q": 50, "technique_rate_R": 0.0, "technique_games_R": 50, "technique_rate_RR": 0.06, "technique_games_RR": 50, "technique_rate_QR": 0.04, "technique_games_QR": 50}
