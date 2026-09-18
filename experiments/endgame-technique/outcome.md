@@ -172,3 +172,36 @@ at 0 for all 120 updates. Training success at level 0 (all episodes, guided): Q 
   fired. Same distribution and the same stored mixture log-prob, so the PPO ratio is
   unchanged; a network-chosen mating move now counts as the network's. Also log
   `technique_clean_attempts_<set>` and `technique_clean_success_rate_<set>`.
+
+# Arm CURSIL3: clean flag fixed (2026-09-18, 13:14-13:59)
+
+Demonstrator "fires" by an explicit epsilon draw; only then is the episode flagged.
+Same start (POOL_LONG), budget (120) and layout.
+
+Levels reached: Q 1 (at update ~100), QR 2 (1 by 20, 2 by 80), RR 1 (by 80), R 0.
+Clean success per 20-update window (network alone, mixed levels 0..current):
+Q 0.36, 0.53, 0.74 | advance | 0.33, 0.70, 0.21; QR 0.82 | 0.45, 0.68 | 0.33, 0.28, 0.20;
+RR 0.37, 0.60, 0.65 | 0.38, 0.20, 0.39; R 0.12, 0.15, 0.17, 0.28, 0.35, 0.13.
+Clean attempts per set per window 12-40 (about half of all technique episodes).
+
+Held-out level 3 at 50 / 100 / 120: Q 0.08 / 0.04 / 0.06, R 0.02 / 0.02 / 0.04,
+RR 0.06 / 0.04 / 0.04, QR 0.14 / 0.14 / **0.20** (TECH2 0.12, POOL_LONG 0.04).
+Other dials at 120: m1 0.780, m2 0.686, m3 0.642, m4 0.546, endgame-mate 0.701, own-game
+0.31, finishing 0.39 / 0.13 / 0.13, prior_score 0.41 / 0.48 / 0.49, game entropy 0.35.
+Games: **21 decisive of 40** (TECH2 17, CURSIL2 11), mate 21 of 90. sil_positive_share
+0.42 -> 0.34.
+
+## Reading
+
+- The curriculum now behaves like a curriculum: clean success climbs at a level (queen
+  0.36 -> 0.74 at level 0), the level advances, success drops as harder starts enter the
+  mix, and climbs again. This is the shape the design wanted and the first two arms hid.
+- Rook v king is the hard rung (clean 0.12-0.35 at level 0): a rook needs the king's
+  help for every mate and the cap is generous, so wins are rare and the window is
+  slow; leave it, it is the honest measure of long-plan technique.
+- Held-out level 3 moved only for queen-and-rook (0.12 -> 0.20); the single pieces are
+  still at levels 0-1 after 120 updates, so level-3 transfer is not yet expected.
+- Whole-game side effect: 21 decisive of 40, the highest of the project (POOL_LONG 22
+  with 800 updates). Puzzle dials held. No SIL lock-in (entropy 0.35).
+- Owner's suspicion from the morning holds: 120 updates show the direction, not the
+  plateau. A longer run from CURSIL3 is the natural next step.

@@ -12,7 +12,7 @@
 ## 3. Run and record
 
 - [x] 3.1a Arm CURSIL: 120 updates from POOL_LONG; recorded in `experiments/endgame-technique/outcome.md` (curriculum raced on teacher-made wins; held-out unchanged).
-- [ ] 3.1b Clean-episode advancement (rollout tracks demonstrator picks per board, reports `clean`), 0.7 over 40, `sil_positive_share`; arm CURSIL2 from POOL_LONG, same budget; outcome.
+- [x] 3.1b Clean-episode advancement (rollout tracks demonstrator picks per board, reports `clean`), 0.7 over 40, `sil_positive_share`; arm CURSIL2 from POOL_LONG, same budget; outcome.
 - [ ] 3.2 RESOURCES: SIL appendix hyperparameters; NOTES sections (self-imitation, start-state curricula); learning record if demonstrated.
 
 ## 4. Comprehension check with owner
