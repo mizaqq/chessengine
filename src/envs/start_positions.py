@@ -161,6 +161,7 @@ class FinishStart:
     cap: int      # plies allowed from `fen` before the game is a draw
     winner: int
     line: tuple = ()   # the human moves (UCI) from `fen` to the mate, both sides
+    config: str = ""   # technique material label (e.g. "Q"); "" for a human record
 
 
 class FinishCurriculum:

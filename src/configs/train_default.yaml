@@ -55,11 +55,14 @@ puzzle_boards: 4
 # Mate-in-three and -four added 2026-09-17 (owner: forced mates stay won whatever
 # the defender replies, unlike human-game mates, so they are the clean conversion
 # rung); first move trusted from Lichess, solution line used as the demonstrator.
+# Endgame mates added 2026-09-18 (owner: prioritise "the endgames which end in mate"):
+# Lichess puzzles themed endgame + mateIn1..5, solution line stored.
 puzzle_train_files:
-  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.25}
-  - {file: data/puzzles/mate_in_2_train.csv, weight: 0.25}
-  - {file: data/puzzles/mate_in_3_train.csv, weight: 0.25}
-  - {file: data/puzzles/mate_in_4_train.csv, weight: 0.25}
+  - {file: data/puzzles/mate_in_1_train.csv, weight: 0.2}
+  - {file: data/puzzles/mate_in_2_train.csv, weight: 0.2}
+  - {file: data/puzzles/mate_in_3_train.csv, weight: 0.2}
+  - {file: data/puzzles/mate_in_4_train.csv, weight: 0.2}
+  - {file: data/puzzles/endgame_mate_train.csv, weight: 0.2}
 # Terminal reward for a missed mate on a puzzle board. 0 (default) keeps the value
 # head honest about still-winning positions; try negative values as an experiment.
 puzzle_miss_reward: 0.0
@@ -70,6 +73,7 @@ puzzle_eval_files:
   lichess_m2: data/puzzles/mate_in_2_eval.csv
   lichess_m3: data/puzzles/mate_in_3_eval.csv
   lichess_m4: data/puzzles/mate_in_4_eval.csv
+  lichess_end: data/puzzles/endgame_mate_eval.csv
   selfplay: data/puzzles/selfplay_mate_in_1_eval.csv
 eval_interval: 50
 
@@ -101,6 +105,19 @@ game_start_file: data/games/midgame_starts.csv
 # (up to finish_depth_max) whenever the success rate over the last finish_window
 # finishing episodes reaches finish_advance_rate. Sync env only.
 finish_boards: 2
+# What the finishing boards play. `technique` (default since 2026-09-18, owner: "mating
+# with queen, mating with rook ... the bare king stuff should be generated"): generated
+# bare-king starts with a forced win by rule, strong side to move, no mate in one,
+# success = mate within the set's cap. `human`: rewound human checkmates (nine arms,
+# depth 10/20 conversion never moved). The human finishing evaluation stays on either way.
+finish_source: technique
+technique_sets: [Q, R, RR, QR]
+# Plies allowed per set, about twice the perfect-play worst case (KQ 10 moves, KR 16,
+# KRR 7, KQR 6). At the exact distance the dial measures perfection; far above it,
+# sloppy technique passes.
+technique_caps: {Q: 40, R: 60, RR: 40, QR: 40}
+# Held-out generated starts per set in the periodic evaluation (fixed positions).
+technique_eval_games: 50
 finish_train_file: data/finishes/finish_train.csv
 finish_depth_start: 2
 finish_depth_max: 40

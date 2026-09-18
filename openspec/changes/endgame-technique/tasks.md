@@ -4,10 +4,10 @@
 
 ## 2. Technique starts
 
-- [ ] 2.1 `FinishStart.config`; `src/envs/technique.py`: `generate_position(set, rng)`, `TechniqueSampler(sets, caps, seed)` with `sample()`, `report()` no-op, `current_depth = 0`. Tests: queen-start scenario (material, side to move, no mate in one, cap, label), reproducible scenario, rejection of check on the strong king.
-- [ ] 2.2 Vector env passes `finish_config` in info; rollout routes labelled results to `metrics.add_technique_result`; metrics keys `technique_attempts_<label>`, `technique_success_rate_<label>`; finishing counters untouched. Tests: labelled-start-counted-apart scenario, cap-reached scenario on a `Q` board.
-- [ ] 2.3 `src/eval/technique.py`: `evaluate_technique(...)` with fixed held-out starts; test: fixed-positions scenario and key names.
-- [ ] 2.4 Config: `finish_source`, `technique_sets`, `technique_caps`, `technique_eval_games`; `resolve_finish_boards` builds the technique sampler when `finish_source: technique`; eval hook adds the technique evaluation; default mix five sources at 0.2, `lichess_end` eval set. Tests: resolver and mix.
+- [x] 2.1 `FinishStart.config`; `src/envs/technique.py`: `generate_position(set, rng)`, `TechniqueSampler(sets, caps, seed)` with `sample()`, `report()` no-op, `current_depth = 0`. Tests: queen-start scenario (material, side to move, no mate in one, cap, label), reproducible scenario, rejection of check on the strong king.
+- [x] 2.2 Vector env passes `finish_config` in info; rollout routes labelled results to `metrics.add_technique_result`; metrics keys `technique_attempts_<label>`, `technique_success_rate_<label>`; finishing counters untouched. Tests: labelled-start-counted-apart scenario, cap-reached scenario on a `Q` board.
+- [x] 2.3 `src/eval/technique.py`: `evaluate_technique(...)` with fixed held-out starts; test: fixed-positions scenario and key names.
+- [x] 2.4 Config: `finish_source`, `technique_sets`, `technique_caps`, `technique_eval_games`; `resolve_finish_boards` builds the technique sampler when `finish_source: technique`; eval hook adds the technique evaluation; default mix five sources at 0.2, `lichess_end` eval set. Tests: resolver and mix.
 
 ## 3. Run and record
 

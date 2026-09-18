@@ -272,3 +272,20 @@ def test_opponent_pool_resolver(tmp_path):
     assert pool.learner_mask(torch.ones(16, dtype=torch.long)).shape == (16,)
     assert resolve_prior_match({"opponent_prior": str(tmp_path), "prior_eval_games": 0}) is None
     assert resolve_prior_match({"opponent_prior": str(tmp_path), "prior_eval_games": 1}) is not None
+
+
+from src.entrypoints.train import resolve_technique_sets  # noqa: E402
+
+
+def test_technique_resolver_and_finish_source():
+    from src.envs.technique import TechniqueSampler
+    sets, caps = resolve_technique_sets({})
+    assert sets == ["Q", "R", "RR", "QR"] and caps["R"] == 60
+    sets, caps = resolve_technique_sets({"technique_sets": ["Q"], "technique_caps": {"Q": 30}})
+    assert caps["Q"] == 30
+    with pytest.raises(ValueError):
+        resolve_technique_sets({"technique_sets": ["BB"]})
+    sampler, n = resolve_finish_boards({"num_envs": 16, "finish_boards": 2, "finish_source": "technique"}, 4)
+    assert n == 2 and isinstance(sampler, TechniqueSampler) and sampler.sample().config in sets + ["R", "RR", "QR"]
+    with pytest.raises(ValueError):
+        resolve_finish_boards({"num_envs": 16, "finish_boards": 2, "finish_source": "tablebase"}, 4)

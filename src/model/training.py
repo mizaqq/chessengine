@@ -202,10 +202,15 @@ def _collect_rollout(
                     if finish_boards.get(env_idx, False):
                         # Finishing board: success = the record's winner won; kept out of the
                         # game rates like puzzles. Rewards are the normal win/loss/draw.
-                        metrics.add_finish_result(
-                            depth=env_step.info["finish_depth"][env_idx],
-                            success=env_step.info["finish_success"][env_idx],
-                        )
+                        # A labelled (technique) start is counted per label instead of depth.
+                        label = env_step.info.get("finish_config", {}).get(env_idx, "")
+                        if label:
+                            metrics.add_technique_result(label, env_step.info["finish_success"][env_idx])
+                        else:
+                            metrics.add_finish_result(
+                                depth=env_step.info["finish_depth"][env_idx],
+                                success=env_step.info["finish_success"][env_idx],
+                            )
                         continue
                     if puzzle_boards.get(env_idx, False):
                         mover_won = (result == "white_win") == (int(players[env_idx]) == WHITE)

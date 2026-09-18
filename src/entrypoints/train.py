@@ -11,6 +11,8 @@ from src.model.training import run_chess_training, A2C_PRESET, PPO_PRESET
 from src.envs.start_positions import FenSampler, MixedSampler, StartPositionSampler, load_fens, load_puzzles, FinishCurriculum, load_finishes
 from src.eval.finishes import evaluate_finishes
 from src.eval.matches import play_match, summarize_match
+from src.eval.technique import evaluate_technique
+from src.envs.technique import DEFAULT_CAPS, TechniqueSampler
 from src.training.opponent_pool import OpponentPool, PoolBoards, freeze
 from src.eval.puzzles import evaluate_mate_in_one
 
@@ -113,7 +115,9 @@ def resolve_eval_fn(config: Dict[str, Any]):
     named = config.get("puzzle_eval_files")
     finish_path = config.get("finish_eval_file")
     prior_match = resolve_prior_match(config)
-    if named or finish_path or prior_match is not None:
+    tech_games = int(config.get("technique_eval_games", 0) or 0)
+    tech = resolve_technique_sets(config) if tech_games > 0 else None
+    if named or finish_path or prior_match is not None or tech is not None:
         sets = {name: load_puzzles(path) for name, path in (named or {}).items()}
         finish_records = load_finishes(finish_path) if finish_path else None
         finish_kwargs = dict(
@@ -132,6 +136,9 @@ def resolve_eval_fn(config: Dict[str, Any]):
                 out.update(evaluate_finishes(white, black, finish_records, oriented=oriented, **finish_kwargs))
             if prior_match is not None:
                 out.update(prior_match(white, oriented))
+            if tech is not None:
+                out.update(evaluate_technique(white, black, tech[0], tech[1], games=tech_games,
+                                              oriented=oriented, seed=int(config.get("seed", 42)) + 5000))
             return out
         return eval_many
     path = config.get("puzzle_eval_file")
@@ -210,6 +217,12 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
     num_envs = int(config.get("num_envs", 12))
     if n < 0 or num_puzzle_envs + n > num_envs:
         raise ValueError(f"finish_boards must be in [0, {num_envs - num_puzzle_envs}], got {n}")
+    source = config.get("finish_source", "human")
+    if source == "technique":
+        sets, caps = resolve_technique_sets(config)
+        return TechniqueSampler(sets, caps, seed=int(config.get("seed", 42)) + 2000), n
+    if source != "human":
+        raise ValueError(f"finish_source must be 'human' or 'technique', got {source!r}")
     path = config.get("finish_train_file")
     if not path:
         raise ValueError("finish_boards > 0 requires finish_train_file")
@@ -226,6 +239,20 @@ def resolve_finish_boards(config: Dict[str, Any], num_puzzle_envs: int):
     except ValueError as e:
         raise ValueError(f"finishing curriculum config: {e}") from e
     return sampler, n
+
+
+def resolve_technique_sets(config: Dict[str, Any]):
+    """`technique_sets`: material labels (strong side's pieces beyond the king, e.g.
+    Q, R, RR, QR); `technique_caps`: plies allowed per label (defaults 40/60/40/40,
+    about twice the perfect-play mate distance). Returns (sets, caps)."""
+    sets = [str(x) for x in (config.get("technique_sets") or ["Q", "R", "RR", "QR"])]
+    caps = {**DEFAULT_CAPS, **{str(k): int(v) for k, v in (config.get("technique_caps") or {}).items()}}
+    for label in sets:
+        if label not in caps:
+            raise ValueError(f"technique_caps has no entry for {label!r}")
+        if caps[label] < 2:
+            raise ValueError(f"technique cap for {label!r} must be >= 2 plies")
+    return sets, caps
 
 
 def resolve_midgame_boards(config: Dict[str, Any], num_puzzle_envs: int):

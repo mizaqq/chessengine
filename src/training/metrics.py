@@ -38,6 +38,7 @@ class MetricsAggregator:
         self.guide_demo_picks = 0
         self._finish_by_depth = {}   # depth -> [attempts, successes]
         self._pool_by_name = {}      # opponent name -> [games, points]
+        self._technique_by_label = {}  # material label -> [attempts, successes]
         self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
 
@@ -70,6 +71,13 @@ class MetricsAggregator:
         self.finish_attempts += 1
         self.finish_success += int(success)
         entry = self._finish_by_depth.setdefault(int(depth), [0, 0])
+        entry[0] += 1
+        entry[1] += int(success)
+
+    def add_technique_result(self, label: str, success: bool):
+        """Record a finished technique board (generated bare-king start) under its
+        material label; kept out of the game and finishing rates."""
+        entry = self._technique_by_label.setdefault(str(label), [0, 0])
         entry[0] += 1
         entry[1] += int(success)
 
@@ -157,6 +165,8 @@ class MetricsAggregator:
             "explore_offprior_share": (self.explore_offprior / self.explore_count if self.explore_count else None),
             "guide_moves": self.guide_count,
             "guide_demo_share": (self.guide_demo_picks / self.guide_count if self.guide_count else None),
+            **{f"technique_attempts_{k}": v[0] for k, v in sorted(self._technique_by_label.items())},
+            **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},
             "pool_games": sum(v[0] for v in self._pool_by_name.values()),
             "pool_score": (sum(v[1] for v in self._pool_by_name.values()) / sum(v[0] for v in self._pool_by_name.values())
                            if self._pool_by_name else None),

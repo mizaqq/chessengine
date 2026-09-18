@@ -136,6 +136,7 @@ class OpenSpielVectorEnv:
         finish_boards: dict[int, bool] = {}
         finish_depth: dict[int, int] = {}
         finish_success: dict[int, bool] = {}
+        finish_config: dict[int, str] = {}
 
         for i, (env, action) in enumerate(zip(self.envs, actions)):
             if not env.is_done():
@@ -154,6 +155,7 @@ class OpenSpielVectorEnv:
                     won = game_results[i] == ("white_win" if start.winner == WHITE else "black_win")
                     finish_depth[i] = start.depth
                     finish_success[i] = won
+                    finish_config[i] = getattr(start, "config", "")
                     self.finish_sampler.report(start.depth, won)
                     del self.finish_start[i]
                 self._reset_env(i)
@@ -175,6 +177,7 @@ class OpenSpielVectorEnv:
             info["finish_boards"] = finish_boards
             info["finish_depth"] = finish_depth
             info["finish_success"] = finish_success
+            info["finish_config"] = finish_config
 
         return EnvStep(
             obs=obs,

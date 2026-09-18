@@ -109,3 +109,17 @@ def test_depth_three_row_keeps_solution_line_and_rejects_non_mate():
           "FEN": "r5k1/5ppp/8/8/8/8/5PPP/R4RK1 b - - 0 1",
           "Moves": "a8a1 f1a1 g7g6 a1a8 g8g7 a8a7"}   # ends with ...Ra7 which is not mate -> rejected
     assert convert_row(ok, 3) is None
+
+
+def test_theme_filter_and_depth_from_theme():
+    from scripts.prepare_puzzles import theme_depth
+    assert theme_depth(["endgame", "mateIn2", "short"]) == 2 and theme_depth(["endgame"]) is None
+    # endgame mate-in-two kept: depth from the theme, forcing move verified
+    row = {"PuzzleId": "e2", "FEN": "6k1/5ppp/8/8/8/8/5PPP/R5K1 b - - 0 1", "Moves": "g8h8 a1a8",
+           "Rating": "900", "Themes": "endgame mateIn1 short"}
+    out = convert_row(row, None, ("endgame",))
+    assert out is not None and out["mate_in"] == "1" and out["solution"] == "a1a8"
+    # middlegame mate rejected by the filter
+    assert convert_row({**row, "Themes": "middlegame mateIn1"}, None, ("endgame",)) is None
+    # no mateIn theme rejected
+    assert convert_row({**row, "Themes": "endgame crushing"}, None, ("endgame",)) is None

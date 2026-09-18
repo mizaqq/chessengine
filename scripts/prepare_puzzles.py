@@ -74,9 +74,27 @@ def forces_mate_in_two(board: chess.Board, key_uci: str) -> bool:
         board.pop()
 
 
-def convert_row(row: dict, depth: int = 1) -> dict | None:
-    """Return a stored row for a mateIn<depth> puzzle, or None if it does not check out."""
-    if f"mateIn{depth}" not in row["Themes"].split():
+def theme_depth(themes) -> int | None:
+    """Mate depth from a `mateIn<N>` theme (1-5), or None."""
+    for n in (1, 2, 3, 4, 5):
+        if f"mateIn{n}" in themes:
+            return n
+    return None
+
+
+def convert_row(row: dict, depth: int | None = 1, themes=()) -> dict | None:
+    """Return a stored row for a mateIn<depth> puzzle, or None if it does not check out.
+
+    `depth` None: any mateIn1..5 theme, depth read from the theme (endgame-mate rung,
+    owner 2026-09-18). `themes`: every listed theme must be present (e.g. `endgame`)."""
+    row_themes = row["Themes"].split()
+    if any(t not in row_themes for t in themes):
+        return None
+    if depth is None:
+        depth = theme_depth(row_themes)
+        if depth is None:
+            return None
+    elif f"mateIn{depth}" not in row_themes:
         return None
     moves = row["Moves"].split()
     if len(moves) != 2 * depth:
@@ -129,7 +147,12 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--depth", type=int, default=1, choices=(1, 2, 3, 4))
+    ap.add_argument("--depth", default="1", choices=("1", "2", "3", "4", "any"),
+                    help="mateIn depth; 'any' takes 1-5 from the theme")
+    ap.add_argument("--themes", default="", help="comma-separated themes every puzzle must carry, e.g. endgame")
+    ap.add_argument("--prefix", default=None, help="output name (default mate_in_<depth> or <themes>_mate for any)")
+    ap.add_argument("--exclude-eval", type=Path, nargs="*", default=[],
+                    help="held-out files whose ids must not appear in the new train set")
     ap.add_argument("--train", type=int, default=20000)
     ap.add_argument("--eval", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)
@@ -139,17 +162,25 @@ def main() -> None:
     args = ap.parse_args()
 
     download(DUMP_URL, args.dump)
+    depth = None if args.depth == "any" else int(args.depth)
+    themes = tuple(t for t in args.themes.split(",") if t)
+    exclude = set()
+    for path in args.exclude_eval:
+        with open(path, newline="") as fh:
+            exclude |= {r["puzzle_id"] for r in csv.DictReader(fh)}
     rows = []
     seen = 0
     for raw in iter_dump(args.dump):
         seen += 1
-        converted = convert_row(raw, args.depth)
+        if raw["PuzzleId"] in exclude:
+            continue
+        converted = convert_row(raw, depth, themes)
         if converted is not None:
             rows.append(converted)
         if seen % 500_000 == 0:
             print(f"  scanned {seen}, kept {len(rows)}", flush=True)
-    print(f"scanned {seen} puzzles, kept {len(rows)} mate-in-{args.depth}")
-    prefix = f"mate_in_{args.depth}"
+    print(f"scanned {seen} puzzles, kept {len(rows)} mate-in-{args.depth} themes={themes}")
+    prefix = args.prefix or (f"mate_in_{args.depth}" if depth is not None else "_".join(themes + ("mate",)))
 
     random.Random(args.seed).shuffle(rows)
     if args.keep_eval:
