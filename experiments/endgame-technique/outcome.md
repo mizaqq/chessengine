@@ -327,3 +327,50 @@ Buckets: 33 of 36 known by update 80; 6-10 in the band at any time; none graduat
 2. **Warm start for good-starts**: weight unknown buckets by an easiness prior (edge
    distance 0 -> 1, 1 -> 0.5, 2 -> 0.25, 3 -> 0.1) until they are known, so the
    curriculum starts near the goal as the paper does and expands outward.
+
+# Arms LAMBDA and GSL2 (2026-09-18, 18:18-19:54)
+
+Owner: "okay agreed on both." Queen-only, 120 updates from CURSIL_LONG. LAMBDA = level
+ladder + lambda 1.0 (control QONLY); GSL2 = good starts with the warm-start prior +
+lambda 1.0 (control GSL).
+
+| arm | held-out Q 50/100/120 | own-game m1 | decisive of 40 | in-game mate | m1 | entropy |
+|---|---|---|---|---|---|---|
+| QONLY (levels, 0.95) | 0.08 / 0.22 / 0.12 | 0.29 / 0.32 / 0.28 | 19 | 0.28 | 0.777 | 0.30 |
+| LAMBDA (levels, 1.0) | 0.12 / 0.18 / 0.16 | 0.32 / 0.30 / 0.33 | **23** | 0.32 | **0.791** | 0.31 |
+| GSL (good starts flat, 1.0) | 0.12 / 0.10 / 0.18 | 0.36 / 0.35 / 0.32 | 21 | 0.40 | 0.783 | 0.29 |
+| GSL2 (good starts warm, 1.0) | 0.12 / 0.22 / 0.18 | 0.33 / 0.31 / 0.35 | **23** | 0.31 | 0.784 | 0.29 |
+
+Clip fraction 0.19-0.20 and KL 0.033-0.040 in all four: lambda 1 did not destabilise PPO.
+Finishing d10 / d20 wandered 0.13-0.24 in all arms (noise band).
+
+## Reading
+
+- **Lambda 1.0: adopt.** Every lambda-1 arm beat the lambda-0.95 control on decisive
+  games (21-23 vs 19), in-game mate rate (0.31-0.40 vs 0.28) and own-game mate-in-one
+  (0.30-0.36 vs 0.28-0.32), with the same puzzle dials and a healthy clip band. Held-out
+  queen: no separation (all 0.16-0.18 at the end). Small effects each, consistent
+  direction across three arms; it becomes the default for the long run.
+- **Warm start did not lift the good-starts curriculum**: clean success stayed 0.06-0.13
+  (GSL 0.03-0.18). The per-bucket table from GSL2's curriculum.json explains why and is
+  the most honest picture of the technique so far: every one of the 33 feasible buckets,
+  including all nine with the weak king on the edge, has a clean success of 0.00-0.25
+  (median 0.05). The level ladder's 0.4-0.5 "clean success at level 1" was an average
+  over the mix of level-0 corner starts (mate in two or three, won at about 0.9) and
+  level-1 edge starts (won at about 0.1). The network has learned to finish a cornered
+  king; it has not learned to drive a king to the edge. Held-out level 3 at 0.15-0.2 is
+  the same story.
+- **Curriculum choice for the long run: levels.** Held-out tie, simpler, and it produces
+  many more wins per update (level-0 starts) for self-imitation to replay. Good starts
+  stays available as `technique_curriculum: good_starts` and its bucket table is the
+  diagnostic to re-run at the end of the long run.
+- The three infeasible buckets are the expected ones (central king with a piece five or
+  more squares away).
+
+## Next: LONG2 (owner: "some kind of long run after this ... increase LR a bit if the
+run is moving slowly only"; "option 1")
+
+600 updates from LAMBDA, default layout (3 puzzle / 4 technique on all four sets / 5
+mid-game / 4 opening), pool, SIL, guidance 0.25, levels curriculum from level 0 for
+every set (levels persist from now on), gae_lambda 1.0, min_lr 1e-4 (no decay). Then
+games, finishes, probe, win matrix vs SL / M34 / POOL_LONG / CURSIL_LONG.

@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "white_win": 12,
+  "black_win": 11,
+  "draw": 16,
+  "unfinished": 1
+ },
+ "draw_rate": 0.4,
+ "decisive_rate": 0.575,
+ "mate_in_one_opportunities": 74,
+ "mate_in_one_found": 23,
+ "mate_in_one_rate": 0.3108108108108108,
+ "mean_plies": 114.75,
+ "checkpoints": {
+  "model": "experiments/endgame-technique/GSL2/model_20260918195344_episodes_120.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

@@ -1,0 +1,20 @@
+{
+ "games": 40,
+ "results": {
+  "white_win": 9,
+  "black_win": 14,
+  "unfinished": 2,
+  "draw": 15
+ },
+ "draw_rate": 0.375,
+ "decisive_rate": 0.575,
+ "mate_in_one_opportunities": 72,
+ "mate_in_one_found": 23,
+ "mate_in_one_rate": 0.3194444444444444,
+ "mean_plies": 133.55,
+ "checkpoints": {
+  "model": "experiments/endgame-technique/LAMBDA/model_20260918191011_episodes_120.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
