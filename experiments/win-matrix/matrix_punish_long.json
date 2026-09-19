@@ -1,0 +1,185 @@
+{
+ "names": [
+  "SL",
+  "LONG3",
+  "DEPTH20",
+  "PUNISH",
+  "PUNISH_LONG"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "LONG3": "experiments/endgame-technique/LONG3",
+  "DEPTH20": "experiments/endgame-technique/DEPTH20",
+  "PUNISH": "experiments/punish-gifts/PUNISH",
+  "PUNISH_LONG": "experiments/punish-gifts/PUNISH_LONG"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SL": {
+   "LONG3": 0.4666666666666667,
+   "DEPTH20": 0.475,
+   "PUNISH": 0.44166666666666665,
+   "PUNISH_LONG": 0.525
+  },
+  "LONG3": {
+   "SL": 0.5333333333333333,
+   "DEPTH20": 0.49166666666666664,
+   "PUNISH": 0.48333333333333334,
+   "PUNISH_LONG": 0.4666666666666667
+  },
+  "DEPTH20": {
+   "SL": 0.525,
+   "LONG3": 0.5083333333333333,
+   "PUNISH": 0.5,
+   "PUNISH_LONG": 0.475
+  },
+  "PUNISH": {
+   "SL": 0.5583333333333333,
+   "LONG3": 0.5166666666666666,
+   "DEPTH20": 0.5,
+   "PUNISH_LONG": 0.5166666666666667
+  },
+  "PUNISH_LONG": {
+   "SL": 0.475,
+   "LONG3": 0.5333333333333333,
+   "DEPTH20": 0.525,
+   "PUNISH": 0.4833333333333333
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "LONG3",
+   "counts": {
+    "a_white_black_win": 7,
+    "a_black_black_win": 5,
+    "a_white_draw": 17,
+    "a_black_draw": 18,
+    "a_white_unfinished": 1,
+    "a_black_white_win": 7,
+    "a_white_white_win": 5
+   }
+  },
+  {
+   "a": "SL",
+   "b": "DEPTH20",
+   "counts": {
+    "a_white_black_win": 7,
+    "a_black_draw": 16,
+    "a_white_draw": 18,
+    "a_black_unfinished": 1,
+    "a_white_white_win": 5,
+    "a_black_white_win": 7,
+    "a_black_black_win": 6
+   }
+  },
+  {
+   "a": "SL",
+   "b": "PUNISH",
+   "counts": {
+    "a_white_white_win": 4,
+    "a_black_draw": 21,
+    "a_white_draw": 17,
+    "a_white_black_win": 9,
+    "a_black_black_win": 3,
+    "a_black_unfinished": 1,
+    "a_black_white_win": 5
+   }
+  },
+  {
+   "a": "SL",
+   "b": "PUNISH_LONG",
+   "counts": {
+    "a_white_white_win": 7,
+    "a_black_draw": 16,
+    "a_black_white_win": 5,
+    "a_white_black_win": 7,
+    "a_white_draw": 16,
+    "a_black_black_win": 8,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "LONG3",
+   "b": "DEPTH20",
+   "counts": {
+    "a_white_black_win": 9,
+    "a_black_white_win": 10,
+    "a_white_white_win": 10,
+    "a_black_draw": 11,
+    "a_white_draw": 9,
+    "a_black_black_win": 8,
+    "a_white_unfinished": 2,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "LONG3",
+   "b": "PUNISH",
+   "counts": {
+    "a_white_black_win": 6,
+    "a_black_white_win": 8,
+    "a_white_white_win": 8,
+    "a_black_draw": 17,
+    "a_white_draw": 16,
+    "a_black_unfinished": 1,
+    "a_black_black_win": 4
+   }
+  },
+  {
+   "a": "LONG3",
+   "b": "PUNISH_LONG",
+   "counts": {
+    "a_white_white_win": 6,
+    "a_black_black_win": 5,
+    "a_white_draw": 14,
+    "a_black_draw": 16,
+    "a_white_unfinished": 2,
+    "a_black_white_win": 7,
+    "a_white_black_win": 8,
+    "a_black_unfinished": 2
+   }
+  },
+  {
+   "a": "DEPTH20",
+   "b": "PUNISH",
+   "counts": {
+    "a_white_white_win": 6,
+    "a_black_white_win": 7,
+    "a_white_black_win": 4,
+    "a_black_draw": 17,
+    "a_white_draw": 20,
+    "a_black_black_win": 5,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "DEPTH20",
+   "b": "PUNISH_LONG",
+   "counts": {
+    "a_white_draw": 15,
+    "a_black_draw": 16,
+    "a_white_unfinished": 1,
+    "a_black_white_win": 9,
+    "a_white_black_win": 6,
+    "a_white_white_win": 8,
+    "a_black_black_win": 4,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "PUNISH",
+   "b": "PUNISH_LONG",
+   "counts": {
+    "a_white_draw": 19,
+    "a_black_draw": 16,
+    "a_black_black_win": 8,
+    "a_white_black_win": 5,
+    "a_black_white_win": 6,
+    "a_white_unfinished": 1,
+    "a_white_white_win": 5
+   }
+  }
+ ]
+}

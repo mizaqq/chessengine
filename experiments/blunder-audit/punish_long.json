@@ -1,0 +1,25 @@
+{
+ "mover": "experiments/punish-gifts/PUNISH_LONG",
+ "games_per_colour": 20,
+ "seed": 1,
+ "defenders": {
+  "self": {
+   "mover_plies": 2925,
+   "gift_mate_per100": 0.7863247863247863,
+   "gift_mate": 23,
+   "punish_rate_mate": 0.30434782608695654,
+   "gift_material_per100": 7.35042735042735,
+   "gift_material": 215,
+   "punish_rate_material": 0.7116279069767442
+  },
+  "SL": {
+   "mover_plies": 3301,
+   "gift_mate_per100": 1.6358679188124812,
+   "gift_mate": 54,
+   "punish_rate_mate": 0.037037037037037035,
+   "gift_material_per100": 7.724931838836716,
+   "gift_material": 255,
+   "punish_rate_material": 0.5882352941176471
+  }
+ }
+}

@@ -46,3 +46,48 @@ Reading.
 Verdict: hypothesis confirmed (fewer gifts, more punishment, stronger head to head), with a
 fixable side effect. Next: mates take priority over captures in the punisher (spec change
 within this change), rerun 120 updates from DEPTH20 as PUNISH2, compare on the same table.
+
+## PUNISH_LONG (2026-09-19): DEPTH20 + 600 updates, punisher 0.5, mates before captures
+
+Owner: "make the fix and run a longer run". Same as PUNISH except the punisher offers the
+mating moves when any exist and free captures only otherwise. Training took 3.6 h (games are
+shorter with a punisher on both sides). Bare network at evaluation throughout.
+
+| dial | DEPTH20 | PUNISH (120) | PUNISH_LONG (600) |
+|---|---|---|---|
+| free-piece gifts per 100 plies / own punish rate | 9.6 / 0.54 | 6.6 / 0.72 | 7.4 / 0.71 |
+| allowed mates per 100 / own punish rate | 0.87 / 0.13 | 0.83 / 0.28 | 0.79 / 0.30 |
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.804 / 0.723 / 0.683 / 0.580 / 0.751 | 0.772 / 0.698 / 0.656 / 0.561 / 0.733 | 0.784 / 0.706 / 0.678 / 0.555 / 0.732 |
+| own-game mate-in-one | 0.352 | 0.257 | 0.262 |
+| finishing d2 / d10 / d20 | 0.40 / 0.20 / 0.13 | 0.36 / 0.18 / 0.17 | 0.29 / 0.17 / 0.09 |
+| technique Q / R / RR / QR | 0.20 / 0.12 / 0.16 / 0.22 | 0.10 / 0.00 / 0.12 / 0.22 | 0.14 / 0.06 / 0.16 / 0.24 |
+| game entropy | 0.288 | 0.303 | 0.333 (rising all run) |
+| vs SL, decisive | 14-11 | 14-7 | 12-15 |
+| vs DEPTH20, decisive | - | 11-11 | 15-12 |
+
+Five-way matrix (30 games per colour): every row mean between 0.48 and 0.52. No checkpoint
+is distinguishable from another at this sample size; PUNISH_LONG beats LONG3 15-11 and
+DEPTH20 15-12 and loses to SL 12-15 and PUNISH 11-13.
+
+Reading.
+- **The punisher fixes exactly what it measures and nothing more.** Gifts down a quarter to a
+  third, own punishment up, and those gains appear within 120 updates and do not grow with
+  600. Game strength stays at par with everything (the self-play plateau since LONG2).
+- **The mate-priority fix did not bring the mates back.** Own-game mate-in-one stayed at 0.26,
+  and depth-2 finishing (find the mate in two against our own defence) fell further to 0.29.
+  So the cost is not the uniform draw; it is the exploration shift itself: about 8% of learner
+  plies per update are punisher rows, and half of those are captures the network did not
+  choose. The batch leans toward material play; the mating skill that took LONG2 and LONG3
+  1,200 updates to build decays in 120.
+- Entropy rose 0.29 -> 0.33 over the run (the punished side keeps losing material in new ways),
+  the opposite of the drift we worried about, and probably part of why the puzzle dials
+  slipped: a flatter policy on a fixed-size network.
+- Diagnostic (6 self-play games, 822 plies): a punishing move exists in 18% of positions, a
+  mate in one in 1.3%; punish_moves ~85 per update after the label boards are excluded.
+
+Verdict: hypothesis confirmed as a mechanism, not as a lever on strength. As configured
+(epsilon 0.5, all boards) the punisher costs more finishing and mating skill than it buys.
+`punish_epsilon` stays 0 by default. Options recorded for the owner: (1) epsilon 0.2 on game
+boards only (opening + mid-game), curriculum boards clean; (2) punisher on the pool
+opponents only (the original option 2), which never touches the learner's batch; (3) park it
+and record the lesson.
