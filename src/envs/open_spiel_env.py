@@ -111,11 +111,14 @@ class OpenSpielEnv:
         self.demo_alive = bool(self.demo_line)
 
     def punish_actions(self, threshold: int = 3) -> set[int]:
-        """Punishing moves for the side to move: rules mates in one and captures that
-        win at least `threshold` net material (change punish-gifts)."""
+        """Punishing moves for the side to move: the rules mates in one if any exist,
+        otherwise the captures that win at least `threshold` net material (change
+        punish-gifts). Mates come first: arm PUNISH drew the two uniformly and took
+        the piece instead of mating half the time, and own-game mate-in-one fell."""
         if self.is_done():
             return set()
-        return set(mating_actions_of(self)) | free_capture_actions_of(self, threshold)
+        mates = set(mating_actions_of(self))
+        return mates if mates else free_capture_actions_of(self, threshold)
 
     def demo_actions(self) -> set[int]:
         """Action ids the demonstrator would play now: the next move of the line while

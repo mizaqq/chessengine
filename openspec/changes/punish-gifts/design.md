@@ -22,7 +22,9 @@ in the reward; removing existing guidance.
 - **One rules helper, shared with the audit.** `capture_gain` and `free_capture_actions_of`
   move from `scripts/blunder_audit.py` into `src/envs/open_spiel_env.py` next to
   `mating_actions_of`; the audit imports them. The env gains `punish_actions()` =
-  mates ∪ free captures (threshold from the env, default 3).
+  mates if any, else free captures (threshold default 3). Ordering added after arm PUNISH:
+  drawing the two uniformly made the punisher take a piece instead of mating half the time
+  in won positions; own-game mate-in-one fell 0.35 -> 0.26 and every puzzle set -0.03.
 - **Two demonstration channels, one mixture.** The rollout asks each board for its
   label demonstration (as now) and, on punish boards, its punishing moves. Per row it
   picks (demo set, epsilon): label demo with `guide_epsilon` if non-empty, else

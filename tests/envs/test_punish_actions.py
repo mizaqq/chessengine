@@ -35,3 +35,10 @@ def test_threshold_excludes_pawn_grabs():
 def test_punish_actions_include_mate():
     env = _env("6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1")   # Ra8# ; no captures
     assert _sans(env, env.punish_actions()) == {"Ra8#"}
+
+
+def test_mate_takes_priority_over_a_free_capture():
+    # White: Ra8 is mate; Bxh4 also wins a free rook. Only the mate is offered.
+    env = _env("6k1/5ppp/8/8/7r/8/5B2/R5K1 w - - 0 1")
+    assert _sans(env, env.punish_actions()) == {"Ra8#"}
+    assert "Bxh4" in _sans(env, free_capture_actions_of(env, 3))
