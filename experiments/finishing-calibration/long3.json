@@ -1,0 +1,55 @@
+{
+ "checkpoint": {
+  "model": "experiments/endgame-technique/LONG3/model_20260919051604_episodes_600.pth"
+ },
+ "depths": {
+  "2": {
+   "sampled": {
+    "rate": 0.4,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.48,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.77,
+    "games": 100,
+    "defender_stayed_on_line": 0.43,
+    "mean_ply_defender_left_line": 1.0
+   }
+  },
+  "10": {
+   "sampled": {
+    "rate": 0.12,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.14,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.33,
+    "games": 100,
+    "defender_stayed_on_line": 0.03,
+    "mean_ply_defender_left_line": 1.3917525773195876
+   }
+  },
+  "20": {
+   "sampled": {
+    "rate": 0.16,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.16,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.14,
+    "games": 100,
+    "defender_stayed_on_line": 0.0,
+    "mean_ply_defender_left_line": 1.36
+   }
+  }
+ }
+}

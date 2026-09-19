@@ -1,0 +1,71 @@
+{
+ "names": [
+  "SL",
+  "LONG2",
+  "LONG3"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "LONG2": "experiments/endgame-technique/LONG2",
+  "LONG3": "experiments/endgame-technique/LONG3"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SL": {
+   "LONG2": 0.5416666666666666,
+   "LONG3": 0.55
+  },
+  "LONG2": {
+   "SL": 0.45833333333333337,
+   "LONG3": 0.425
+  },
+  "LONG3": {
+   "SL": 0.44999999999999996,
+   "LONG2": 0.575
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "LONG2",
+   "counts": {
+    "a_white_draw": 22,
+    "a_black_draw": 15,
+    "a_black_white_win": 6,
+    "a_black_black_win": 8,
+    "a_white_unfinished": 1,
+    "a_white_black_win": 2,
+    "a_black_unfinished": 1,
+    "a_white_white_win": 5
+   }
+  },
+  {
+   "a": "SL",
+   "b": "LONG3",
+   "counts": {
+    "a_white_white_win": 7,
+    "a_black_draw": 20,
+    "a_white_draw": 19,
+    "a_black_white_win": 3,
+    "a_black_black_win": 5,
+    "a_black_unfinished": 2,
+    "a_white_black_win": 3,
+    "a_white_unfinished": 1
+   }
+  },
+  {
+   "a": "LONG2",
+   "b": "LONG3",
+   "counts": {
+    "a_white_draw": 18,
+    "a_black_white_win": 11,
+    "a_black_draw": 12,
+    "a_white_white_win": 4,
+    "a_white_black_win": 8,
+    "a_black_black_win": 6,
+    "a_black_unfinished": 1
+   }
+  }
+ ]
+}

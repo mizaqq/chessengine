@@ -435,3 +435,47 @@ or creep, own-game up, prior score par, technique pairs up, finishing unchanged.
 `gae_lambda` 1.0 becomes the PPO default (three arms plus LONG2). `min_lr` stays 3e-5 in
 the config; long runs set 1e-4 explicitly (owner's option 1) until a run at the default
 shows a difference.
+
+# LONG3: LONG2 + 600 updates, mixed finishing slot (2026-09-19, 01:39-05:19)
+
+Finishing boards draw technique and human starts 0.5 / 0.5; everything else as LONG2.
+
+| dial | LONG2 | LONG3 |
+|---|---|---|
+| mate-in-1 / 2 / 3 / 4 | 0.802 / 0.712 / 0.665 / 0.574 | **0.808 / 0.723 / 0.691 / 0.590** |
+| endgame-mate | 0.742 | **0.747** |
+| own-game mate-in-one | 0.333 | **0.387** |
+| technique Q / R / RR / QR | 0.26 / 0.02 / 0.18 / 0.28 | 0.16 / 0.06 / 0.10 / 0.38 |
+| finishing d2 / d10 / d20 (sampled) | 0.40 / 0.13 / 0.12 | 0.43 / 0.13 / 0.11 |
+| calibration human-line d2 / d10 / d20 | 0.75 / 0.28 / 0.22 | 0.77 / 0.33 / 0.14 |
+| vs LONG2 (decisive) | - | **19-10** |
+| vs SL prior (decisive) | 8-7 (yesterday), 8-13 (today) | 6-12 |
+| game entropy | 0.30 | 0.27-0.29 (lowest so far) |
+| 40 games | 17 decisive | 19 decisive, mate 0.23 |
+
+Finishing depth curriculum: stayed at depth 8 for all 600 updates (advance needs 0.6
+over 100 episodes, all episodes counted; training success at d6 / d8 0.05-0.36).
+
+## Reading
+
+- **Puzzle and own-game dials keep rising** (own-game mate-in-one 0.39, best of the
+  project) and LONG3 beats LONG2 19-10, so 1,200 updates of the consolidated recipe are
+  still paying on everything that has a training signal.
+- **Finishing d10 / d20 unchanged for the fifteenth arm, and now we know one more reason:
+  the finishing depth curriculum never passed depth 8**, so no training board ever started
+  10 or 20 plies before the mate. The evaluation asks for a depth the training never
+  visited. The threshold (0.6 over 100, teacher-made wins counted) is the same rule that
+  misled the technique ladder before the clean-episode fix.
+- **Against the prior, back to slightly negative** (6-12; the matrix score against SL
+  swung 0.45-0.51 across three sessions, so par is the honest description). Entropy is
+  drifting down slowly; watch it.
+- Technique held-out is noisy (Q 0.08-0.26 within one run at 50 games); the pairs hold.
+
+## Next (owner decides)
+
+1. **Train at the evaluated depths**: sample the finishing depth uniformly over [0, 20]
+   (curriculum off, or start at 20), so d10 / d20 boards exist in training. Cheapest
+   possible fix for a dial that has had no matching training signal.
+2. **Self-demonstrations** on finishing boards (own winning line replaces the human's
+   once one exists for the record), which the calibration says targets the right ply.
+3. Entropy guard: if it slides under 0.27, raise entropy_coef or shorten the run.
