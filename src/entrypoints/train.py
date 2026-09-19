@@ -362,6 +362,24 @@ def resolve_guide(config: Dict[str, Any]):
     return {"epsilon": eps, "boards": boards}
 
 
+def resolve_punish(config: Dict[str, Any]):
+    """Punisher (change punish-gifts): `punish_epsilon` in [0, 1) (0 = off),
+    `punish_threshold` positive int (net material a capture must win, default 3),
+    `punish_boards` `puzzle` | `curriculum` | `all` (default all)."""
+    eps = float(config.get("punish_epsilon", 0.0) or 0.0)
+    if not 0.0 <= eps < 1.0:
+        raise ValueError(f"punish_epsilon must be in [0, 1), got {eps}")
+    if eps == 0.0:
+        return None
+    threshold = int(config.get("punish_threshold", 3))
+    if threshold < 1:
+        raise ValueError(f"punish_threshold must be a positive integer, got {threshold}")
+    boards = config.get("punish_boards", "all")
+    if boards not in ("puzzle", "curriculum", "all"):
+        raise ValueError(f"punish_boards must be 'puzzle', 'curriculum' or 'all', got {boards!r}")
+    return {"epsilon": eps, "threshold": threshold, "boards": boards}
+
+
 def resolve_layout_schedule(config: Dict[str, Any], num_puzzle_envs: int):
     """`layout_schedule: [{from_update, finish_boards, midgame_boards}, ...]`: board
     roles after the puzzle boards switch at those updates (boards beyond the three
@@ -451,6 +469,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     layout_schedule = resolve_layout_schedule(config, num_puzzle_envs)
     explore = resolve_exploration(config)
     guide = resolve_guide(config)
+    punish = resolve_punish(config)
     pool = resolve_opponent_pool(config, num_puzzle_envs + num_finish_envs)
     sil = resolve_sil(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
@@ -506,6 +525,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         guide=guide,
         pool=pool,
         sil=sil,
+        punish=punish,
     )
 
     sampler_state = finish_sampler.state() if hasattr(finish_sampler, "state") else None

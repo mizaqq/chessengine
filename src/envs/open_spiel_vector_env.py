@@ -78,6 +78,12 @@ class OpenSpielVectorEnv:
         return [self.envs[i].demo_actions() if (boards is None or boards[i]) else set()
                 for i in range(self.num_envs)]
 
+    def punish_actions(self, boards=None, threshold: int = 3):
+        """Per-board punishing move sets (rules mate or free capture, change
+        punish-gifts); `boards` restricts the work to those indices."""
+        return [self.envs[i].punish_actions(threshold) if (boards is None or boards[i]) else set()
+                for i in range(self.num_envs)]
+
     def is_puzzle_env(self, i: int) -> bool:
         return i < self.num_puzzle_envs
 

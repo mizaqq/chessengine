@@ -21,28 +21,7 @@ import torch
 from src.model.checkpoints import load_models
 from src.viz.play import play_game
 from scripts.prepare_puzzles import mating_moves
-
-VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0}
-
-
-def capture_gain(board: chess.Board, move: chess.Move) -> int:
-    """Net material the side to move wins with `move` after the cheapest recapture."""
-    if not board.is_capture(move):
-        return 0
-    victim = board.piece_at(move.to_square)
-    gained = VALUE[victim.piece_type] if victim else 1        # en passant
-    board.push(move)
-    recaptures = [m for m in board.legal_moves if m.to_square == move.to_square]
-    board.pop()
-    if not recaptures:
-        return gained
-    return gained - VALUE[board.piece_at(move.from_square).piece_type]
-
-
-def best_gain(board: chess.Board) -> int:
-    """Largest net capture gain available to the side to move (0 if none)."""
-    return max((capture_gain(board, m) for m in board.legal_moves), default=0)
-
+from src.envs.open_spiel_env import capture_gain, best_gain
 
 def gain_if_opponent_moved(board: chess.Board) -> int:
     """Best gain the *other* side would have if it were to move now; 0 when the

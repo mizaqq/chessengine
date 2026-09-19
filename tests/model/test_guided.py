@@ -98,3 +98,85 @@ def test_guided_sampling_flags_only_demonstrator_fires_and_keeps_mixture_log_pro
             assert abs(steps[0].old_log_prob[0].item() - math.log(eps + (1 - eps) / n_legal)) < 1e-3
             assert m.episode_summary()["technique_clean_attempts_Q"] == 0
         assert rec.calls and all(c is expect_clean for c in rec.calls[:1])
+
+
+class _Uniform(torch.nn.Module):
+    def forward(self, obs, mask):
+        return mask / mask.sum(dim=1, keepdim=True), torch.zeros(obs.shape[0], 1)
+
+
+class _Rec:
+    current_depth = 0
+    def __init__(self, s): self.s = s
+    def sample(self): return self.s
+    def report(self, d, s): pass
+    def report_label(self, label, success, clean=True, depth=None): pass
+    def levels(self): return {"Q": 0}
+
+
+def _one_board(fen, winner, line=()):
+    from src.envs.start_positions import FinishStart
+    puzzles = StartPositionSampler([Puzzle("p", "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", ["a1a8"], 0)])
+    env = OpenSpielVectorEnv(1, puzzles, 0, None, None, 0, _Rec(FinishStart(fen, 0, 40, winner, line, "Q")), 1)
+    return env, env.reset()
+
+
+def test_punisher_takes_hung_queen_with_mixture_log_prob_and_flags_episode():
+    """Black to move, white queen on d4 hangs to the c6 knight; punish_epsilon 0.5 gives
+    Nxd4 behaviour probability 0.5/n + 0.5, and the stored log-prob is the mixture's."""
+    from src.envs.start_positions import BLACK
+    fen = "4k3/p7/2n5/8/3Q4/8/8/4K3 b - - 0 1"
+    for eps in (0.5, 0.999):
+        env, step = _one_board(fen, BLACK)
+        nxd4 = next(iter(env.envs[0].actions_for_uci(["c6d4"])))
+        n_legal = int(step.legal_actions_mask[0].sum())
+        torch.manual_seed(1)
+        m = MetricsAggregator()
+        punish = {"epsilon": eps, "threshold": 3, "mask": torch.tensor([True])}
+        steps, _ = _collect_rollout(env, _Uniform(), _Uniform(), step, 1, 1, {"win": 2, "loss": -2, "draw": -0.5}, m,
+                                    oriented=True, guide=None, punish=punish)
+        a, lp = int(steps[0].action[0]), steps[0].old_log_prob[0].item()
+        expected = math.log((1 - eps) / n_legal + (eps if a == nxd4 else 0.0))
+        assert abs(lp - expected) < 1e-4
+        s = m.episode_summary()
+        assert s["punish_moves"] == 1 and s["guide_moves"] == 0
+        if eps > 0.99:
+            assert a == nxd4 and s["punish_picks"] == 1 and env._demo_acted[0] is True
+
+
+def test_label_demonstration_wins_over_punisher():
+    """A finishing board still on the human line keeps guide_epsilon even when a free
+    capture exists."""
+    from src.envs.start_positions import BLACK
+    fen = "4k3/p7/2n5/8/3Q4/8/8/4K3 b - - 0 1"
+    env, step = _one_board(fen, BLACK, line=("e8d8",))       # the "human" plays Kd8?? — not a capture
+    kd8 = env.envs[0].actions_for_uci(["e8d8"])
+    if not kd8:                                                 # Kd8 illegal here (queen covers d8): use Kf8
+        env, step = _one_board(fen, BLACK, line=("e8f8",))
+        kd8 = env.envs[0].actions_for_uci(["e8f8"])
+    demo = next(iter(kd8))
+    n_legal = int(step.legal_actions_mask[0].sum())
+    torch.manual_seed(2)
+    m = MetricsAggregator()
+    guide = {"epsilon": 0.25, "mask": torch.tensor([True])}
+    punish = {"epsilon": 0.999, "threshold": 3, "mask": torch.tensor([True])}
+    steps, _ = _collect_rollout(env, _Uniform(), _Uniform(), step, 1, 1, {"win": 2, "loss": -2, "draw": -0.5}, m,
+                                oriented=True, guide=guide, punish=punish)
+    a, lp = int(steps[0].action[0]), steps[0].old_log_prob[0].item()
+    assert abs(lp - math.log(0.75 / n_legal + (0.25 if a == demo else 0.0))) < 1e-4
+    s = m.episode_summary()
+    assert s["guide_moves"] == 1 and s["punish_moves"] == 0
+
+
+def test_punisher_off_reproduces_guided_rollout_exactly():
+    from src.envs.start_positions import WHITE
+    fen = "7k/8/5K2/8/8/8/8/6Q1 w - - 0 1"
+    outs = []
+    for punish in (None, {"epsilon": 0.0, "threshold": 3, "mask": torch.tensor([True])}):
+        env, step = _one_board(fen, WHITE)
+        torch.manual_seed(5)
+        steps, _ = _collect_rollout(env, _Uniform(), _Uniform(), step, 3, 1, {"win": 2, "loss": -2, "draw": -0.5},
+                                    MetricsAggregator(), oriented=True,
+                                    guide={"epsilon": 0.25, "mask": torch.tensor([True])}, punish=punish)
+        outs.append([(int(s.action[0]), round(s.old_log_prob[0].item(), 6)) for s in steps])
+    assert outs[0] == outs[1]

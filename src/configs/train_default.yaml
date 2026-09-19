@@ -206,6 +206,17 @@ explore_boards: curriculum
 guide_epsilon: 0.0
 guide_boards: curriculum
 
+# Punisher (owner, 2026-09-19: "the model we are playing against is not punishing for
+# very stupid moves"; blunder audit: our defender takes a hung piece 0.54 of the time,
+# delivers an allowed mate 0.13). On punish_boards, when the side to move has a rules
+# mate or a capture winning >= punish_threshold net material (after the cheapest
+# recapture) and no label demonstration, the behaviour policy plays one with
+# probability punish_epsilon; mixture log-prob stored as for guide_epsilon. Learner
+# plies only. A hand-made exploiter (AlphaStar league, Vinyals et al. 2019).
+punish_epsilon: 0.0
+punish_threshold: 3
+punish_boards: all
+
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").
 # Training games ran 200-220 plies into repetition draws; 120 is a first guess.

@@ -63,15 +63,18 @@ OFFPRIOR_THRESHOLD = 0.05   # a pick counts as "against the prior" below this ne
 
 def guided_probs(p, demos, epsilon):
     """Label-guided behaviour mixture: for each row i with a non-empty demonstration
-    set demos[i], b = (1 - epsilon) * p + epsilon * uniform(demos[i]); rows without a
-    demonstration keep p. Salimans & Chen 2018 (demonstration-guided starts) turned
-    into a behaviour policy; the update stays outcome-driven."""
+    set demos[i], b = (1 - eps_i) * p + eps_i * uniform(demos[i]); rows without a
+    demonstration keep p. `epsilon` is a scalar or one value per row (label guidance
+    and the punisher use different probabilities). Salimans & Chen 2018
+    (demonstration-guided starts) turned into a behaviour policy; the update stays
+    outcome-driven."""
     b = p.clone()
     for i, demo in enumerate(demos):
         if demo:
+            eps = float(epsilon[i]) if hasattr(epsilon, "__len__") else float(epsilon)
             idx = torch.tensor(sorted(demo), dtype=torch.long)
-            b[i] = (1.0 - epsilon) * p[i]
-            b[i, idx] += epsilon / len(idx)
+            b[i] = (1.0 - eps) * p[i]
+            b[i, idx] += eps / len(idx)
     return b
 
 
@@ -88,6 +91,7 @@ def _collect_rollout(
     explore=None,
     guide=None,
     pool=None,
+    punish=None,
 ):
     """Play `num_steps` plies on every board and record what the update needs.
 
@@ -119,6 +123,10 @@ def _collect_rollout(
             pass
     noisy = explore["mask"] if explore is not None and explore.get("epsilon", 0) > 0 else None
     guided = guide["mask"] if guide is not None and guide.get("epsilon", 0) > 0 else None
+    # Punisher (change punish-gifts): on its boards, a rules mate or a free capture is
+    # the demonstration when the board has no label demonstration, played with
+    # punish["epsilon"]. Same mixture machinery as label guidance.
+    punishing = punish["mask"] if punish is not None and punish.get("epsilon", 0) > 0 else None
     if noisy is not None and guided is not None:
         raise ValueError("explore (noise) and guide (labels) cannot both be active")
 
@@ -134,10 +142,22 @@ def _collect_rollout(
             old_log_prob = torch.zeros(num_envs)
             entropy = torch.zeros(num_envs)
             num_legal = legal.sum(dim=1).float().clamp(min=1.0)
-            demos = envs.demo_actions(guided) if guided is not None else None
+            label_demos = envs.demo_actions(guided) if guided is not None else None
+            punish_demos = envs.punish_actions(punishing, punish["threshold"]) if punishing is not None else None
             guided_rows = None
-            if demos is not None:
-                guided_rows = torch.tensor([bool(guided[i]) and bool(demos[i]) for i in range(num_envs)])
+            demos = [set()] * num_envs
+            row_eps = torch.zeros(num_envs)
+            punish_rows = torch.zeros(num_envs, dtype=torch.bool)
+            if label_demos is not None or punish_demos is not None:
+                demos = []
+                for i in range(num_envs):
+                    if label_demos is not None and bool(guided[i]) and label_demos[i]:
+                        demos.append(label_demos[i]); row_eps[i] = guide["epsilon"]
+                    elif punish_demos is not None and bool(punishing[i]) and punish_demos[i]:
+                        demos.append(punish_demos[i]); row_eps[i] = punish["epsilon"]; punish_rows[i] = True
+                    else:
+                        demos.append(set())
+                guided_rows = torch.tensor([bool(d) for d in demos])
 
             learner = pool.learner_mask(players) if pool is not None else torch.ones(num_envs, dtype=torch.bool)
             if pool is not None:
@@ -169,7 +189,7 @@ def _collect_rollout(
                 elif guided_rows is not None and guided_rows[mask].any():
                     env_ids = mask.nonzero().squeeze(1).tolist()
                     row_demos = [demos[e] if guided_rows[e] else set() for e in env_ids]
-                    b = guided_probs(p, row_demos, guide["epsilon"])
+                    b = guided_probs(p, row_demos, row_eps[mask])
                     bdist = Categorical(probs=b)
                     # Sample the mixture by its components so we know when the demonstrator
                     # fired: with probability epsilon (rows with a demo) a uniform demo move,
@@ -178,16 +198,23 @@ def _collect_rollout(
                     # be the demo move counts as the network's (arm CURSIL2: flagging by
                     # action made every mate "teacher-made" and froze the curriculum).
                     a = dist.sample()
-                    fire = torch.rand(len(env_ids)) < guide["epsilon"]
-                    hits = 0
+                    fire = torch.rand(len(env_ids)) < row_eps[mask]
+                    hits = punish_hits = 0
                     for j, e in enumerate(env_ids):
                         if row_demos[j] and bool(fire[j]):
                             choices = sorted(row_demos[j])
                             a[j] = choices[int(torch.randint(len(choices), (1,)))]
-                            hits += 1
+                            if punish_rows[e]:
+                                punish_hits += 1
+                            else:
+                                hits += 1
                             demo_acted[e] = True
                     old_log_prob[mask] = bdist.log_prob(a)
-                    metrics.add_guide(count=int(guided_rows[mask].sum()), demo_picks=hits)
+                    label_rows = guided_rows & ~punish_rows
+                    if label_rows[mask].any():
+                        metrics.add_guide(count=int(label_rows[mask].sum()), demo_picks=hits)
+                    if punish_rows[mask].any():
+                        metrics.add_punish(count=int(punish_rows[mask].sum()), picks=punish_hits)
                 else:
                     a = dist.sample()
                     old_log_prob[mask] = dist.log_prob(a)
@@ -529,6 +556,7 @@ def run_chess_training(
     guide=None,
     pool=None,
     sil=None,
+    punish=None,
 ):
     """Run A2C or PPO self-play.
 
@@ -539,6 +567,9 @@ def run_chess_training(
     (puzzle + finishing boards) or `all`; the board mask is rebuilt every update.
     `guide`: None or dict(epsilon, boards): label-guided behaviour, the demonstrator
     (puzzle key move / human line / rules mate) is played with probability epsilon.
+    `punish`: None or dict(epsilon, threshold, boards): on its boards a rules mate or
+    a capture winning >= threshold net material is the demonstration when the board
+    has no label demonstration (change punish-gifts).
 
     `pool`: None or a `PoolBoards` (src/training/opponent_pool.py): its boards play
     the learner against a frozen pool member; after each update the pool may take
@@ -615,6 +646,10 @@ def run_chess_training(
         guide_now = None
         if guide is not None and guide.get("epsilon", 0) > 0:
             guide_now = {"epsilon": guide["epsilon"], "mask": _board_mask(guide.get("boards", "curriculum"))}
+        punish_now = None
+        if punish is not None and punish.get("epsilon", 0) > 0:
+            punish_now = {"epsilon": punish["epsilon"], "threshold": int(punish.get("threshold", 3)),
+                          "mask": _board_mask(punish.get("boards", "all"))}
         explore_now = None
         if explore is not None and explore.get("epsilon", 0) > 0:
             which = explore.get("boards", "curriculum")
@@ -639,6 +674,7 @@ def run_chess_training(
             explore=explore_now,
             guide=guide_now,
             pool=pool,
+            punish=punish_now,
         )
 
         bootstrap_white = _compute_bootstrap(

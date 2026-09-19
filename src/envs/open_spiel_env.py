@@ -40,6 +40,38 @@ def forcing_mate_actions_of(env) -> set[int]:
     return env.actions_for_uci(ucis) if ucis else set()
 
 
+PIECE_VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0}
+
+
+def capture_gain(board: chess.Board, move: chess.Move) -> int:
+    """Net material the side to move wins with `move`: the captured piece minus the
+    capturing piece when the destination can be recaptured (one exchange, no search)."""
+    if not board.is_capture(move):
+        return 0
+    victim = board.piece_at(move.to_square)
+    gained = PIECE_VALUE[victim.piece_type] if victim else 1        # en passant
+    board.push(move)
+    recapturable = any(m.to_square == move.to_square for m in board.legal_moves)
+    board.pop()
+    return gained - (PIECE_VALUE[board.piece_at(move.from_square).piece_type] if recapturable else 0)
+
+
+def best_gain(board: chess.Board) -> int:
+    """Largest net capture gain available to the side to move (0 if none)."""
+    return max((capture_gain(board, m) for m in board.legal_moves), default=0)
+
+
+def free_capture_actions_of(env, threshold: int = 3) -> set[int]:
+    """Legal actions that win at least `threshold` net material (rules, one ply):
+    the punisher's answer to a hung piece."""
+    state = env.env.get_state
+    if state.current_player() not in (0, 1):
+        return set()
+    board = chess.Board(state.to_string())
+    ucis = [m.uci() for m in board.legal_moves if capture_gain(board, m) >= threshold]
+    return env.actions_for_uci(ucis) if ucis else set()
+
+
 def mating_actions_of(env) -> list[int]:
     """Legal actions that mate at once (rules engine); [] if none."""
     state = env.env.get_state
@@ -77,6 +109,13 @@ class OpenSpielEnv:
         self.demo_line = list(ucis or [])
         self.demo_index = 0
         self.demo_alive = bool(self.demo_line)
+
+    def punish_actions(self, threshold: int = 3) -> set[int]:
+        """Punishing moves for the side to move: rules mates in one and captures that
+        win at least `threshold` net material (change punish-gifts)."""
+        if self.is_done():
+            return set()
+        return set(mating_actions_of(self)) | free_capture_actions_of(self, threshold)
 
     def demo_actions(self) -> set[int]:
         """Action ids the demonstrator would play now: the next move of the line while

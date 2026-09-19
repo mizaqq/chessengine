@@ -312,3 +312,16 @@ def test_sil_resolver():
         resolve_sil({"sil_updates": 4, "sil_batch": 300, "sil_buffer": 100})
     with pytest.raises(ValueError):
         resolve_sil({"sil_updates": 4, "shared_network": False})
+
+
+def test_punish_resolver():
+    from src.entrypoints.train import resolve_punish
+    assert resolve_punish({}) is None
+    assert resolve_punish({"punish_epsilon": 0}) is None
+    assert resolve_punish({"punish_epsilon": 0.5}) == {"epsilon": 0.5, "threshold": 3, "boards": "all"}
+    with pytest.raises(ValueError):
+        resolve_punish({"punish_epsilon": 1.0})
+    with pytest.raises(ValueError, match="threshold"):
+        resolve_punish({"punish_epsilon": 0.5, "punish_threshold": 0})
+    with pytest.raises(ValueError, match="punish_boards"):
+        resolve_punish({"punish_epsilon": 0.5, "punish_boards": "opening"})
