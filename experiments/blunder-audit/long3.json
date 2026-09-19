@@ -1,0 +1,34 @@
+{
+ "mover": "experiments/endgame-technique/LONG3",
+ "games_per_colour": 20,
+ "seed": 1,
+ "defenders": {
+  "self": {
+   "mover_plies": 2759,
+   "gift_mate_per100": 0.8698803914461761,
+   "gift_mate": 24,
+   "punish_rate_mate": 0.125,
+   "gift_material_per100": 9.568684305907938,
+   "gift_material": 264,
+   "punish_rate_material": 0.5416666666666666
+  },
+  "self_greedy": {
+   "mover_plies": 2758,
+   "gift_mate_per100": 0.4713560551124003,
+   "gift_mate": 13,
+   "punish_rate_mate": 0.3076923076923077,
+   "gift_material_per100": 10.841189267585207,
+   "gift_material": 299,
+   "punish_rate_material": 0.4882943143812709
+  },
+  "SL": {
+   "mover_plies": 3153,
+   "gift_mate_per100": 2.4421186171899776,
+   "gift_mate": 77,
+   "punish_rate_mate": 0.09090909090909091,
+   "gift_material_per100": 8.309546463685379,
+   "gift_material": 262,
+   "punish_rate_material": 0.48854961832061067
+  }
+ }
+}
