@@ -479,3 +479,27 @@ over 100 episodes, all episodes counted; training success at d6 / d8 0.05-0.36).
 2. **Self-demonstrations** on finishing boards (own winning line replaces the human's
    once one exists for the record), which the calibration says targets the right ply.
 3. Entropy guard: if it slides under 0.27, raise entropy_coef or shorten the run.
+
+## DEPTH20 (2026-09-19): LONG3 + 120 updates, human finishing depth uniform over [0, 20]
+
+Owner: "lets go with option 1. The model has to know the idea if it can mate in 10 so
+expanding it further should work." Config change only: `finish_depth_start = finish_depth_max
+= 20`, so the curriculum cannot move and depths 10 and 20 appear in training for the first time
+(LONG3's curriculum sat at 8 all run). Everything else as LONG3.
+
+| dial | LONG3 | DEPTH20 |
+|---|---|---|
+| finishing d2 / d10 / d20 (held-out) | 0.43 / 0.13 / 0.11 | 0.40 / **0.20** / 0.13 |
+| mate-in-1 / 2 / 3 / 4 / endgame (held-out top-1) | 0.808 / 0.723 / 0.691 / 0.590 / 0.747 | 0.804 / 0.723 / 0.683 / 0.580 / 0.751 |
+| own-game mate-in-one | 0.387 | 0.352 |
+| prior_score (20 games) | 0.44 | 0.41 |
+| head to head, decisive (DEPTH20 view) | - | 12 to 9 for DEPTH20 |
+| game entropy | 0.283 | 0.288 |
+| training finishing attempts per depth (last update) | 0-8 only | 5-9 per depth up to 20 |
+
+Reading: the first movement on depth 10 in the project's history (0.13 -> 0.20 after 120
+updates, 100 held-out games, so roughly +-0.04 noise: real but modest), depth 20 within noise.
+Puzzles held within noise; own-game mate-in-one down 0.03 (noise band). Training success at the
+new depths after 120 updates: 0.25-0.6 on 5-9 attempts each, i.e. the boards are being won, so
+the signal exists. Verdict: option 1 works as a mechanism and costs nothing; the depth-20 dial
+needs more than 120 updates or the punisher. DEPTH20 is the start checkpoint for PUNISH.

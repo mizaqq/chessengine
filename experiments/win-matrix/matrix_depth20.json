@@ -1,0 +1,36 @@
+{
+ "names": [
+  "LONG3",
+  "DEPTH20"
+ ],
+ "dirs": {
+  "LONG3": "experiments/endgame-technique/LONG3",
+  "DEPTH20": "experiments/endgame-technique/DEPTH20"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "LONG3": {
+   "DEPTH20": 0.475
+  },
+  "DEPTH20": {
+   "LONG3": 0.525
+  }
+ },
+ "counts": [
+  {
+   "a": "LONG3",
+   "b": "DEPTH20",
+   "counts": {
+    "a_white_draw": 17,
+    "a_black_draw": 19,
+    "a_white_unfinished": 2,
+    "a_white_black_win": 4,
+    "a_black_white_win": 8,
+    "a_white_white_win": 7,
+    "a_black_unfinished": 1,
+    "a_black_black_win": 2
+   }
+  }
+ ]
+}
