@@ -194,6 +194,21 @@ reach for it. Prune anything that turns out shallow or wrong.
   cured by an ensemble pool. Use for: opponent pool from saved checkpoints, and
   the checkpoint-vs-checkpoint win matrix as the "cycling" probe.
 
+- [Paper: "Open-ended Learning in Symmetric Zero-sum Games" — Balduzzi et al. (ICML 2019)](https://arxiv.org/abs/1901.08106)
+  Abstract and §1 read 2026-09-19: self-play produces a sequence of stronger agents
+  only when "the game is approximately transitive"; in nontransitive games there are
+  "strategic cycles" and "we want agents to increase in strength, but against whom is
+  unclear". Proposes response oracles against a population (PSRO_rN) instead of the
+  latest self. Use for: reading the blunder audit (LONG3 beats LONG2 while hanging a
+  piece every ten plies: beating the current self is not the same as getting better).
+
+- [Blog: "AlphaStar: Grandmaster level in StarCraft II using multi-agent RL" — Vinyals et al. (DeepMind, 2019; Nature paper behind it)](https://deepmind.google/discover/blog/alphastar-grandmaster-level-in-starcraft-ii-using-multi-agent-reinforcement-learning/)
+  Read 2026-09-19 (league section): "playing to win is insufficient"; exploiter
+  agents "whose sole purpose is to expose weaknesses of the main agent" are added to
+  the league so that valid strategies are not forgotten and the main agent becomes
+  robust. Use for: the one-ply rules punisher as a hand-made exploiter of gifts
+  (hanging pieces, allowed mates); change `punish-gifts`.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
