@@ -1,0 +1,36 @@
+{
+ "names": [
+  "START",
+  "PUNISH"
+ ],
+ "dirs": {
+  "START": "experiments/endgame-technique/DEPTH20",
+  "PUNISH": "experiments/punish-gifts/PUNISH"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "START": {
+   "PUNISH": 0.45
+  },
+  "PUNISH": {
+   "START": 0.55
+  }
+ },
+ "counts": [
+  {
+   "a": "START",
+   "b": "PUNISH",
+   "counts": {
+    "a_white_unfinished": 1,
+    "a_black_draw": 14,
+    "a_white_draw": 21,
+    "a_black_unfinished": 2,
+    "a_black_white_win": 9,
+    "a_white_black_win": 5,
+    "a_black_black_win": 5,
+    "a_white_white_win": 3
+   }
+  }
+ ]
+}

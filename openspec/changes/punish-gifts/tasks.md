@@ -10,8 +10,8 @@
 
 ## 3. Experiment
 
-- [ ] 3.1 Driver `experiments/punish-gifts/run_punish.sh`: 120 updates from the chosen checkpoint, `punish_epsilon 0.5`, then games, finishes, blunder audit (self / SL), win matrix vs the start checkpoint. Verify: run.json, audit json, matrix json committed.
-- [ ] 3.2 Write `experiments/punish-gifts/outcome.md`: gift rates and punish rates before/after, puzzles, own-game m1, entropy, verdict.
+- [x] 3.1 Driver `experiments/punish-gifts/run_punish.sh`: 120 updates from the chosen checkpoint, `punish_epsilon 0.5`, then games, finishes, blunder audit (self / SL), win matrix vs the start checkpoint. Verify: run.json, audit json, matrix json committed.
+- [x] 3.2 Write `experiments/punish-gifts/outcome.md`: gift rates and punish rates before/after, puzzles, own-game m1, entropy, verdict.
 
 ## 4. Comprehension
 

@@ -1,0 +1,19 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 22,
+  "white_win": 9,
+  "black_win": 9
+ },
+ "draw_rate": 0.55,
+ "decisive_rate": 0.45,
+ "mate_in_one_opportunities": 70,
+ "mate_in_one_found": 18,
+ "mate_in_one_rate": 0.2571428571428571,
+ "mean_plies": 138.4,
+ "checkpoints": {
+  "model": "experiments/punish-gifts/PUNISH/model_20260919120729_episodes_120.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}
