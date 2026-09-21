@@ -29,13 +29,14 @@ from src.eval.matches import play_match, score_from_counts  # noqa: E402
 
 def play_pair(job):
     """One pairing, both colours. Returns counts from the first name's side."""
-    (a, dir_a), (b, dir_b), games, seed = job
+    (a, dir_a), (b, dir_b), games, seed = job[:4]
+    start_fens = job[4] if len(job) > 4 else None
     torch.set_num_threads(1)
     ma, _, oa, _ = load_models(dir_a)
     mb, _, ob, _ = load_models(dir_b)
     if not (oa and ob):
         raise ValueError("matrix expects shared (oriented) checkpoints")
-    return a, b, play_match(ma, mb, games, seed)
+    return a, b, play_match(ma, mb, games, seed, start_fens=start_fens)
 
 
 def build_table(names, pair_results):
@@ -65,10 +66,15 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--start-file", type=Path, default=None, help="CSV with a `fen` column: games start from these positions instead of the opening")
     args = ap.parse_args()
     entries = [e.split("=", 1) for e in args.entries]
     names = [n for n, _ in entries]
-    jobs = [(entries[i], entries[j], args.games, args.seed * 1000 + i * 31 + j)
+    start_fens = None
+    if args.start_file:
+        from src.envs.start_positions import load_fens
+        start_fens = load_fens(args.start_file)
+    jobs = [(entries[i], entries[j], args.games, args.seed * 1000 + i * 31 + j, start_fens)
             for i in range(len(entries)) for j in range(i + 1, len(entries))]
     t0 = time.time()
     if args.workers > 1:
@@ -85,7 +91,7 @@ def main():
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps({"names": names, "dirs": dict(entries), "games_per_colour": args.games,
-                                        "seed": args.seed, "table": table,
+                                        "seed": args.seed, "table": table, "start_file": str(args.start_file) if args.start_file else None,
                                         "counts": [{"a": a, "b": b, "counts": c} for a, b, c in results]}, indent=1))
 
 

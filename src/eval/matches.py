@@ -14,13 +14,18 @@ from src.viz.play import play_game
 RESULT_SCORE_WHITE = {"white_win": 1.0, "black_win": 0.0, "draw": 0.5, "unfinished": 0.5}
 
 
-def play_match(model_a, model_b, games_per_colour: int, seed: int = 0) -> Dict[str, int]:
-    """Counts keyed `a_<colour>_<result>`, colour = the colour model_a played."""
+def play_match(model_a, model_b, games_per_colour: int, seed: int = 0, start_fens=None) -> Dict[str, int]:
+    """Counts keyed `a_<colour>_<result>`, colour = the colour model_a played.
+    `start_fens`: optional list of positions; each pair of games (both colours) starts
+    from one drawn with `seed` (mid-game matches, scripts/eval_matrix.py --start-file)."""
+    import random
     counts: Counter = Counter()
     torch.manual_seed(seed)
+    rng = random.Random(seed)
     for _ in range(games_per_colour):
-        counts["a_white_" + play_game(model_a, model_b, greedy=False, oriented=True).result] += 1
-        counts["a_black_" + play_game(model_b, model_a, greedy=False, oriented=True).result] += 1
+        fen = rng.choice(start_fens) if start_fens else None
+        counts["a_white_" + play_game(model_a, model_b, greedy=False, oriented=True, start_fen=fen).result] += 1
+        counts["a_black_" + play_game(model_b, model_a, greedy=False, oriented=True, start_fen=fen).result] += 1
     return dict(counts)
 
 

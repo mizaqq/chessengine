@@ -46,8 +46,11 @@ def play_game(
     greedy_white: Optional[bool] = None,
     greedy_black: Optional[bool] = None,
     oriented: bool = False,
+    start_fen: Optional[str] = None,
 ) -> GameRecord:
     """Play a single game and return per-move records plus the result.
+
+    `start_fen`: start from this position instead of the opening (mid-game matches).
 
     `greedy` applies to both sides; `greedy_white` / `greedy_black` override it per
     side. Greedy means argmax (deterministic, ignores `seed`); otherwise moves are
@@ -60,7 +63,7 @@ def play_game(
     if seed is not None:
         torch.manual_seed(seed)
     env = OpenSpielEnv()
-    env.reset()
+    env.reset(start_fen)
     models = {WHITE: white_model.eval(), BLACK: black_model.eval()}
     game = GameRecord()
 
