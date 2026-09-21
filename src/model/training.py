@@ -1,4 +1,5 @@
 import torch
+from pathlib import Path
 from tqdm import tqdm
 from torch.distributions import Categorical
 from src.core.types import StepRecord
@@ -571,6 +572,7 @@ def run_chess_training(
     sil=None,
     punish=None,
     referee=None,
+    progress_path=None,
 ):
     """Run A2C or PPO self-play.
 
@@ -779,6 +781,11 @@ def run_chess_training(
             logs.append({"episode": episode, "loss": total_loss, **summary, **eval_metrics})
         elif eval_metrics:
             logs.append({"episode": episode, "loss": total_loss, **eval_metrics})
+        if progress_path is not None and (episode % log_interval == 0 or eval_metrics or episode == episodes):
+            # Live view for scripts/dashboard.py: the logs so far plus where the run is.
+            import json, time as _time
+            Path(progress_path).write_text(json.dumps({"episode": episode, "episodes": episodes,
+                                                       "updated": _time.time(), "logs": logs}))
 
     if hasattr(envs, "close"):
         envs.close()

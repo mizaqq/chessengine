@@ -39,3 +39,6 @@ data/raw/
 # human-game pretraining sets are rebuilt by scripts/prepare_games.py
 data/games/*.npz
 *.gif
+
+# Local dashboard output (regenerate with python -m scripts.dashboard)
+dashboard/

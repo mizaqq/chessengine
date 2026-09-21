@@ -552,6 +552,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         sil=sil,
         punish=punish,
         referee=referee,
+        progress_path=config.get("progress_file"),
     )
 
     sampler_state = finish_sampler.state() if hasattr(finish_sampler, "state") else None

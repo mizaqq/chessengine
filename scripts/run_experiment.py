@@ -32,6 +32,8 @@ def main():
         key, raw = item.split("=", 1)
         config[key] = parse_value(raw)
 
+    args.out.mkdir(parents=True, exist_ok=True)
+    config.setdefault("progress_file", str(args.out / "progress.json"))   # live view for scripts/dashboard.py
     start = time.time()
     result = run_training_from_config(config)
     elapsed = time.time() - start
