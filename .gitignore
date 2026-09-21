@@ -41,4 +41,4 @@ data/games/*.npz
 *.gif
 
 # Local dashboard output (regenerate with python -m scripts.dashboard)
-dashboard/
+/dashboard/
