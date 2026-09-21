@@ -394,6 +394,28 @@ def resolve_referee(config: Dict[str, Any]):
     return {"threshold": threshold}
 
 
+def resolve_guards(config: Dict[str, Any]):
+    """PPO guards (change ppo-guards): `target_kl` positive or null (default 0.03);
+    `stop_below_prior` in (0, 1) or null (default 0.5, only with prior_eval_games > 0);
+    `stop_patience` >= 1 (default 2)."""
+    tk = config.get("target_kl", 0.03)
+    if tk is not None:
+        tk = float(tk)
+        if tk <= 0:
+            raise ValueError(f"target_kl must be > 0 or null, got {tk}")
+    sbp = config.get("stop_below_prior", 0.5)
+    if sbp is not None:
+        sbp = float(sbp)
+        if not 0 < sbp < 1:
+            raise ValueError(f"stop_below_prior must be in (0, 1) or null, got {sbp}")
+        if int(config.get("prior_eval_games", 0) or 0) <= 0:
+            sbp = None                                   # no prior match: the alarm cannot fire
+    patience = int(config.get("stop_patience", 2))
+    if patience < 1:
+        raise ValueError(f"stop_patience must be >= 1, got {patience}")
+    return {"target_kl": tk, "stop_below_prior": sbp, "stop_patience": patience}
+
+
 def resolve_layout_schedule(config: Dict[str, Any], num_puzzle_envs: int):
     """`layout_schedule: [{from_update, finish_boards, midgame_boards}, ...]`: board
     roles after the puzzle boards switch at those updates (boards beyond the three
@@ -486,6 +508,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     guide = resolve_guide(config)
     punish = resolve_punish(config)
     referee = resolve_referee(config)
+    guards = resolve_guards(config)
     pool = resolve_opponent_pool(config, num_puzzle_envs + num_finish_envs)
     sil = resolve_sil(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
@@ -553,6 +576,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         punish=punish,
         referee=referee,
         progress_path=config.get("progress_file"),
+        **guards,
     )
 
     sampler_state = finish_sampler.state() if hasattr(finish_sampler, "state") else None

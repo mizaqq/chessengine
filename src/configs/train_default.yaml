@@ -25,6 +25,15 @@ env_type: sync
 
 gamma: 0.99
 entropy_coef: 0.01
+# PPO guards (change ppo-guards, 2026-09-21, after LONG256B drifted: KL 0.04 -> 0.06, clip
+# 0.16 -> 0.26, puzzles 0.80 -> 0.54). target_kl: before each minibatch step the clean-sample
+# approx KL is checked; above it no more steps this update (Spinning Up PPO; their default
+# 0.01, our healthy band 0.02-0.04). null = off. stop_below_prior / stop_patience: stop when
+# prior_score is below the threshold at that many consecutive evaluations and restore the
+# last good weights (needs prior_eval_games > 0). Summary: mean_kl_stop, mean_optimizer_steps.
+target_kl: 0.03
+stop_below_prior: 0.5
+stop_patience: 2
 grad_clip: 1.0
 
 # Reward shaping (Ng, Harada & Russell 1999). `potential`: each own move gets

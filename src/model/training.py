@@ -379,7 +379,7 @@ _EMPTY_STATS = {
 }
 
 _EMPTY_UPDATE = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0,
-                 "clip_fraction": None, "approx_kl": None, "optimizer_steps": 0, "sample_count": 0}
+                 "clip_fraction": None, "approx_kl": None, "optimizer_steps": 0, "sample_count": 0, "kl_stop": 0.0}
 
 
 def _gather_side(steps_data, advantages, targets, model_id, puzzle_env_mask=None):
@@ -463,9 +463,14 @@ def ppo_policy_loss(new_log_prob, old_log_prob, advantages, clip_epsilon):
 def update_model(
     model, optimizer, batch, *, epochs=1, minibatches=1, clip_epsilon=None,
     normalize_advantage=False, value_coef=1.0, entropy_coef=0.01, grad_clip=1.0,
-    generator=None,
+    generator=None, target_kl=None,
 ):
     """Turn one gathered batch into `epochs * minibatches` optimizer steps.
+
+    `target_kl` (change ppo-guards): before each step the minibatch's mean approx KL on
+    clean samples is checked; above the target no further steps are taken this update
+    (Spinning Up PPO: "If the mean KL-divergence of the new policy from the old grows
+    beyond a threshold, we stop taking gradient steps"). Reported as `kl_stop` (0/1).
 
     Each minibatch re-runs the network on the stored observations, forms the
     probability ratio against the stored log-probs, and minimises
@@ -480,11 +485,21 @@ def update_model(
     n = batch["obs"].shape[0]
     sums = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
     steps = 0
+    kl_stop = 0.0
     for _ in range(epochs):
         for idx in _minibatch_indices(n, minibatches, generator):
             probs, value = model(batch["obs"][idx], batch["legal_mask"][idx])
             dist = Categorical(probs=probs)
             new_log_prob = dist.log_prob(batch["action"][idx])
+            if target_kl is not None:
+                with torch.no_grad():
+                    clean0 = ~batch["noisy"][idx] if "noisy" in batch else torch.ones(len(idx), dtype=torch.bool)
+                    if not clean0.any():
+                        clean0 = torch.ones(len(idx), dtype=torch.bool)
+                    kl_now = (batch["old_log_prob"][idx][clean0] - new_log_prob[clean0]).mean().item()
+                if kl_now > target_kl:
+                    kl_stop = 1.0
+                    break
             adv = batch["adv"][idx]
             if normalize_advantage:
                 adv = (adv - adv.mean()) / (adv.std(unbiased=False) + 1e-8) if len(adv) > 1 else torch.zeros_like(adv)
@@ -513,11 +528,17 @@ def update_model(
                 if clip_epsilon is not None:
                     sums["clip_fraction"] += ((ratio[clean] - 1.0).abs() > clip_epsilon).float().mean().item()
                 sums["approx_kl"] += (batch["old_log_prob"][idx][clean] - new_log_prob[clean]).mean().item()
-    out = {k: v / steps for k, v in sums.items()}
-    if clip_epsilon is None:
-        out["clip_fraction"] = None
+        else:
+            continue
+        break                      # target_kl tripped: leave the epoch loop too
+    out = {k: (v / steps if steps else 0.0) for k, v in sums.items()}
+    if clip_epsilon is None or steps == 0:
+        out["clip_fraction"] = None if clip_epsilon is None else out["clip_fraction"]
+    if steps == 0:
+        out["approx_kl"] = None
     out["optimizer_steps"] = steps
     out["sample_count"] = n
+    out["kl_stop"] = kl_stop
     return out
 
 
@@ -573,8 +594,16 @@ def run_chess_training(
     punish=None,
     referee=None,
     progress_path=None,
+    target_kl=None,
+    stop_below_prior=None,
+    stop_patience=2,
 ):
     """Run A2C or PPO self-play.
+
+    `target_kl`: PPO early stop per update (see `update_model`). `stop_below_prior` /
+    `stop_patience` (change ppo-guards): when the evaluation's `prior_score` is below the
+    threshold at `stop_patience` consecutive evaluations, training stops and both models
+    are restored to their weights at the last evaluation that passed.
 
     `layout_schedule`: list of {from_update, finish_boards, midgame_boards}; at
     `from_update` the env's board roles after the puzzle boards are switched
@@ -630,6 +659,10 @@ def run_chess_training(
     puzzle_env_mask = torch.arange(num_envs) < num_puzzle_envs
     import time as _time0
     run_started = _time0.time()
+    import copy as _copy0
+    below_streak = 0
+    good_state = (_copy0.deepcopy(white_model.state_dict()),
+                  _copy0.deepcopy(black_model.state_dict()) if black_model is not None else None)
     logs = []
     losses = []
     env_step = envs.reset()
@@ -715,7 +748,7 @@ def run_chess_training(
         )
         g_w = _gather_side(steps_data, adv_w, tgt_w, WHITE, puzzle_env_mask)
         g_b = _gather_side(steps_data, adv_b, tgt_b, BLACK, puzzle_env_mask)
-        update_kwargs = dict(algo, entropy_coef=entropy_coef, grad_clip=grad_clip)
+        update_kwargs = dict(algo, entropy_coef=entropy_coef, grad_clip=grad_clip, target_kl=target_kl)
 
         if shared:
             # One batch of both colours' own steps, one optimizer.
@@ -762,6 +795,8 @@ def run_chess_training(
             value_loss=_sample_weighted(updates, "value_loss"),
             clip_fraction=_sample_weighted(updates, "clip_fraction"),
             approx_kl=_sample_weighted(updates, "approx_kl"),
+            kl_stop=(max(u.get("kl_stop", 0.0) for u in updates) if updates else None),
+            optimizer_steps=(sum(u.get("optimizer_steps", 0) for u in updates) if updates else None),
         )
 
         pbar.set_postfix(loss=total_loss)
@@ -777,12 +812,35 @@ def run_chess_training(
             episode % eval_interval == 0 or episode == episodes
         )
         eval_metrics = eval_fn(white_model, black_model) if eval_due else {}
+        alarm = False
+        if eval_metrics and stop_below_prior is not None and eval_metrics.get("prior_score") is not None:
+            import copy as _copy
+            if eval_metrics["prior_score"] < stop_below_prior:
+                below_streak += 1
+            else:
+                below_streak = 0
+                good_state = (_copy.deepcopy(white_model.state_dict()),
+                              _copy.deepcopy(black_model.state_dict()) if black_model is not None else None)
+            if below_streak >= stop_patience:
+                alarm = True
+                eval_metrics = {**eval_metrics, "alarm_stop": episode}
+                print(f"update {episode}: prior_score {eval_metrics['prior_score']:.2f} below {stop_below_prior} "
+                      f"at {below_streak} evaluations; stopping and restoring the last good weights", flush=True)
 
         if episode % log_interval == 0:
             summary = metrics.episode_summary()
             logs.append({"episode": episode, "loss": total_loss, **summary, **eval_metrics})
         elif eval_metrics:
             logs.append({"episode": episode, "loss": total_loss, **eval_metrics})
+        if alarm:
+            white_model.load_state_dict(good_state[0])
+            if black_model is not None and good_state[1] is not None:
+                black_model.load_state_dict(good_state[1])
+            if progress_path is not None:
+                import json, time as _time
+                Path(progress_path).write_text(json.dumps({"episode": episode, "episodes": episodes, "started": run_started,
+                                                           "updated": _time.time(), "logs": logs}))
+            break
         if progress_path is not None and (episode % log_interval == 0 or eval_metrics or episode == episodes):
             # Live view for scripts/dashboard.py: the logs so far plus where the run is.
             import json, time as _time

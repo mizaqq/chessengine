@@ -217,3 +217,20 @@ def test_diagnostics_use_clean_samples_only():
     m = Const()
     out = update_model(m, torch.optim.SGD(m.parameters(), lr=0.0), batch, epochs=1, minibatches=1, clip_epsilon=0.2)
     assert out["clip_fraction"] == 0.0 and abs(out["approx_kl"]) < 1e-6
+
+
+def test_target_kl_stops_further_steps_and_reports_it():
+    model = ChessPolicyProbs(num_filters=8)
+    _, batch = _batch(model)
+    opt = CountingAdam(model.parameters(), lr=1e-4)
+    # an impossibly small target: the first minibatch's KL is ~0 (ratio 1), so exactly one step is taken
+    # before the second minibatch's KL (now > 0 after the step) trips the guard
+    out = update_model(model, opt, batch, epochs=4, minibatches=4, clip_epsilon=0.2, target_kl=1e-12)
+    assert 1 <= opt.steps < 16 and out["optimizer_steps"] == opt.steps and out["kl_stop"] == 1.0
+    model2 = ChessPolicyProbs(num_filters=8)
+    _, batch2 = _batch(model2)
+    opt2 = CountingAdam(model2.parameters(), lr=1e-4)
+    out2 = update_model(model2, opt2, batch2, epochs=4, minibatches=4, clip_epsilon=0.2, target_kl=10.0)
+    assert opt2.steps == 16 and out2["kl_stop"] == 0.0
+    out3 = update_model(model2, opt2, batch2, epochs=1, minibatches=1, clip_epsilon=0.2, target_kl=None)
+    assert out3["kl_stop"] == 0.0 and out3["optimizer_steps"] == 1

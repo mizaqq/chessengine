@@ -333,3 +333,14 @@ def test_referee_resolver():
     assert resolve_referee({"pool_referee": True, "opponent_pool_boards": 5}) == {"threshold": 3}
     with pytest.raises(ValueError, match="opponent_pool_boards"):
         resolve_referee({"pool_referee": True})
+
+
+def test_guards_resolver():
+    from src.entrypoints.train import resolve_guards
+    assert resolve_guards({"prior_eval_games": 20}) == {"target_kl": 0.03, "stop_below_prior": 0.5, "stop_patience": 2}
+    assert resolve_guards({})["stop_below_prior"] is None            # no prior match: alarm off
+    assert resolve_guards({"target_kl": None})["target_kl"] is None
+    with pytest.raises(ValueError):
+        resolve_guards({"target_kl": 0})
+    with pytest.raises(ValueError):
+        resolve_guards({"prior_eval_games": 20, "stop_below_prior": 1.5})
