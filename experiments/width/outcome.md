@@ -341,3 +341,32 @@ within their 40/100/50-game noise bands.
 Verdict: LONG256G is the best checkpoint. The guarded recipe (target_kl 0.02, alarm, optimizer
 persistence) is the default for the 256 line. Open question for the continuation: the late
 narrowing of the training-time prior margin; the alarm exists for exactly that.
+
+## LONG256H (2026-09-21 night): guarded continuation of LONG256G — alarm at update 300
+
+Optimizer restored, lr 1e-4, target_kl 0.02, alarm on 40 games. Training-time prior match:
+34-19, 36-21, 30-16, 30-22, **25-28, 20-36** at 50..300 -> alarm; weights restored to update 200
+(the last passing evaluation). Held-out m1 during the run: 0.817 (50), 0.807 (150), 0.786
+(250) — declining from the start. Entropy 0.26 -> 0.17 by update 210. The KL guard fired on
+every update and left 4.8 of 16 steps: even at ~one pass per update the policy kept moving
+in a direction that lost games and puzzles.
+
+| 200-game matches from the opening | decisive W-L |
+|---|---|
+| LONG256G vs prior | 96-38 |
+| LONG256H (weights of update 200) vs prior | 75-44 |
+| LONG256G vs LONG256H | **87-61** |
+
+Reading: the alarm did its job and kept a checkpoint that still beats the prior, but the
+continuation never improved on LONG256G — it declined from its first evaluation. Two
+continuations of the 256 line (from LONG256 unguarded, from LONG256G guarded) now show the
+same picture: after ~600 updates from this prior, further PPO updates under this recipe make
+the policy sharper (entropy < 0.2) and weaker, and the KL guard slows the descent without
+changing its direction. LONG256G stays the best checkpoint; its own late-run prior margin
+(29-26, 24-18 at 550/600) was the early warning.
+
+What this points at (owner decides tomorrow): the ceiling is in the recipe, not the step
+size — candidates are the opponent pool (snapshots of an already-sharp self), the
+self-imitation buffer (replaying the sharp policy's own wins), and the learning rate floor
+(no decay: min_lr = lr). A better prior (two high-Elo months, running tonight) raises the
+ceiling without touching the recipe; the recipe question remains.
