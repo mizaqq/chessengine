@@ -1,0 +1,34 @@
+{
+ "names": [
+  "LONG256",
+  "ENT10"
+ ],
+ "dirs": {
+  "LONG256": "experiments/width/LONG256",
+  "ENT10": "experiments/width/ENT10"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "LONG256": {
+   "ENT10": 0.5916666666666667
+  },
+  "ENT10": {
+   "LONG256": 0.4083333333333333
+  }
+ },
+ "counts": [
+  {
+   "a": "LONG256",
+   "b": "ENT10",
+   "counts": {
+    "a_white_white_win": 15,
+    "a_black_white_win": 10,
+    "a_white_draw": 7,
+    "a_black_black_win": 14,
+    "a_white_black_win": 8,
+    "a_black_draw": 6
+   }
+  }
+ ]
+}

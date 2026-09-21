@@ -1,0 +1,19 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 15,
+  "black_win": 11,
+  "white_win": 14
+ },
+ "draw_rate": 0.375,
+ "decisive_rate": 0.625,
+ "mate_in_one_opportunities": 70,
+ "mate_in_one_found": 25,
+ "mate_in_one_rate": 0.35714285714285715,
+ "mean_plies": 101.825,
+ "checkpoints": {
+  "model": "experiments/width/ENT10/model_20260921170750_episodes_120.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

@@ -154,3 +154,20 @@ Open question (owner): is a sharp policy a problem in itself? The dials say no y
 up, strength level); the risk is the AlphaGo-SL lesson that a narrow policy explores less
 and will plateau. Options: entropy_coef 0.1 (a real step), a KL-target / early stop per
 update, or accept and watch prior_score on the next long run.
+
+## ENT10 (2026-09-21): LONG256 + 120 updates, entropy_coef 0.1
+
+| dial | LONG256 | ENT10 |
+|---|---|---|
+| game entropy | 0.198 | 0.216 (stopped sliding, barely up) |
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.802 / 0.728 / 0.666 / 0.573 / 0.753 | 0.783 / 0.719 / 0.643 / 0.571 / 0.721 |
+| own-game mate-in-one | 0.408 | 0.357 |
+| finishing d2 / d10 / d20 | 0.53 / 0.34 / 0.20 | 0.45 / 0.26 / 0.22 |
+| prior_score | 0.64 | 0.48 |
+| vs LONG256, decisive | - | 18-29 |
+
+Reading: at 0.1 the bonus finally registers — the slide stops (0.198 -> 0.216) — but every
+skill dial pays for it and LONG256 beats the arm 29-18. The guard rule in the driver
+(entropy +0.03 and m1 not down > 0.01) rejected it; LONG256B runs without an entropy guard,
+with prior_score as the alarm. Lesson: in this loss the entropy term becomes visible around
+0.1 in normalised units, and at that size it costs more skill than the sharpness costs strength.
