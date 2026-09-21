@@ -8,7 +8,7 @@
 set -e
 cd "$(dirname "$0")/../.."
 PY=.venv/bin/python
-until grep -q "wrote .* human_big_train.npz" experiments/human-pretraining/prepare_big.log && grep -q "WIDTH all done" experiments/width/run_compare.log; do sleep 120; done
+until grep -q "human_big_train.npz" experiments/human-pretraining/prepare_big.log && grep -q "WIDTH all done" experiments/width/run_compare.log; do sleep 120; done
 for NF in 128 192; do
   OUT=experiments/human-pretraining/slbig$NF; mkdir -p $OUT
   echo "=== SLBIG$NF start $(date +%H:%M:%S)"
