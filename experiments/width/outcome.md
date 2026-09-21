@@ -69,3 +69,27 @@ Counts unchanged per the owner (120 / 600) until told otherwise.
 Next (owner decides): (1) continue LONG192 for 600 more (curves still rising); (2) redo the
 key ablations on the new line only where the old result may not transfer (lambda, punisher);
 (3) more data still: one more Lichess month roughly doubles the positions.
+
+## LONG192B (2026-09-21): LONG192 + 600 updates (owner: "lets go with 1 and 2")
+
+| dial | LONG192 (600) | LONG192B (1,200) |
+|---|---|---|
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.749 / 0.672 / 0.619 / 0.535 / 0.677 | **0.775 / 0.701 / 0.659 / 0.571 / 0.714** |
+| own-game mate-in-one (40 games) | 0.267 | **0.492** (project best) |
+| decisive share, own games | 0.60 | 0.75 |
+| finishing d2 / d10 / d20 | 0.43 / 0.20 / 0.20 | 0.45 / 0.19 / 0.19 |
+| technique Q / R / RR / QR | 0.10 / 0.08 / 0.20 / 0.38 | 0.30 / 0.12 / 0.20 / 0.26 |
+| gifts per 100 plies / own punish | 8.2 / 0.62 | 8.1 / 0.69 |
+| game entropy / KL | 0.367 / 0.022 | 0.310 / 0.024 |
+| vs slbig192 (own prior), decisive | 20-11 | **30-5** |
+| vs LONG192, decisive | - | 22-19 |
+| wall clock | 44 min | 56 min (GPU shared with pretraining) |
+
+Reading: every puzzle set up again (+0.03 to +0.04), own-game mate-in-one nearly doubled, the
+network now beats its prior 30-5 where the old lineage never got past par with its own.
+Head to head with LONG192 only 22-19: game strength is saturating against a same-lineage
+opponent while the skill dials still climb. Finishing at depth 10/20 flat at ~0.19 (the one
+dial that has not moved on the new line either). Entropy 0.37 -> 0.31, still above the old
+lineage's 0.28. LONG192B is the current best checkpoint. Meanwhile the two-month 192 prior
+(sl2m192, 2.85M positions) reached top-1 0.432 and beats slbig192 21-6: the next long run
+should start from a better prior rather than continue this one.
