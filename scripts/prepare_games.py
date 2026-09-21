@@ -185,20 +185,23 @@ def main():
     ap.add_argument("--eval-frac", type=float, default=0.05)
     ap.add_argument("--midgame", type=int, default=50_000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--prefix", default="human", help="output files <prefix>_train.npz / <prefix>_eval.npz")
+    ap.add_argument("--midgame-out", default="midgame_starts.csv")
     args = ap.parse_args()
 
     dump = download(args.month, RAW_DIR / f"lichess_db_standard_rated_{args.month}.pgn.zst")
     train, ev, mid_fens = collect(open_pgn(dump), args.min_elo, args.positions, args.per_game,
                                   args.eval_frac, args.midgame, args.seed)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    with open(OUT_DIR / "midgame_starts.csv", "w", newline="") as fh:
+    with open(OUT_DIR / args.midgame_out, "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(["fen"]); w.writerows([[f] for f in mid_fens])
     env = OpenSpielEnv()
     for name, samples in (("eval", ev), ("train", train)):
         print(f"encoding {name} ({len(samples)} positions)", flush=True)
         arrays = encode(samples, env)
-        np.savez_compressed(OUT_DIR / f"human_{name}.npz", **arrays)
-        print(f"  wrote {len(arrays['action'])} rows to {OUT_DIR / f'human_{name}.npz'}", flush=True)
+        out = OUT_DIR / f"{args.prefix}_{name}.npz"
+        np.savez_compressed(out, **arrays)
+        print(f"  wrote {len(arrays['action'])} rows to {out}", flush=True)
 
 
 if __name__ == "__main__":
