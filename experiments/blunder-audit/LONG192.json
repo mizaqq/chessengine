@@ -1,0 +1,16 @@
+{
+ "mover": "experiments/width/LONG192",
+ "games_per_colour": 20,
+ "seed": 1,
+ "defenders": {
+  "self": {
+   "mover_plies": 2016,
+   "gift_mate_per100": 1.4880952380952381,
+   "gift_mate": 30,
+   "punish_rate_mate": 0.3,
+   "gift_material_per100": 8.234126984126984,
+   "gift_material": 166,
+   "punish_rate_material": 0.6204819277108434
+  }
+ }
+}

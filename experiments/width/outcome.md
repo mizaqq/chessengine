@@ -1,0 +1,71 @@
+# width: outcome
+
+## Question
+Is the 128x10 network the ceiling? Owner (2026-09-21): compare 192 vs 128 with the same recipe;
+"the actual test will be long run, but we should fix data there" (the priors were data-starved).
+
+## Priors (supervised, same recipe, GPU)
+
+| prior | data | held-out human top-1 | eval CE | m1 / m2 puzzles | vs old SL, decisive |
+|---|---|---|---|---|---|
+| sl (128) | 299k positions | 0.341 | 2.301 | 0.169 / 0.132 | - |
+| sl192 | 299k | 0.338 | 2.300 | 0.161 / 0.144 | 8-6 |
+| slbig128 | 1.43M | **0.405** | 1.981 | 0.261 / 0.224 | 24-1 |
+| slbig192 | 1.43M | 0.404 | 1.975 | 0.267 / 0.253 | 18-5 |
+
+Width changed nothing in the supervised stage at either data size; five times the data moved
+every dial (train 0.40 vs eval 0.31 on the small set was the tell: data-limited, not
+capacity-limited). slbig128 vs slbig192: 15-10, par.
+
+## 120-update comparison from the small-data priors (CTRL128 vs RL192)
+Puzzles 0.478 vs 0.494 (m1), own-game m1 0.205 vs 0.071, head to head 13-15. A wash; both lose
+to their priors at 120 updates as every short run from a prior has. RL192 took 9 min on the GPU
+vs 45 min for CTRL128 on the CPU.
+
+## Long runs from the big-data priors (600 updates each, today's full recipe)
+
+| dial | LONG3 (old lineage, ~2,000 updates) | LONG128 | LONG192 |
+|---|---|---|---|
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.808 / 0.723 / 0.691 / 0.590 / 0.747 | 0.688 / 0.626 / 0.566 / 0.492 / 0.662 | 0.749 / 0.672 / 0.619 / 0.535 / 0.677 |
+| m1 trajectory (updates 50 -> 550) | - | 0.59 -> 0.69, flat from 250 | 0.56 -> **0.73, still rising** |
+| own-game mate-in-one (40 games) | 0.232 | 0.284 | 0.267 |
+| finishing d2 / d10 / d20 | 0.43 / 0.13 / 0.11 | 0.33 / 0.16 / 0.18 | 0.43 / 0.20 / 0.20 |
+| technique Q / R / RR / QR | 0.16 / 0.06 / 0.10 / 0.38 | 0.04 / 0.06 / 0.18 / 0.18 | 0.10 / 0.08 / 0.20 / 0.38 |
+| gifts per 100 plies / own punish | 9.6 / 0.54 (DEPTH20) | 9.9 / 0.50 | 8.2 / 0.62 |
+| game entropy / approx KL | 0.283 / 0.039 | 0.286 / 0.034 | 0.367 / 0.022 |
+| vs own prior, decisive | 6-12 (vs sl) | 8-18 | 12-10 |
+| vs LONG3, decisive | - | **30-9** | **32-2** |
+| LONG128 vs LONG192, decisive | | 16 | **28** |
+| wall clock (GPU) | 217 min (CPU) | 38 min | 44 min |
+
+Five-way matrix row means: SLBIG128 0.585, LONG192 0.587, SLBIG192 0.569, LONG128 0.471,
+LONG3 0.288.
+
+## Reading
+- **Strength was data-limited, not recipe-limited.** A big-data prior with zero RL beats LONG3,
+  the strongest checkpoint of the old lineage, 24-0 and 29-2. Two thousand updates of curricula
+  on a starved prior never made up for the missing human games. Balduzzi's warning in numbers:
+  the old lineage kept beating its own past selves while staying weak against anything else.
+- **Width matters in RL, not in SL.** Same prior quality, same recipe, same budget: LONG192 beats
+  LONG128 28-16, is higher on every puzzle set (+0.04 to +0.06), on finishing at every depth, on
+  gifts and on own punishment, and its mate-in-1 curve is still rising at update 550 where
+  LONG128's flattened at 250. LONG192 stays at par with its prior (12-10) while LONG128 drifts
+  below its own (8-18, prior_score 0.61 -> 0.35 over the last 200 updates). Entropy 0.37 vs 0.29
+  and KL 0.022 vs 0.034: the wider network changes less per update and keeps more options open.
+- **The held-out puzzle dials and game strength disagree.** LONG3 has the best puzzle numbers
+  in the project and loses 32-2 to LONG192. The puzzle sets measure what the curriculum taught;
+  games measure what the prior knew. Read puzzles as skill dials, not as strength.
+- Correction to earlier reports: LONG3's "own-game mate-in-one 0.387" was the eval hook's
+  self-play probe (`selfplay_top1` = 0.38666666666666666); `games.json` (40 games, seed 0) says 0.232. The table
+  above uses games.json for all three.
+
+## Verdict
+Adopt the 192-filter network on the big-data prior as the main line: `experiments/width/LONG192`
+is the new best checkpoint by games (and its curves are still climbing). The old lineage
+(LONG3 / DEPTH20 / PUNISH*) is retired as a starting point; its lessons (lambda 1, depth
+uniform over [0,20], mixed finishing slot, pool, SIL, punisher off) carry over in the recipe.
+Counts unchanged per the owner (120 / 600) until told otherwise.
+
+Next (owner decides): (1) continue LONG192 for 600 more (curves still rising); (2) redo the
+key ablations on the new line only where the old result may not transfer (lambda, punisher);
+(3) more data still: one more Lichess month roughly doubles the positions.
