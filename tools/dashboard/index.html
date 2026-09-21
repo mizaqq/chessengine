@@ -34,10 +34,12 @@ button{padding:4px 10px;border:1px solid var(--line);border-radius:5px;backgroun
 canvas.big{width:100%!important;height:320px!important}
 .pill{display:inline-block;width:10px;height:10px;border-radius:5px;margin-right:4px;vertical-align:middle}
 .err{color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:4px} .chips label{font-size:11.5px;padding:2px 8px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:#fff;user-select:none}
+.chips label.on{background:var(--acc);color:#fff;border-color:var(--acc)} .chips input{display:none}
 </style>
 </head>
 <body>
-<div class="top"><h1>chessengine <span class="sub">live</span></h1><span id="status" class="sub small">connecting…</span><span class="sub small">ui v4</span></div>
+<div class="top"><h1>chessengine <span class="sub">live</span></h1><span id="status" class="sub small">connecting…</span><span class="sub small">ui v5</span></div>
 
 <div class="card"><h2>Running</h2><div id="running" class="cards"></div></div>
 
@@ -47,7 +49,10 @@ canvas.big{width:100%!important;height:320px!important}
       <button id="clearSel">clear selection</button></div>
     <div class="wrap"><table id="results"></table></div></div>
   <div class="card"><h2>Curves</h2>
-    <div class="tools"><select id="metric"></select><label class="small"><input type="checkbox" id="alignX"> align x to 0 (compare shapes)</label></div>
+    <div class="tools"><div id="metrics" class="chips"></div></div>
+    <div class="tools"><label class="small"><input type="checkbox" id="alignX"> align x to 0 (compare shapes)</label>
+      <label class="small"><input type="checkbox" id="normY"> scale each curve to [0, 1] (mix metrics of different size)</label>
+      <span class="sub small">colour = arm · line style = metric</span></div>
     <canvas id="curves" class="big"></canvas><div id="curvesHint" class="sub small">select arms in the results table</div></div>
 </div>
 
@@ -70,6 +75,6 @@ canvas.big{width:100%!important;height:320px!important}
 
 <div class="card"><h2>Outcome notes</h2><div class="tools"><select id="outSel"></select></div><pre id="outText"></pre></div>
 
-<script src="/app.js?v=4"></script>
+<script src="/app.js?v=5"></script>
 </body>
 </html>

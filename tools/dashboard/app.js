@@ -7,7 +7,8 @@ const PALETTE = ["#2f5d8a", "#c7522e", "#2e7d32", "#7b3fa0", "#b7791f", "#0f8b8d
 const color = i => PALETTE[i % PALETTE.length];
 
 const S = { state: null, sort: { key: "mtime", dir: -1 }, selected: new Set(), runCache: {}, charts: {}, matrixFile: null, outFile: null,
-            games: {}, gi: null, mi: 0, timer: null, metric: "lichess_top1" };
+            games: {}, gi: null, mi: 0, timer: null, metrics: new Set(["lichess_top1"]) };
+const DASHES = [[], [6, 3], [2, 2], [8, 3, 2, 3], [1, 3], [10, 4], [4, 2, 1, 2], [12, 3, 3, 3]];
 
 const COLS = [
   ["name", "arm", "l"], ["mtime", "when"], ["updates", "upd"], ["elapsed_min", "min"], ["filters", "net"],
@@ -121,15 +122,24 @@ const METRICS = ["lichess_top1", "lichess_m2_top1", "lichess_m3_top1", "lichess_
   "mean_value_loss", "mean_policy_loss", "mean_approx_kl", "mean_clip_fraction", "draw_rate", "mean_terminal_return", "sil_positive_share", "pool_score", "punish_moves", "guide_demo_share"];
 async function getRun(arm) { if (!S.runCache[arm]) S.runCache[arm] = await (await fetch(`/api/run?arm=${encodeURIComponent(arm)}`)).json(); return S.runCache[arm]; }
 async function renderCurves() {
-  const arms = [...S.selected]; const chart = lineChart("curves", { legend: true, xTitle: "update" });
-  if (!arms.length) { setData(chart, []); $("curvesHint").textContent = "select arms in the results table"; return; }
-  const align = $("alignX").checked; const ds = [];
+  const arms = [...S.selected], mets = [...S.metrics]; const chart = lineChart("curves", { legend: true, xTitle: "update" });
+  if (!arms.length || !mets.length) { setData(chart, []); $("curvesHint").textContent = arms.length ? "pick at least one metric" : "select arms in the results table"; return; }
+  const align = $("alignX").checked, norm = $("normY").checked; const ds = [];
   for (const [i, arm] of arms.entries()) {
-    const run = await getRun(arm); let pts = series(run.logs, S.metric);
-    if (align && pts.length) { const x0 = pts[0].x; pts = pts.map(p => ({ x: p.x - x0, y: p.y })); }
-    ds.push({ label: arm, data: pts, borderColor: color(i), borderWidth: 1.6, pointRadius: pts.length < 30 ? 2 : 0 });
+    const run = await getRun(arm);
+    for (const [j, met] of mets.entries()) {
+      let pts = series(run.logs, met); if (!pts.length) continue;
+      if (align) { const x0 = pts[0].x; pts = pts.map(p => ({ x: p.x - x0, y: p.y })); }
+      if (norm) { const ys = pts.map(p => p.y), lo = Math.min(...ys), hi = Math.max(...ys); pts = pts.map(p => ({ x: p.x, y: hi > lo ? (p.y - lo) / (hi - lo) : 0.5 })); }
+      ds.push({ label: `${arm} · ${met}`, data: pts, borderColor: color(i), borderDash: DASHES[j % DASHES.length], borderWidth: 1.6, pointRadius: pts.length < 30 ? 2 : 0 });
+    }
   }
-  setData(chart, ds); $("curvesHint").textContent = `${S.metric}: ${INFO[S.metric] || ""} · ${arms.length} arm(s)`;
+  setData(chart, ds);
+  $("curvesHint").innerHTML = mets.map(m => `<b>${m}</b>: ${INFO[m] || ""}`).join(" · ") + ` · ${arms.length} arm(s)`;
+}
+function renderMetricChips() {
+  $("metrics").innerHTML = METRICS.map(m => `<label class="${S.metrics.has(m) ? "on" : ""}" title="${(INFO[m] || "").replace(/"/g, "'")}"><input type="checkbox" data-m="${m}" ${S.metrics.has(m) ? "checked" : ""}>${m}</label>`).join("");
+  $("metrics").querySelectorAll("input[data-m]").forEach(cb => cb.onchange = () => { cb.checked ? S.metrics.add(cb.dataset.m) : S.metrics.delete(cb.dataset.m); renderMetricChips(); renderCurves(); });
 }
 
 /* ---------------- matrices */
@@ -204,9 +214,8 @@ document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") re
 $("playMore").onclick = async () => { const g = S.games[S.gi]; if (!g) return; const r = await (await fetch(`/api/play?arm=${encodeURIComponent(g.arm)}`, { method: "POST" })).json(); $("playMsg").textContent = r.queued ? `queued for ${r.queued}; appears when played` : (r.error || ""); };
 
 /* ---------------- wiring */
-$("metric").innerHTML = METRICS.map(m => `<option>${m}</option>`).join(""); $("metric").value = S.metric;
-$("metric").onchange = () => { S.metric = $("metric").value; renderCurves(); };
-renderLegend();
+renderMetricChips(); renderLegend();
+$("normY").onchange = renderCurves;
 $("alignX").onchange = renderCurves;
 $("filter").oninput = () => renderResults(S.state); $("onlyModels").onchange = () => renderResults(S.state);
 $("clearSel").onclick = () => { S.selected.clear(); renderResults(S.state); renderCurves(); };
