@@ -89,3 +89,12 @@ def test_init_from_layout_mismatch_is_rejected(tmp_path):
     with pytest.raises(ValueError, match="two-network"):
         run_training_from_config({"num_envs": 1, "max_updates": 0, "steps_per_update": 1,
                                   "init_from": str(tmp_path)})
+
+
+def test_load_models_infers_width_and_depth(tmp_path):
+    from src.model.checkpoints import architecture_of
+    wide = ChessPolicyProbs(num_filters=48, num_blocks=3)
+    save_model(wide, tmp_path, updates=1)
+    w, b, oriented, _ = load_models(tmp_path)
+    assert oriented and w.num_filters == 48 and w.num_blocks == 3
+    assert architecture_of(wide.state_dict()) == {"num_filters": 48, "num_blocks": 3}

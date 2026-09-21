@@ -57,13 +57,14 @@ class ChessPolicy(nn.Module):
 
 
 class ChessPolicyProbs(nn.Module):
-    def __init__(self, num_filters=128):
+    def __init__(self, num_filters=128, num_blocks=10):
         super().__init__()
+        self.num_filters, self.num_blocks = int(num_filters), int(num_blocks)
         self.conv_input = nn.Sequential(
             nn.Conv2d(20, num_filters, kernel_size=3, padding=1),
             nn.ReLU(),
         )
-        self.res_tower = nn.Sequential(*[ResBlock(num_filters) for _ in range(10)])
+        self.res_tower = nn.Sequential(*[ResBlock(num_filters) for _ in range(num_blocks)])
 
         self.policy_head = nn.Sequential(
             nn.Conv2d(num_filters, 32, kernel_size=1),  # 1x1 conv to reduce depth

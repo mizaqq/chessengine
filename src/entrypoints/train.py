@@ -510,8 +510,9 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         black_model = None if shared else b0
         print("initialised from", paths)
     else:
-        white_model = ChessPolicyProbs()
-        black_model = None if shared else ChessPolicyProbs()
+        arch = {"num_filters": int(config.get("num_filters", 128)), "num_blocks": int(config.get("num_blocks", 10))}
+        white_model = ChessPolicyProbs(**arch)
+        black_model = None if shared else ChessPolicyProbs(**arch)
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
     # Shared: one network for both colours, observations oriented to the mover.
     optimizer_black = None if shared else torch.optim.Adam(black_model.parameters(), lr=lr)

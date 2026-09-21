@@ -39,9 +39,18 @@ def save_models(white_model, black_model, save_dir, updates: int, timestamp: str
     return paths
 
 
+def architecture_of(state_dict) -> dict:
+    """Width and depth of a saved network, read off its weights (conv_input.0.weight
+    is [num_filters, 20, 3, 3]; res_tower.<i>.* keys count the blocks)."""
+    num_filters = int(state_dict["conv_input.0.weight"].shape[0])
+    blocks = {int(k.split(".")[1]) for k in state_dict if k.startswith("res_tower.")}
+    return {"num_filters": num_filters, "num_blocks": len(blocks)}
+
+
 def _load(path) -> ChessPolicyProbs:
-    m = ChessPolicyProbs()
-    m.load_state_dict(torch.load(path, map_location="cpu"))
+    sd = torch.load(path, map_location="cpu")
+    m = ChessPolicyProbs(**architecture_of(sd))
+    m.load_state_dict(sd)
     return m
 
 
