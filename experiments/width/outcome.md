@@ -206,3 +206,26 @@ table: (1) lr 5e-5 for continuations of the 256 line (LR5 evidence); (2) target-
 stopping inside the PPO update (stop the epoch loop when approx KL > ~0.03; standard in the
 reference implementations); (3) a training stop when prior_score is below par at two
 consecutive evaluations, so an alarm actually halts the run.
+
+## LONG256C (2026-09-21): LONG256 + 600 with the three guards — alarm fired at update 100
+
+lr 5e-5, target_kl 0.03 (per-minibatch check), stop_below_prior 0.5 / patience 2.
+- `mean_kl_stop` = 1.0 at every update, `mean_optimizer_steps` 6.5 of 16: the guard cut every
+  update after about a third of its steps; reported KL over the steps taken 0.007, clip 0.06.
+- prior_score 0.40 (update 50), 0.35 (update 100) -> alarm; weights restored to the start
+  (no evaluation had passed). The saved LONG256C is LONG256 bit for bit: identical
+  games.json / finishes.json / audit. Held-out m1 at update 50 was 0.793 (LONG256 0.802).
+- The matrix then played LONG256 against its own weights: 17-27. That is the noise band of
+  60 sampled games between identical policies — worth remembering when reading 60-game
+  results (Henderson et al. 2018).
+
+Reading: the alarm did its mechanical job (stop + restore) and the run cost 7 minutes instead
+of 55. Whether it fired on a real decline is unclear: two 20-game matches at 0.40 / 0.35 from
+a policy that scored 0.56-0.69 across twelve evaluations in LONG256 is unlikely but not
+impossible noise; and the per-minibatch KL check at 0.03 turned the recipe into ~1.5 PPO
+epochs, which is a large change made blind. Spinning Up checks the *epoch-mean* KL and stops
+at 1.5x target; our check is per minibatch, whose KL varies far more than the mean.
+
+Proposed fixes (owner decides): (1) KL check on the running mean of the current epoch, trip
+at 1.5x target (faithful to the reference); (2) the alarm uses 40 prior games (noise band
++-0.15 instead of +-0.2), patience 2; (3) rerun LONG256C.

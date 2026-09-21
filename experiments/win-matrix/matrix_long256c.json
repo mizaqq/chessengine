@@ -1,0 +1,67 @@
+{
+ "names": [
+  "SLHI256",
+  "LONG256",
+  "LONG256C"
+ ],
+ "dirs": {
+  "SLHI256": "experiments/human-pretraining/slhi256",
+  "LONG256": "experiments/width/LONG256",
+  "LONG256C": "experiments/width/LONG256C"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SLHI256": {
+   "LONG256": 0.4583333333333333,
+   "LONG256C": 0.44166666666666665
+  },
+  "LONG256": {
+   "SLHI256": 0.5416666666666667,
+   "LONG256C": 0.4166666666666667
+  },
+  "LONG256C": {
+   "SLHI256": 0.5583333333333333,
+   "LONG256": 0.5833333333333333
+  }
+ },
+ "counts": [
+  {
+   "a": "SLHI256",
+   "b": "LONG256",
+   "counts": {
+    "a_white_black_win": 9,
+    "a_black_black_win": 10,
+    "a_black_draw": 7,
+    "a_white_draw": 14,
+    "a_black_white_win": 13,
+    "a_white_white_win": 7
+   }
+  },
+  {
+   "a": "SLHI256",
+   "b": "LONG256C",
+   "counts": {
+    "a_white_black_win": 14,
+    "a_black_black_win": 10,
+    "a_white_draw": 10,
+    "a_black_draw": 12,
+    "a_white_white_win": 5,
+    "a_black_white_win": 8,
+    "a_white_unfinished": 1
+   }
+  },
+  {
+   "a": "LONG256",
+   "b": "LONG256C",
+   "counts": {
+    "a_white_white_win": 11,
+    "a_black_draw": 9,
+    "a_black_white_win": 15,
+    "a_white_black_win": 12,
+    "a_white_draw": 7,
+    "a_black_black_win": 6
+   }
+  }
+ ]
+}
