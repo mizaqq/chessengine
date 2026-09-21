@@ -276,3 +276,34 @@ state; B1 = A + 100 with the optimizer state restored; B2 = A + 100 with a fresh
 200-game matches of A, B1, B2 vs the prior. If B2 loses and B1 holds, checkpoints must carry
 the optimizer (code ready: save/load of the Adam state). If both hold, the fragility is
 LONG256's alone and the pool / SIL resets are next.
+
+## RESTART probe (2026-09-21 evening): is it the Adam reset?
+
+A = slhi256 + 200 updates (lr 1e-4, target_kl 0.02, alarm off; optimizer saved). B1 = A + 100
+with the Adam state restored; B2 = A + 100 with a fresh Adam. 200-game matches from the opening:
+
+| match | decisive W-L | draws |
+|---|---|---|
+| A vs prior | 80-42 | 77 |
+| B1 (Adam restored) vs prior | **93-50** | 57 |
+| B2 (fresh Adam) vs prior | 77-49 | 74 |
+| B1 vs A | 71-64 | 65 |
+| B2 vs A | 62-74 | 64 |
+| B1 vs B2 | 81-67 | 52 |
+
+Row means: B1 0.553, A 0.536, B2 0.502, prior 0.409. Puzzles: A 0.777 / 0.702, B1 0.778 / 0.704,
+B2 0.792 / 0.724. Guard dials in band throughout (KL 0.011-0.012, clip 0.09-0.10, kl_stop
+0.3-0.7). A's entropy at 200 updates: 0.35.
+
+Reading: **a restart is not fatal** — both continuations from a 200-update checkpoint hold or
+improve against the prior. Restoring Adam helps a little (B1 > B2 by 81-67 and by row mean),
+not decisively; the fresh-Adam continuation still beats the prior 77-49. So the collapse of
+every continuation from LONG256 is about LONG256's state, not the restart mechanics: after 600
+guard-less updates at lr 1e-4 it sits at entropy 0.20 (A at 200 guarded updates: 0.35), and
+from there any further training loses games while puzzles rise. Adam persistence stays on
+(cheap, mildly positive).
+
+Verdict / next: stop continuing LONG256. The clean path is a fresh 600-update run from slhi256
+with the guards on from update 1 (lr 1e-4, target_kl 0.02, alarm on 40 games) — LONG256G —
+compared against LONG256 on the same table. A (its first 200 updates, in effect) is already
+80-42 vs the prior with entropy 0.35.

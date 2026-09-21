@@ -1,0 +1,114 @@
+{
+ "names": [
+  "SLHI256",
+  "A",
+  "B1",
+  "B2"
+ ],
+ "dirs": {
+  "SLHI256": "experiments/human-pretraining/slhi256",
+  "A": "experiments/width/RESTART_A",
+  "B1": "experiments/width/RESTART_B1",
+  "B2": "experiments/width/RESTART_B2"
+ },
+ "games_per_colour": 100,
+ "seed": 11,
+ "table": {
+  "SLHI256": {
+   "A": 0.405,
+   "B1": 0.3925,
+   "B2": 0.43
+  },
+  "A": {
+   "SLHI256": 0.595,
+   "B1": 0.4825,
+   "B2": 0.53
+  },
+  "B1": {
+   "SLHI256": 0.6074999999999999,
+   "A": 0.5175000000000001,
+   "B2": 0.535
+  },
+  "B2": {
+   "SLHI256": 0.5700000000000001,
+   "A": 0.47,
+   "B1": 0.46499999999999997
+  }
+ },
+ "start_file": null,
+ "counts": [
+  {
+   "a": "SLHI256",
+   "b": "A",
+   "counts": {
+    "a_white_black_win": 46,
+    "a_black_black_win": 22,
+    "a_white_white_win": 20,
+    "a_black_white_win": 34,
+    "a_white_draw": 34,
+    "a_black_draw": 43,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "SLHI256",
+   "b": "B1",
+   "counts": {
+    "a_white_black_win": 47,
+    "a_black_white_win": 46,
+    "a_white_white_win": 25,
+    "a_black_draw": 29,
+    "a_black_black_win": 25,
+    "a_white_draw": 28
+   }
+  },
+  {
+   "a": "SLHI256",
+   "b": "B2",
+   "counts": {
+    "a_white_draw": 40,
+    "a_black_white_win": 40,
+    "a_black_draw": 34,
+    "a_white_black_win": 37,
+    "a_white_white_win": 23,
+    "a_black_black_win": 26
+   }
+  },
+  {
+   "a": "A",
+   "b": "B1",
+   "counts": {
+    "a_white_white_win": 35,
+    "a_black_black_win": 29,
+    "a_white_black_win": 28,
+    "a_black_draw": 28,
+    "a_black_white_win": 43,
+    "a_white_draw": 37
+   }
+  },
+  {
+   "a": "A",
+   "b": "B2",
+   "counts": {
+    "a_white_white_win": 41,
+    "a_black_draw": 33,
+    "a_white_black_win": 28,
+    "a_black_black_win": 33,
+    "a_white_draw": 31,
+    "a_black_white_win": 34
+   }
+  },
+  {
+   "a": "B1",
+   "b": "B2",
+   "counts": {
+    "a_white_black_win": 34,
+    "a_black_draw": 32,
+    "a_white_white_win": 46,
+    "a_white_draw": 20,
+    "a_black_white_win": 33,
+    "a_black_black_win": 35
+   }
+  }
+ ]
+}
