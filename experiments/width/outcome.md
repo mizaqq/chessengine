@@ -127,3 +127,30 @@ Reading.
 
 Verdict: LONG256 is the main line. Before continuing it, decide on an entropy floor (e.g. raise
 the entropy coefficient or stop decaying it) and measure on 120 updates.
+
+## Entropy guard arms (2026-09-21): LONG256 + 120 updates each
+
+| dial | LONG256 | ENT03 (entropy_coef 0.03) | LR5 (lr 5e-5) |
+|---|---|---|---|
+| game entropy (end) | 0.198 | **0.156** | **0.154** |
+| KL / clip fraction | 0.040 / 0.18 | 0.052 / 0.17 | 0.019 / 0.11 |
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.802 / 0.728 / 0.666 / 0.573 / 0.753 | 0.812 / 0.739 / 0.673 / 0.587 / 0.746 | 0.780 / 0.726 / 0.659 / 0.572 / 0.720 |
+| own-game mate-in-one | 0.408 | 0.207 | 0.361 |
+| finishing d2 / d10 / d20 | 0.53 / 0.34 / 0.20 | 0.51 / 0.28 / 0.23 | 0.48 / 0.25 / 0.30 |
+| prior_score (20 games) | 0.64 | 0.44 | 0.45 |
+| vs LONG256, decisive | - | 21-24 | 25-22 |
+| ENT03 vs LR5 | | 30-17 | |
+
+Reading: **neither guard moved entropy** — both arms kept sliding (0.20 -> 0.15) in 120
+updates; tripling the entropy coefficient did nothing visible, and halving the learning rate
+halved KL as expected but not the slide. Puzzles held or rose slightly (ENT03 best puzzle
+numbers in the project); own-game mate-in-one and prior_score fell in both arms, within
+the 40/20-game noise bands but in the same direction. Head to head both arms are level with
+LONG256. LONG256's own entropy series was a monotone slide from 0.56 (update 10) to 0.20
+(update 580), so the 256 network sharpens continuously under this recipe regardless of the
+two knobs we turned by these amounts.
+
+Open question (owner): is a sharp policy a problem in itself? The dials say no yet (puzzles
+up, strength level); the risk is the AlphaGo-SL lesson that a narrow policy explores less
+and will plateau. Options: entropy_coef 0.1 (a real step), a KL-target / early stop per
+update, or accept and watch prior_score on the next long run.

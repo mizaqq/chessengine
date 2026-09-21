@@ -1,0 +1,66 @@
+{
+ "names": [
+  "LONG256",
+  "ENT03",
+  "LR5"
+ ],
+ "dirs": {
+  "LONG256": "experiments/width/LONG256",
+  "ENT03": "experiments/width/ENT03",
+  "LR5": "experiments/width/LR5"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "LONG256": {
+   "ENT03": 0.525,
+   "LR5": 0.475
+  },
+  "ENT03": {
+   "LONG256": 0.475,
+   "LR5": 0.6083333333333333
+  },
+  "LR5": {
+   "LONG256": 0.525,
+   "ENT03": 0.3916666666666667
+  }
+ },
+ "counts": [
+  {
+   "a": "LONG256",
+   "b": "ENT03",
+   "counts": {
+    "a_white_draw": 8,
+    "a_black_black_win": 9,
+    "a_white_black_win": 7,
+    "a_white_white_win": 15,
+    "a_black_white_win": 14,
+    "a_black_draw": 7
+   }
+  },
+  {
+   "a": "LONG256",
+   "b": "LR5",
+   "counts": {
+    "a_white_white_win": 10,
+    "a_black_white_win": 13,
+    "a_black_black_win": 12,
+    "a_white_draw": 8,
+    "a_white_black_win": 12,
+    "a_black_draw": 5
+   }
+  },
+  {
+   "a": "ENT03",
+   "b": "LR5",
+   "counts": {
+    "a_white_white_win": 20,
+    "a_black_black_win": 10,
+    "a_white_black_win": 6,
+    "a_black_white_win": 11,
+    "a_white_draw": 4,
+    "a_black_draw": 9
+   }
+  }
+ ]
+}
