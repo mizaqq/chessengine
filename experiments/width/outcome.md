@@ -93,3 +93,37 @@ dial that has not moved on the new line either). Entropy 0.37 -> 0.31, still abo
 lineage's 0.28. LONG192B is the current best checkpoint. Meanwhile the two-month 192 prior
 (sl2m192, 2.85M positions) reached top-1 0.432 and beats slbig192 21-6: the next long run
 should start from a better prior rather than continue this one.
+
+## LONG256 (2026-09-21): slhi256 (high-Elo, 256 filters) + 600 updates
+
+| dial | LONG192B (1,200 upd, 1500-Elo prior) | LONG256 (600 upd, 2000-Elo prior) |
+|---|---|---|
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.775 / 0.701 / 0.659 / 0.571 / 0.714 | **0.802 / 0.728 / 0.666 / 0.573 / 0.753** |
+| m1 trajectory | 0.75 -> 0.78 | 0.74 -> 0.81 (flat from 350) |
+| own-game mate-in-one | **0.492** | 0.408 |
+| finishing d2 / d10 / d20 | 0.45 / 0.19 / 0.19 | **0.53 / 0.34 / 0.20** |
+| technique Q / R / RR / QR | 0.30 / 0.12 / 0.20 / 0.26 | 0.28 / 0.14 / **0.32 / 0.56** |
+| gifts per 100 plies / own punish | 8.1 / 0.69 | 8.6 / 0.47 |
+| game entropy / KL / clip | 0.310 / 0.024 / 0.14 | **0.198** / 0.040 / 0.18 |
+| vs own prior, decisive | 30-5 | 31-11 |
+| vs LONG192B, decisive | - | **28-22** |
+| vs LONG192 | 22-19 | 32-11 |
+| wall clock | 56 min | 52 min |
+
+Four-way row means: LONG256 0.631, SLHI256 0.561, LONG192B 0.422, LONG192 0.386. The bare
+high-Elo prior beats LONG192B 31-6.
+
+Reading.
+- **The new best checkpoint by every game measure and most dials.** In 600 updates LONG256
+  reaches LONG3's puzzle numbers (which took the old lineage ~2,000 updates) and the first
+  real movement on finishing depth 10 in the project (0.19 -> 0.34). Technique QR 0.56.
+- **The prior is most of it.** slhi256 with zero RL beats LONG192B 31-6: a better start beats
+  1,200 updates of curriculum on a worse one, for the third time today.
+- **Warning signs.** Game entropy 0.198 is the lowest ever recorded (old lineage 0.28, LONG192B
+  0.31); KL and clip fraction are up; own-game mate-in-one is below LONG192B and own punishment
+  fell to 0.47. The 256 network sharpens fast; with m1 flat from update 350 this looks like the
+  policy collapsing onto a narrow repertoire rather than still learning. Continuing without an
+  entropy guard is the risk to discuss before the next long run.
+
+Verdict: LONG256 is the main line. Before continuing it, decide on an entropy floor (e.g. raise
+the entropy coefficient or stop decaying it) and measure on 120 updates.

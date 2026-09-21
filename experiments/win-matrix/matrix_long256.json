@@ -1,0 +1,112 @@
+{
+ "names": [
+  "SLHI256",
+  "LONG192",
+  "LONG192B",
+  "LONG256"
+ ],
+ "dirs": {
+  "SLHI256": "experiments/human-pretraining/slhi256",
+  "LONG192": "experiments/width/LONG192",
+  "LONG192B": "experiments/width/LONG192B",
+  "LONG256": "experiments/width/LONG256"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SLHI256": {
+   "LONG192": 0.6416666666666667,
+   "LONG192B": 0.7083333333333334,
+   "LONG256": 0.3333333333333333
+  },
+  "LONG192": {
+   "SLHI256": 0.3583333333333333,
+   "LONG192B": 0.475,
+   "LONG256": 0.325
+  },
+  "LONG192B": {
+   "SLHI256": 0.29166666666666663,
+   "LONG192": 0.525,
+   "LONG256": 0.45
+  },
+  "LONG256": {
+   "SLHI256": 0.6666666666666667,
+   "LONG192": 0.675,
+   "LONG192B": 0.55
+  }
+ },
+ "counts": [
+  {
+   "a": "SLHI256",
+   "b": "LONG192",
+   "counts": {
+    "a_white_white_win": 11,
+    "a_black_draw": 11,
+    "a_black_black_win": 15,
+    "a_white_draw": 14,
+    "a_white_black_win": 5,
+    "a_black_white_win": 4
+   }
+  },
+  {
+   "a": "SLHI256",
+   "b": "LONG192B",
+   "counts": {
+    "a_white_white_win": 15,
+    "a_black_black_win": 16,
+    "a_white_black_win": 4,
+    "a_black_white_win": 2,
+    "a_black_draw": 12,
+    "a_white_draw": 11
+   }
+  },
+  {
+   "a": "SLHI256",
+   "b": "LONG256",
+   "counts": {
+    "a_white_black_win": 17,
+    "a_black_draw": 14,
+    "a_black_black_win": 2,
+    "a_black_white_win": 14,
+    "a_white_white_win": 9,
+    "a_white_draw": 4
+   }
+  },
+  {
+   "a": "LONG192",
+   "b": "LONG192B",
+   "counts": {
+    "a_white_draw": 14,
+    "a_black_black_win": 10,
+    "a_white_white_win": 9,
+    "a_black_white_win": 15,
+    "a_black_draw": 5,
+    "a_white_black_win": 7
+   }
+  },
+  {
+   "a": "LONG192",
+   "b": "LONG256",
+   "counts": {
+    "a_white_draw": 8,
+    "a_black_white_win": 18,
+    "a_white_black_win": 14,
+    "a_black_draw": 9,
+    "a_white_white_win": 8,
+    "a_black_black_win": 3
+   }
+  },
+  {
+   "a": "LONG192B",
+   "b": "LONG256",
+   "counts": {
+    "a_white_white_win": 15,
+    "a_black_draw": 7,
+    "a_white_black_win": 12,
+    "a_black_white_win": 16,
+    "a_white_draw": 3,
+    "a_black_black_win": 7
+   }
+  }
+ ]
+}
