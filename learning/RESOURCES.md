@@ -237,6 +237,14 @@ reach for it. Prune anything that turns out shallow or wrong.
   curve 0.341 (299k) -> 0.405 (1.43M) -> 0.432 (2.85M) and the quantity-vs-quality question
   (high-Elo set); workshop 3 §5.
 
+- [Docs: OpenAI Spinning Up — PPO](https://spinningup.openai.com/en/latest/algorithms/ppo.html)
+  Read 2026-09-21: "If the mean KL-divergence of the new policy from the old grows beyond a
+  threshold, we stop taking gradient steps"; clipping alone "is still possible to end up with
+  a new policy which is too far from the old policy"; default `target_kl` 0.01 (their
+  implementation stops an epoch at 1.5x target). Use for: target-KL early stopping in
+  `update_model` after LONG256B drifted (KL 0.04 -> 0.06, clip 0.16 -> 0.26); our healthy band
+  has been 0.02-0.04, so the threshold is set at 0.03; change `ppo-guards`.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
