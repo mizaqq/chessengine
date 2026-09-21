@@ -247,3 +247,32 @@ at 1.5x target (faithful to the reference); (2) the alarm uses 40 prior games (n
 
 Probe queued (PROBE256): LONG256 + 100 updates, lr 5e-5, guards on but alarm off, checkpoint
 kept; then 200-game matches vs slhi256 from the opening and from mid-game starts.
+
+## PROBE256 (2026-09-21): LONG256 + 100 updates (lr 5e-5, KL guard, no alarm), 200-game matches
+
+Same seed/config as LONG256D minus the alarm, so it reproduces it exactly (prior evals 16-23,
+16-35) and keeps the checkpoint.
+
+| match (200 games, decisive W-L, draws) | from the opening | from mid-game starts (high-Elo) |
+|---|---|---|
+| LONG256 vs slhi256 | **78-43** (79 draws) | 68-58 (74) |
+| PROBE256 vs slhi256 | 51-73 (76) | 56-62 (82) |
+| LONG256 vs PROBE256 | **99-52** (49) | **111-46** (43) |
+
+Held-out puzzles of PROBE256 at update 100: 0.810 / 0.732 (LONG256 0.802 / 0.728).
+
+Reading: 100 updates of continuation made the network weaker in games everywhere — most from
+the opening (score vs prior 0.59 -> 0.44), a little from mid-game (0.53 -> 0.48), and badly
+against its own start (LONG256 wins 2:1 from either start) — while every puzzle set improved.
+This is not the LONG256B drift (KL 0.016, clip 0.08, 10 of 16 steps: all in band), and it
+is not opening-specific. Whatever a restart resets is the suspect: the Adam moments (never
+saved: every continuation starts Adam from zero, so the first steps are the largest possible
+per parameter), the opponent pool (prior only until the first snapshot at update 50), the SIL
+buffer (empty). LONG192 -> LONG192B survived the same restart, so the 256 network at its
+sharpness (entropy 0.20 -> 0.15) is the fragile case.
+
+Next (owner decides): isolate the restart. From slhi256: A = 200 updates saving the optimizer
+state; B1 = A + 100 with the optimizer state restored; B2 = A + 100 with a fresh optimizer;
+200-game matches of A, B1, B2 vs the prior. If B2 loses and B1 holds, checkpoints must carry
+the optimizer (code ready: save/load of the Adam state). If both hold, the fragility is
+LONG256's alone and the pool / SIL resets are next.
