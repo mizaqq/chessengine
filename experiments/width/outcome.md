@@ -370,3 +370,36 @@ size — candidates are the opponent pool (snapshots of an already-sharp self), 
 self-imitation buffer (replaying the sharp policy's own wins), and the learning rate floor
 (no decay: min_lr = lr). A better prior (two high-Elo months, running tonight) raises the
 ceiling without touching the recipe; the recipe question remains.
+
+## LONG256X (2026-09-22 night): guarded 600 from slhi2_256 — alarm at 300, new best
+
+Training-time prior match: 41-20, 44-14, 44-22, 35-25, **26-30, 31-34** at 50..300 -> alarm at
+300, weights restored to update 200. Held-out m1: 0.804, 0.828, 0.836, 0.837 (200), 0.817, 0.836.
+Entropy 0.51 -> 0.18 by update 260 — the decline against the prior began as entropy crossed
+~0.2, exactly as in LONG256 (0.20 at 600, continuations failed) and LONG256H (0.17 at 210,
+alarm at 300). KL guard: every update cut, 7.6 of 16 steps.
+
+| LONG256X (weights of update 200) | value |
+|---|---|
+| mate-in-1 / 2 / 3 / 4 / endgame (at 200) | **0.837 / 0.77 / 0.70 / 0.59 / 0.79** |
+| own-game mate-in-one / decisive | **0.493** / 0.875 |
+| finishing d2 / d10 / d20 | **0.58 / 0.34 / 0.31** (d20 best ever) |
+| technique Q / R / RR / QR | 0.24 / 0.04 / 0.32 / 0.44 |
+| gifts per 100 / own punish | 8.1 / 0.58 |
+| vs slhi2_256 (own prior), 200 games | **92-62** |
+| vs LONG256G | **112-55** |
+| vs LONG256H | 110-46 |
+
+Four-way row means: LONG256X 0.626, SLHI2_256 0.542, LONG256G 0.454, LONG256H 0.378.
+
+Reading: a better prior lifted every dial and LONG256X is the best checkpoint by a wide
+margin, after only 200 useful updates. The same failure shape appeared for the third time,
+earlier than before: the policy improves until its entropy falls to ~0.2 and then loses games
+to the prior while the KL guard trims steps. The alarm turned that from a collapse into a
+clean stop with the best weights kept. The recipe question is now sharp: what drives the
+entropy through 0.2 (pool snapshots of an already-sharp self, SIL replaying its own wins, no
+learning-rate decay), and which of those to change first.
+
+Calibration on the new line (LONG256G, 100 games): depth 2 sampled 0.52 / greedy 0.57 /
+human-line 0.82; depth 10: 0.25 / 0.30 / 0.39; depth 20: 0.22 / 0.18 / 0.27. The human first
+move still adds ~0.14 at depth 10; the defender leaves the record after ~1.7 plies.

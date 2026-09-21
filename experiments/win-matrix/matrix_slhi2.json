@@ -1,0 +1,35 @@
+{
+ "names": [
+  "SLHI256",
+  "SLHI2_256"
+ ],
+ "dirs": {
+  "SLHI256": "experiments/human-pretraining/slhi256",
+  "SLHI2_256": "experiments/human-pretraining/slhi2_256"
+ },
+ "games_per_colour": 100,
+ "seed": 11,
+ "table": {
+  "SLHI256": {
+   "SLHI2_256": 0.31
+  },
+  "SLHI2_256": {
+   "SLHI256": 0.69
+  }
+ },
+ "start_file": null,
+ "counts": [
+  {
+   "a": "SLHI256",
+   "b": "SLHI2_256",
+   "counts": {
+    "a_white_black_win": 47,
+    "a_black_black_win": 13,
+    "a_black_white_win": 57,
+    "a_white_draw": 38,
+    "a_black_draw": 30,
+    "a_white_white_win": 15
+   }
+  }
+ ]
+}

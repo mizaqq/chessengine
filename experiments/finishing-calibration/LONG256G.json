@@ -1,0 +1,55 @@
+{
+ "checkpoint": {
+  "model": "experiments/width/LONG256G/model_20260921215328_episodes_600.pth"
+ },
+ "depths": {
+  "2": {
+   "sampled": {
+    "rate": 0.52,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.57,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.82,
+    "games": 100,
+    "defender_stayed_on_line": 0.47,
+    "mean_ply_defender_left_line": 1.0
+   }
+  },
+  "10": {
+   "sampled": {
+    "rate": 0.25,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.3,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.39,
+    "games": 100,
+    "defender_stayed_on_line": 0.03,
+    "mean_ply_defender_left_line": 1.7628865979381443
+   }
+  },
+  "20": {
+   "sampled": {
+    "rate": 0.22,
+    "games": 100
+   },
+   "greedy": {
+    "rate": 0.18,
+    "games": 100
+   },
+   "human": {
+    "rate": 0.27,
+    "games": 100,
+    "defender_stayed_on_line": 0.0,
+    "mean_ply_defender_left_line": 1.66
+   }
+  }
+ }
+}

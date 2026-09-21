@@ -25,3 +25,16 @@ Reading.
 - GPU wall clock: 13 / 32 / 43 min for 1.43M x 2 ep (192), 2.85M x 2 ep (192), 2.85M x 2 ep (256).
 
 Next: LONG256 = slhi256 + 600 updates on today's recipe (LONG192B as the comparison point).
+
+## 2026-09-22 night: two high-Elo months (slhi2_256)
+
+| prior | positions (Elo >= 2000) | held-out top-1 (own set) | eval CE | m1 / m2 puzzles | own-game m1 | vs slhi256, 200 games |
+|---|---|---|---|---|---|---|
+| slhi256 | 2.85M (2026-08) | 0.447 | 1.784 | 0.469 / 0.378 | 0.226 | - |
+| slhi2_256 | 5.70M (2026-07 + 08) | **0.471** | **1.685** | **0.635 / 0.464** | 0.283 | **104-28** |
+
+Doubling the high-Elo data: mate-in-1 puzzles 0.47 -> 0.63 with zero RL (LONG3, the old
+lineage's best after ~2,000 RL updates, had 0.81), and 104-28 in games against the one-month
+prior. The bare slhi2_256 also beats LONG256G (600 guarded RL updates on the one-month prior)
+79-55. The prior curve has not bent; the streamed build took 30 min, the 256 pretraining 77 min
+on the GPU. Next month (2026-06) is the same cost again.
