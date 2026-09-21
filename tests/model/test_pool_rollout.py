@@ -69,3 +69,23 @@ def test_pool_game_result_scored_from_learner_side_and_redrawn():
     s = m.episode_summary()
     assert s["pool_games"] == 2 and s["pool_score"] == 0.75 and s["pool_score_prior"] == 0.75
     assert s["total_games"] == 0
+
+
+def test_pool_referee_replaces_opponent_ply_with_the_punishing_move():
+    from src.envs.start_positions import FenSampler
+    fen = "4k3/p7/8/8/3q4/1N6/8/4K3 w - - 0 1"          # white (pool opponent) to move: Nxd4 wins the queen
+    puzzles = StartPositionSampler([Puzzle("p", "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", ["a1a8"], 0)])
+    env = OpenSpielVectorEnv(2, puzzles, 0, game_start_sampler=FenSampler([fen]), num_midgame_envs=2)
+    step = env.reset()
+    nxd4 = next(iter(env.envs[1].actions_for_uci(["b3d4"])))
+    learner, opponent = Const(0.25), Const(-0.75)
+    pool = OpponentPool(opponent, size=0, snapshot_every=50, seed=0)
+    boards = PoolBoards([1], pool, seed=0)
+    boards._state[1] = ("prior", pool.members[0][1], BLACK)
+    m = MetricsAggregator()
+    torch.manual_seed(0)
+    steps, _ = _collect_rollout(env, learner, learner, step, 1, 2, TR, m, oriented=True, pool=boards, referee={"threshold": 3})
+    assert int(steps[0].action[1]) == nxd4                # referee took the queen on the pool board
+    assert not bool(steps[0].learner[1])                  # and it was the opponent's ply, not trained
+    s = m.episode_summary()
+    assert s["referee_moves"] == 1 and s["referee_picks"] == 1 and s["punish_moves"] == 0

@@ -38,6 +38,8 @@ class MetricsAggregator:
         self.guide_demo_picks = 0
         self.punish_count = 0
         self.punish_picks = 0
+        self.referee_count = 0
+        self.referee_picks = 0
         self._finish_by_depth = {}   # depth -> [attempts, successes]
         self._pool_by_name = {}      # opponent name -> [games, points]
         self._technique_by_label = {}  # material label -> [attempts, successes]
@@ -112,6 +114,11 @@ class MetricsAggregator:
         many of them the punisher played (change punish-gifts)."""
         self.punish_count += int(count)
         self.punish_picks += int(picks)
+
+    def add_referee(self, count: int, picks: int):
+        """Pool-opponent plies and how many were replaced by the referee's punishing move."""
+        self.referee_count += int(count)
+        self.referee_picks += int(picks)
 
     def add_sil_stats(self, buffer_size: int, stats):
         """Self-imitation diagnostics for one update (`stats` None = nothing drawn)."""
@@ -196,6 +203,8 @@ class MetricsAggregator:
             "guide_demo_share": (self.guide_demo_picks / self.guide_count if self.guide_count else None),
             "punish_moves": self.punish_count,
             "punish_picks": self.punish_picks,
+            "referee_moves": self.referee_count,
+            "referee_picks": self.referee_picks,
             **dict(sorted(getattr(self, "technique_dials", {}).items())),
             **{f"technique_attempts_{k}": v[0] for k, v in sorted(self._technique_by_label.items())},
             **{f"technique_success_rate_{k}": v[1] / v[0] for k, v in sorted(self._technique_by_label.items())},

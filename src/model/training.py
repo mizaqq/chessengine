@@ -92,6 +92,7 @@ def _collect_rollout(
     guide=None,
     pool=None,
     punish=None,
+    referee=None,
 ):
     """Play `num_steps` plies on every board and record what the update needs.
 
@@ -161,11 +162,23 @@ def _collect_rollout(
 
             learner = pool.learner_mask(players) if pool is not None else torch.ones(num_envs, dtype=torch.bool)
             if pool is not None:
+                # Pool referee (change punish-gifts, arm POOL_REF): the frozen opponent always
+                # plays a punishing move when one exists. Its plies are never trained, so no
+                # log-prob bookkeeping is needed; only the learner feels the punishment.
+                ref_demos = envs.punish_actions(~learner, referee["threshold"]) if referee is not None else None
                 for opp_model, ids in pool.opponent_groups(players).items():
                     ids_t = torch.tensor(ids, dtype=torch.long)
                     p, v = opp_model(obs_in[ids_t], legal[ids_t])
                     dist = Categorical(probs=p)
                     a = dist.sample()
+                    if ref_demos is not None:
+                        picks = 0
+                        for j, i in enumerate(ids):
+                            if ref_demos[i]:
+                                choices = sorted(ref_demos[i])
+                                a[j] = choices[int(torch.randint(len(choices), (1,)))]
+                                picks += 1
+                        metrics.add_referee(count=len(ids), picks=picks)
                     actions[ids_t] = a
                     old_log_prob[ids_t] = dist.log_prob(a)
                     old_value[ids_t] = v.squeeze(-1)
@@ -557,6 +570,7 @@ def run_chess_training(
     pool=None,
     sil=None,
     punish=None,
+    referee=None,
 ):
     """Run A2C or PPO self-play.
 
@@ -570,6 +584,8 @@ def run_chess_training(
     `punish`: None or dict(epsilon, threshold, boards): on its boards a rules mate or
     a capture winning >= threshold net material is the demonstration when the board
     has no label demonstration (change punish-gifts).
+    `referee`: None or dict(threshold): pool opponents always play a punishing move when
+    one exists (arm POOL_REF); requires `pool`.
 
     `pool`: None or a `PoolBoards` (src/training/opponent_pool.py): its boards play
     the learner against a frozen pool member; after each update the pool may take
@@ -675,6 +691,7 @@ def run_chess_training(
             guide=guide_now,
             pool=pool,
             punish=punish_now,
+            referee=referee,
         )
 
         bootstrap_white = _compute_bootstrap(

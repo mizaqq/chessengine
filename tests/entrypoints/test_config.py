@@ -325,3 +325,11 @@ def test_punish_resolver():
         resolve_punish({"punish_epsilon": 0.5, "punish_threshold": 0})
     with pytest.raises(ValueError, match="punish_boards"):
         resolve_punish({"punish_epsilon": 0.5, "punish_boards": "opening"})
+
+
+def test_referee_resolver():
+    from src.entrypoints.train import resolve_referee
+    assert resolve_referee({}) is None
+    assert resolve_referee({"pool_referee": True, "opponent_pool_boards": 5}) == {"threshold": 3}
+    with pytest.raises(ValueError, match="opponent_pool_boards"):
+        resolve_referee({"pool_referee": True})

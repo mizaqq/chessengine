@@ -380,6 +380,20 @@ def resolve_punish(config: Dict[str, Any]):
     return {"epsilon": eps, "threshold": threshold, "boards": boards}
 
 
+def resolve_referee(config: Dict[str, Any]):
+    """`pool_referee: true` makes the frozen pool opponents always play a punishing move
+    (rules mate, else a capture winning >= punish_threshold) when one exists. Requires
+    opponent_pool_boards > 0."""
+    if not config.get("pool_referee", False):
+        return None
+    if int(config.get("opponent_pool_boards", 0) or 0) <= 0:
+        raise ValueError("pool_referee requires opponent_pool_boards > 0")
+    threshold = int(config.get("punish_threshold", 3))
+    if threshold < 1:
+        raise ValueError(f"punish_threshold must be a positive integer, got {threshold}")
+    return {"threshold": threshold}
+
+
 def resolve_layout_schedule(config: Dict[str, Any], num_puzzle_envs: int):
     """`layout_schedule: [{from_update, finish_boards, midgame_boards}, ...]`: board
     roles after the puzzle boards switch at those updates (boards beyond the three
@@ -470,6 +484,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     explore = resolve_exploration(config)
     guide = resolve_guide(config)
     punish = resolve_punish(config)
+    referee = resolve_referee(config)
     pool = resolve_opponent_pool(config, num_puzzle_envs + num_finish_envs)
     sil = resolve_sil(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
@@ -526,6 +541,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         pool=pool,
         sil=sil,
         punish=punish,
+        referee=referee,
     )
 
     sampler_state = finish_sampler.state() if hasattr(finish_sampler, "state") else None

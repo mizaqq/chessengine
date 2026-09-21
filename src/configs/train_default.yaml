@@ -216,6 +216,12 @@ guide_boards: curriculum
 punish_epsilon: 0.0
 punish_threshold: 3
 punish_boards: all
+# Arms PUNISH / PUNISH_LONG (2026-09-19): gifts down a third, own punishment up, but
+# own-game mate-in-one 0.35 -> 0.26 and finishing down: the captures shifted the
+# learner's own exploration toward material play. Off by default. pool_referee instead
+# makes the frozen pool opponents always punish (rules mate, else a capture winning
+# >= punish_threshold); their plies are never trained, so the learner's batch is untouched.
+pool_referee: false
 
 # Game boards end as a draw after this many plies (AlphaZero: "games exceeding a
 # maximum number of steps ... were terminated and assigned a drawn outcome").
