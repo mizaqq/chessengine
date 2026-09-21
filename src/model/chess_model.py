@@ -84,13 +84,15 @@ class ChessPolicyProbs(nn.Module):
         )
 
     def forward(self, obs, mask=None):
-        x = self.conv_input(obs)
+        """Runs on the device the weights live on and returns on the caller's device,
+        so environments, rollouts and losses stay device-agnostic (src/model/device.py)."""
+        out_device = obs.device
+        dev = self.conv_input[0].weight.device
+        x = self.conv_input(obs.to(dev))
         x = self.res_tower(x)
         logits = self.policy_head(x)
         if mask is not None:
-            logits = torch.where(
-                mask.bool(), logits, torch.tensor(-1e9).to(logits.device)
-            )
+            logits = torch.where(mask.to(dev).bool(), logits, torch.tensor(-1e9, device=dev))
         probs = F.softmax(logits, dim=-1)
         value = self.value_head(x)
-        return probs, value
+        return probs.to(out_device), value.to(out_device)

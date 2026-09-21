@@ -75,13 +75,17 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--num-filters", type=int, default=128)
     ap.add_argument("--num-blocks", type=int, default=10)
+    ap.add_argument("--device", default="auto", help="auto | cpu | mps (see src/model/device.py)")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed); rng = np.random.default_rng(args.seed)
     train, ev = load(args.train), load(args.eval)
     n = len(train["action"])
     print(f"train {n} positions, eval {len(ev['action'])}", flush=True)
-    model = ChessPolicyProbs(num_filters=args.num_filters, num_blocks=args.num_blocks).train()
+    from src.model.device import resolve_device
+    device = resolve_device(args.device)
+    print("device", device, flush=True)
+    model = ChessPolicyProbs(num_filters=args.num_filters, num_blocks=args.num_blocks).to(device).train()
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     args.out.mkdir(parents=True, exist_ok=True)
     log, step, t0 = [], 0, time.time()

@@ -7,6 +7,10 @@ shared_network: true
 # mid game 5, opening 4") after arm TECH: two technique boards gave ~75 games per
 # material set in 120 updates and the held-out technique dial did not leave zero.
 num_envs: 16
+# Network device: auto = Apple GPU (MPS) when visible, else CPU. Measured 2026-09-21:
+# training step 977 ms (CPU) vs 38 ms (MPS) at 128 filters. The command sandbox hides
+# Metal, so GPU runs are launched outside it; inside, auto falls back to CPU.
+device: auto
 # Standard budget (owner, 2026-09-16): 7,500 plies per board = 120 updates x 64 plies.
 max_updates: 120
 # 64 plies x 16 boards = 1,024 samples per update (opponent plies on pool boards

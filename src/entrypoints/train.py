@@ -433,6 +433,7 @@ def resolve_eval_interval(config: Dict[str, Any]) -> int:
     return interval
 
 
+from src.model.device import resolve_device
 from src.model.checkpoints import load_models, save_model, save_models  # noqa: E402  (re-exported)
 
 
@@ -513,6 +514,14 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         arch = {"num_filters": int(config.get("num_filters", 128)), "num_blocks": int(config.get("num_blocks", 10))}
         white_model = ChessPolicyProbs(**arch)
         black_model = None if shared else ChessPolicyProbs(**arch)
+    device = resolve_device(config.get("device", "auto"))
+    white_model.to(device)
+    if black_model is not None:
+        black_model.to(device)
+    if pool is not None:
+        for _, member in pool.pool.members:
+            member.to(device)
+    print("device", device)
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
     # Shared: one network for both colours, observations oriented to the mover.
     optimizer_black = None if shared else torch.optim.Adam(black_model.parameters(), lr=lr)

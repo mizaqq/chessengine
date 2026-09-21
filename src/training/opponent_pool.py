@@ -42,7 +42,7 @@ class OpponentPool:
         """Push a frozen copy of `model` when `update` is a multiple of `snapshot_every`."""
         if self.size <= 0 or self.snapshot_every <= 0 or update % self.snapshot_every != 0:
             return False
-        self._snaps.append((f"snap_{update}", freeze(model)))
+        self._snaps.append((f"snap_{update}", freeze(model)))     # same device as the learner
         return True
 
     def sample(self) -> Tuple[str, torch.nn.Module]:
