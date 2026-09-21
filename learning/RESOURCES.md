@@ -209,6 +209,34 @@ reach for it. Prune anything that turns out shallow or wrong.
   robust. Use for: the one-ply rules punisher as a hand-made exploiter of gifts
   (hanging pieces, allowed mates); change `punish-gifts`.
 
+- [Paper: "Re-evaluating Evaluation" — Balduzzi, Tuyls, Perolat & Graepel (NeurIPS 2018)](https://arxiv.org/abs/1806.02643)
+  Abstract read 2026-09-21: agent-vs-agent and agent-vs-task evaluations are biased by
+  redundant or weak opponents and easy tasks; Nash averaging "automatically adapts to
+  redundancies in evaluation data, so that results are not biased by the incorporation of
+  easy tasks or weak agents". Use for: reading win matrices with many same-lineage
+  checkpoints (LONG3 best on puzzle dials, 32-2 loser in games); workshop 3 §2.
+
+- [Paper: "Deep Reinforcement Learning that Matters" — Henderson et al. (AAAI 2018)](https://arxiv.org/abs/1709.06560)
+  Abstract read 2026-09-21: "Without significance metrics and tighter standardization of
+  experimental reporting, it is difficult to determine whether improvements over the prior
+  state-of-the-art are meaningful"; seeds, hyperparameters and evaluation choices change
+  conclusions. Use for: the 0.387 (training-time probe) vs 0.232 (40-game eval) trap and our
+  60-game matrices' noise band; workshop 3 §6.
+
+- [Paper: "Training Larger Networks for Deep Reinforcement Learning" — Ota et al. (2021)](https://arxiv.org/abs/2102.07920)
+  Abstract read 2026-09-21: naively larger networks "do not lead to performance
+  improvement" in deep RL because of training instability; they use DenseNet-style width,
+  decoupled representation learning and distributed training. Use for: why our 128 -> 192
+  gain in RL (from a strong SL prior, PPO trust band, entropy 0.37, KL 0.02) is not the
+  default outcome; workshop 3 §4.
+
+- [Paper: "Scaling Laws for Imitation Learning in Single-Agent Games" — Tuyls et al. (2023)](https://arxiv.org/abs/2307.09423)
+  Abstract read 2026-09-21: "IL loss and mean return scale smoothly with the compute
+  budget (FLOPs) and are strongly correlated, resulting in power laws"; carefully scaling
+  model and data brings NLP-like gains to behaviour cloning in games. Use for: our prior
+  curve 0.341 (299k) -> 0.405 (1.43M) -> 0.432 (2.85M) and the quantity-vs-quality question
+  (high-Elo set); workshop 3 §5.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
