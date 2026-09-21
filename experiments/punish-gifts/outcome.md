@@ -91,3 +91,44 @@ Verdict: hypothesis confirmed as a mechanism, not as a lever on strength. As con
 boards only (opening + mid-game), curriculum boards clean; (2) punisher on the pool
 opponents only (the original option 2), which never touches the learner's batch; (3) park it
 and record the lesson.
+
+## POOL_REF (2026-09-21): DEPTH20 + 120 updates, referee on the five pool opponents only
+
+Owner: "okay go 1 now". `pool_referee true`, `punish_epsilon 0`: the frozen pool opponent plays
+a rules mate, else a free capture >= 3, whenever one exists (11% of its plies were replaced:
+178 of 1606 per summary window). Learner plies untouched. Bare network at evaluation.
+
+| dial | DEPTH20 | PUNISH (learner-side, 120) | POOL_REF (opponent-side, 120) |
+|---|---|---|---|
+| free-piece gifts per 100 plies / own punish rate | 9.6 / 0.54 | 6.6 / 0.72 | 8.0 / 0.53 |
+| allowed mates per 100 / own punish rate | 0.87 / 0.13 | 0.83 / 0.28 | 0.65 / 0.15 |
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.804 / 0.723 / 0.683 / 0.580 / 0.751 | 0.772 / 0.698 / 0.656 / 0.561 / 0.733 | 0.800 / 0.730 / 0.688 / 0.576 / 0.755 |
+| own-game mate-in-one | 0.352 | 0.257 | 0.328 |
+| finishing d2 / d10 / d20 | 0.40 / 0.20 / 0.13 | 0.36 / 0.18 / 0.17 | 0.39 / 0.17 / 0.17 |
+| technique Q / R / RR / QR | 0.20 / 0.12 / 0.16 / 0.22 | 0.10 / 0.00 / 0.12 / 0.22 | 0.12 / 0.04 / 0.18 / 0.26 |
+| game entropy | 0.288 | 0.303 | 0.270 |
+| vs DEPTH20, decisive | - | 14-8 | 17-15 |
+| vs PUNISH, decisive | 8-14 | - | 11-18 |
+| training score vs the (refereed) prior member | 0.4-0.5 | - | 0.08 |
+
+Reading.
+- **The cost is gone.** Puzzles, own-game mate-in-one, finishing and technique all sit on
+  DEPTH20's numbers (within noise). Confirms the diagnosis: PUNISH's losses came from the
+  learner's own exploration being shifted, not from punishment as such.
+- **The benefit is smaller.** Gifts fell 9.6 -> 8.0 (PUNISH: 6.6) and own punishment did not
+  move, because only the five pool boards carry the lesson and the learner never plays the
+  punishing move itself. Head to head it is level with DEPTH20 (17-15) and loses to PUNISH
+  (11-18).
+- **The refereed prior crushes the learner (0.08).** Punishment at rate 1.0 on those boards is
+  a very different opponent; the learner is still losing those games after 120 updates. A
+  longer run might turn that around, but the held-out dials give no reason to expect a
+  strength gain.
+- **A pattern across the three arms:** PUNISH is the checkpoint that wins head to head
+  (14-8 vs DEPTH20, 18-11 vs POOL_REF, best row in the five-way matrix) while being the
+  worst on every mate dial. Among networks at this level, material discipline decides games
+  more than mating skill does. The held-out dials measure what we chose to teach, not what
+  wins games between these networks.
+
+Verdict: opponent-side punishment is free but weak; learner-side punishment is effective but
+costly. Neither moves the network off the plateau. Both stay off by default; the change is
+recorded and ready to archive after the comprehension check. Next lever: capacity (SL192).

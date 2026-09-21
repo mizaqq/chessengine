@@ -1,0 +1,70 @@
+{
+ "names": [
+  "DEPTH20",
+  "PUNISH",
+  "POOL_REF"
+ ],
+ "dirs": {
+  "DEPTH20": "experiments/endgame-technique/DEPTH20",
+  "PUNISH": "experiments/punish-gifts/PUNISH",
+  "POOL_REF": "experiments/punish-gifts/POOL_REF"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "DEPTH20": {
+   "PUNISH": 0.45,
+   "POOL_REF": 0.48333333333333334
+  },
+  "PUNISH": {
+   "DEPTH20": 0.55,
+   "POOL_REF": 0.5583333333333333
+  },
+  "POOL_REF": {
+   "DEPTH20": 0.5166666666666666,
+   "PUNISH": 0.44166666666666665
+  }
+ },
+ "counts": [
+  {
+   "a": "DEPTH20",
+   "b": "PUNISH",
+   "counts": {
+    "a_white_unfinished": 1,
+    "a_black_draw": 14,
+    "a_white_draw": 21,
+    "a_black_unfinished": 2,
+    "a_black_white_win": 9,
+    "a_white_black_win": 5,
+    "a_black_black_win": 5,
+    "a_white_white_win": 3
+   }
+  },
+  {
+   "a": "DEPTH20",
+   "b": "POOL_REF",
+   "counts": {
+    "a_white_draw": 16,
+    "a_black_white_win": 13,
+    "a_black_draw": 12,
+    "a_black_black_win": 5,
+    "a_white_white_win": 10,
+    "a_white_black_win": 4
+   }
+  },
+  {
+   "a": "PUNISH",
+   "b": "POOL_REF",
+   "counts": {
+    "a_white_white_win": 11,
+    "a_black_white_win": 7,
+    "a_black_black_win": 7,
+    "a_white_draw": 13,
+    "a_black_draw": 14,
+    "a_white_black_win": 4,
+    "a_black_unfinished": 2,
+    "a_white_unfinished": 2
+   }
+  }
+ ]
+}
