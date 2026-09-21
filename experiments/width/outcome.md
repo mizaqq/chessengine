@@ -307,3 +307,37 @@ Verdict / next: stop continuing LONG256. The clean path is a fresh 600-update ru
 with the guards on from update 1 (lr 1e-4, target_kl 0.02, alarm on 40 games) — LONG256G —
 compared against LONG256 on the same table. A (its first 200 updates, in effect) is already
 80-42 vs the prior with entropy 0.35.
+
+## LONG256G (2026-09-21 night): fresh 600 from slhi256, guards on from update 1 — new best
+
+lr 1e-4, target_kl 0.02 (whole-batch, 1.5x), alarm on 40 games (never fired), optimizer saved.
+
+| dial | LONG256 (unguarded) | LONG256G (guarded) |
+|---|---|---|
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.802 / 0.728 / 0.666 / 0.573 / 0.753 | **0.824 / 0.752 / 0.672 / 0.598 / 0.768** |
+| m1 trajectory | flat from 350 | 0.73 -> 0.82, **still rising at 550** |
+| own-game mate-in-one | 0.408 | 0.330 |
+| finishing d2 / d10 / d20 | 0.53 / 0.34 / 0.20 | 0.51 / 0.29 / 0.17 |
+| technique Q / R / RR / QR | 0.28 / 0.14 / 0.32 / 0.56 | 0.22 / 0.12 / 0.24 / 0.54 |
+| gifts per 100 plies / own punish | 8.6 / 0.47 | **6.9 / 0.68** |
+| game entropy at 600 | 0.198 | **0.268** |
+| KL / clip / kl_stop / steps per update | 0.040 / 0.18 / - / 16 | 0.012 / 0.09 / 0.9 late / 11.2 |
+| vs slhi256, 200 games from the opening | 78-43 | **87-59** |
+| LONG256 vs LONG256G, 200 games | | **93-53 for LONG256G** |
+| wall clock | 52 min | 56 min |
+
+Training-time prior match (40 games) over the run: 28-14, 36-13, 35-13, 27-17, 27-24, 29-26 at
+50..550 — the margin narrows in the last 200 updates while the guard fires on most updates
+(kl_stop 0.8-0.9). Same shape LONG256 showed before its continuations failed; here the 200-game
+match still says 87-59 and puzzles are still climbing.
+
+Reading: with the KL guard the same 600 updates end with a policy that is stronger (93-53 head
+to head), sharper on every puzzle set, gives away a fifth fewer pieces and punishes more, and
+keeps entropy at 0.27 instead of 0.20. The guard trimmed about a third of the optimizer steps
+over the run and more late on — the step budget adapts as the policy sharpens, which is the
+point (Spinning Up). The dials that did not improve (own-game m1, finishing, technique) are
+within their 40/100/50-game noise bands.
+
+Verdict: LONG256G is the best checkpoint. The guarded recipe (target_kl 0.02, alarm, optimizer
+persistence) is the default for the 256 line. Open question for the continuation: the late
+narrowing of the training-time prior margin; the alarm exists for exactly that.
