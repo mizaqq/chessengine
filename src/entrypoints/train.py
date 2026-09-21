@@ -395,10 +395,10 @@ def resolve_referee(config: Dict[str, Any]):
 
 
 def resolve_guards(config: Dict[str, Any]):
-    """PPO guards (change ppo-guards): `target_kl` positive or null (default 0.03);
+    """PPO guards (change ppo-guards): `target_kl` positive or null (default 0.02);
     `stop_below_prior` in (0, 1) or null (default 0.5, only with prior_eval_games > 0);
     `stop_patience` >= 1 (default 2)."""
-    tk = config.get("target_kl", 0.03)
+    tk = config.get("target_kl", 0.02)
     if tk is not None:
         tk = float(tk)
         if tk <= 0:

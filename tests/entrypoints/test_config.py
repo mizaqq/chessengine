@@ -337,7 +337,7 @@ def test_referee_resolver():
 
 def test_guards_resolver():
     from src.entrypoints.train import resolve_guards
-    assert resolve_guards({"prior_eval_games": 20}) == {"target_kl": 0.03, "stop_below_prior": 0.5, "stop_patience": 2}
+    assert resolve_guards({"prior_eval_games": 20}) == {"target_kl": 0.02, "stop_below_prior": 0.5, "stop_patience": 2}
     assert resolve_guards({})["stop_below_prior"] is None            # no prior match: alarm off
     assert resolve_guards({"target_kl": None})["target_kl"] is None
     with pytest.raises(ValueError):

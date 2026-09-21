@@ -26,12 +26,14 @@ env_type: sync
 gamma: 0.99
 entropy_coef: 0.01
 # PPO guards (change ppo-guards, 2026-09-21, after LONG256B drifted: KL 0.04 -> 0.06, clip
-# 0.16 -> 0.26, puzzles 0.80 -> 0.54). target_kl: before each minibatch step the clean-sample
-# approx KL is checked; above it no more steps this update (Spinning Up PPO; their default
-# 0.01, our healthy band 0.02-0.04). null = off. stop_below_prior / stop_patience: stop when
+# 0.16 -> 0.26, puzzles 0.80 -> 0.54). target_kl: before each pass after the first, the
+# whole-batch clean-sample approx KL is checked; above 1.5 x target no more passes this
+# update (Spinning Up PPO rule; their default 0.01). Measured on a LONG256 batch the pass
+# means were 0.009 / 0.055 / 0.081 / 0.084 at lr 1e-4: our updates always ran far past the
+# reference band. 0.02 (owner): ~3 passes at 5e-5, 1 at 1e-4. null = off. stop_below_prior / stop_patience: stop when
 # prior_score is below the threshold at that many consecutive evaluations and restore the
 # last good weights (needs prior_eval_games > 0). Summary: mean_kl_stop, mean_optimizer_steps.
-target_kl: 0.03
+target_kl: 0.02
 stop_below_prior: 0.5
 stop_patience: 2
 grad_clip: 1.0

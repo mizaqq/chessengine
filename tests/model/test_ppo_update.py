@@ -223,10 +223,10 @@ def test_target_kl_stops_further_steps_and_reports_it():
     model = ChessPolicyProbs(num_filters=8)
     _, batch = _batch(model)
     opt = CountingAdam(model.parameters(), lr=1e-4)
-    # an impossibly small target: the first minibatch's KL is ~0 (ratio 1), so exactly one step is taken
-    # before the second minibatch's KL (now > 0 after the step) trips the guard
+    # an impossibly small target: the first pass always runs (4 steps); the whole-batch KL before the
+    # second pass is > 0 after those steps, so the guard stops there
     out = update_model(model, opt, batch, epochs=4, minibatches=4, clip_epsilon=0.2, target_kl=1e-12)
-    assert 1 <= opt.steps < 16 and out["optimizer_steps"] == opt.steps and out["kl_stop"] == 1.0
+    assert opt.steps == 4 and out["optimizer_steps"] == 4 and out["kl_stop"] == 1.0
     model2 = ChessPolicyProbs(num_filters=8)
     _, batch2 = _batch(model2)
     opt2 = CountingAdam(model2.parameters(), lr=1e-4)

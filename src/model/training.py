@@ -467,10 +467,11 @@ def update_model(
 ):
     """Turn one gathered batch into `epochs * minibatches` optimizer steps.
 
-    `target_kl` (change ppo-guards): before each step the minibatch's mean approx KL on
-    clean samples is checked; above the target no further steps are taken this update
-    (Spinning Up PPO: "If the mean KL-divergence of the new policy from the old grows
-    beyond a threshold, we stop taking gradient steps"). Reported as `kl_stop` (0/1).
+    `target_kl` (change ppo-guards): before each pass after the first, the whole-batch
+    approx KL (clean samples) of the current policy from the data-collecting one is
+    checked; above 1.5 x target no further passes are taken this update (Spinning Up PPO:
+    "If the mean KL-divergence of the new policy from the old grows beyond a threshold, we
+    stop taking gradient steps"; their stop is at 1.5 x target_kl). Reported as `kl_stop`.
 
     Each minibatch re-runs the network on the stored observations, forms the
     probability ratio against the stored log-probs, and minimises
@@ -486,20 +487,25 @@ def update_model(
     sums = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
     steps = 0
     kl_stop = 0.0
-    for _ in range(epochs):
+    clean_all = ~batch["noisy"] if "noisy" in batch else torch.ones(n, dtype=torch.bool)
+    if not clean_all.any():
+        clean_all = torch.ones(n, dtype=torch.bool)
+    for epoch in range(epochs):
+        if target_kl is not None and epoch > 0:
+            # Spinning Up rule adapted to minibatches: before each pass, the whole-batch KL
+            # of the new policy from the one that collected the data; above 1.5 x target,
+            # stop taking steps this update.
+            with torch.no_grad():
+                p_all, _ = model(batch["obs"][clean_all], batch["legal_mask"][clean_all])
+                lp_all = Categorical(probs=p_all).log_prob(batch["action"][clean_all])
+                kl_epoch = (batch["old_log_prob"][clean_all] - lp_all).mean().item()
+            if kl_epoch > 1.5 * target_kl:
+                kl_stop = 1.0
+                break
         for idx in _minibatch_indices(n, minibatches, generator):
             probs, value = model(batch["obs"][idx], batch["legal_mask"][idx])
             dist = Categorical(probs=probs)
             new_log_prob = dist.log_prob(batch["action"][idx])
-            if target_kl is not None:
-                with torch.no_grad():
-                    clean0 = ~batch["noisy"][idx] if "noisy" in batch else torch.ones(len(idx), dtype=torch.bool)
-                    if not clean0.any():
-                        clean0 = torch.ones(len(idx), dtype=torch.bool)
-                    kl_now = (batch["old_log_prob"][idx][clean0] - new_log_prob[clean0]).mean().item()
-                if kl_now > target_kl:
-                    kl_stop = 1.0
-                    break
             adv = batch["adv"][idx]
             if normalize_advantage:
                 adv = (adv - adv.mean()) / (adv.std(unbiased=False) + 1e-8) if len(adv) > 1 else torch.zeros_like(adv)
@@ -528,9 +534,6 @@ def update_model(
                 if clip_epsilon is not None:
                     sums["clip_fraction"] += ((ratio[clean] - 1.0).abs() > clip_epsilon).float().mean().item()
                 sums["approx_kl"] += (batch["old_log_prob"][idx][clean] - new_log_prob[clean]).mean().item()
-        else:
-            continue
-        break                      # target_kl tripped: leave the epoch loop too
     out = {k: (v / steps if steps else 0.0) for k, v in sums.items()}
     if clip_epsilon is None or steps == 0:
         out["clip_fraction"] = None if clip_epsilon is None else out["clip_fraction"]

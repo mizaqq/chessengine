@@ -1,19 +1,19 @@
 ## ADDED Requirements
 
 ### Requirement: Target-KL early stopping
-When `target_kl` is set, before each minibatch optimizer step the update SHALL compute the
-mean approximate KL `mean(old_log_prob - new_log_prob)` over the minibatch's clean samples
-(samples whose stored log-probability is the network's, not a behaviour mixture's). If it
-exceeds `target_kl`, no further optimizer steps SHALL be taken in this update. The update
-summary SHALL report `mean_kl_stop` (1 for an update cut short, else 0, averaged) and
-`mean_optimizer_steps`. `target_kl` SHALL be a positive number or null (off; default 0.03).
+When `target_kl` is set, before every pass over the batch after the first, the update SHALL
+compute the mean approximate KL `mean(old_log_prob - new_log_prob)` over the whole batch's
+clean samples (samples whose stored log-probability is the network's, not a behaviour
+mixture's). If it exceeds `1.5 * target_kl`, no further passes SHALL be taken in this update.
+The update summary SHALL report `mean_kl_stop` (1 for an update cut short, else 0, averaged)
+and `mean_optimizer_steps`. `target_kl` SHALL be a positive number or null (off; default 0.02).
 
 #### Scenario: guard fires
-- **WHEN** ppo_epochs 4, ppo_minibatches 4, and the third minibatch's KL is 0.05 with target_kl 0.03
-- **THEN** exactly 2 optimizer steps are taken and kl_stop is 1
+- **WHEN** ppo_epochs 4, ppo_minibatches 4, target_kl 0.02, and the whole-batch KL before pass 3 is 0.035
+- **THEN** exactly 8 optimizer steps are taken (two passes) and kl_stop is 1
 
 #### Scenario: guard silent
-- **WHEN** every minibatch's KL stays below target_kl
+- **WHEN** the whole-batch KL before every pass stays at or below 0.03
 - **THEN** all 16 steps are taken and kl_stop is 0
 
 ### Requirement: Training stop on prior alarm

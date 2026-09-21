@@ -8,10 +8,12 @@ Goals: bound the per-update policy move without hand-tuning; make the named alar
 run and keep the last good weights. Non-goals: PPO-penalty, adaptive lr.
 
 ## Decisions
-- **KL check before the step, on the minibatch being stepped** (Spinning Up checks the epoch
-  KL before stepping; per-minibatch is finer and free here). `target_kl` 0.03: our healthy
-  runs sit at 0.02-0.04 per minibatch-mean; 0.01 would stop almost every update. At the
-  extremes: very small -> one step per update (A2C-like, slow); very large -> off.
+- **KL check on the whole batch before each pass, stop at 1.5 x target** (Spinning Up's rule;
+  a first version checked per minibatch at the target and cut every LONG256C update to 6.5
+  of 16 steps because minibatch KLs swing far wider than the mean). Measured on a LONG256
+  batch: epoch-mean KL at lr 1e-4 = 0.009 / 0.055 / 0.081 / 0.084, at 5e-5 = 0.003 / 0.015 /
+  0.032 / 0.043. `target_kl` 0.02 (owner, 2026-09-21): ~3 passes at 5e-5, 1 at 1e-4. Extremes:
+  0.01 (reference default) = one pass at either rate; >= 0.05 = never fires here.
 - **`mean_kl_stop`** is the dial: near 0 the guard is idle; near 1 every update is cut and the
   learning rate is the real problem.
 - **Alarm restores weights** via a deep copy of both models' state dicts taken at each passing
