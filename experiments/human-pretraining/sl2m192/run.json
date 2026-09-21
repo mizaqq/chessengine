@@ -1,0 +1,27 @@
+{
+ "config": {
+  "train": "data/games/human_2m_train.npz",
+  "eval": "data/games/human_2m_eval.npz",
+  "out": "experiments/human-pretraining/sl2m192",
+  "epochs": 2,
+  "batch": 256,
+  "lr": 0.001,
+  "value_weight": 0.01,
+  "eval_every": 500,
+  "eval_limit": 2048,
+  "max_batches": null,
+  "seed": 0,
+  "num_filters": 192,
+  "num_blocks": 10,
+  "device": "auto"
+ },
+ "final": {
+  "eval_ce": 1.8541604642316076,
+  "eval_value_mse": 0.8773499004838295,
+  "eval_top1": 0.43155814575995666,
+  "eval_n": 149280
+ },
+ "steps": 22272,
+ "elapsed_s": 1942.1819262504578,
+ "checkpoint": "experiments/human-pretraining/sl2m192/model_20260921140451_episodes_22272.pth"
+}

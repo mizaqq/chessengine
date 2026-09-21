@@ -1,0 +1,33 @@
+{
+ "names": [
+  "SLBIG192",
+  "SL2M192"
+ ],
+ "dirs": {
+  "SLBIG192": "experiments/human-pretraining/slbig192",
+  "SL2M192": "experiments/human-pretraining/sl2m192"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SLBIG192": {
+   "SL2M192": 0.375
+  },
+  "SL2M192": {
+   "SLBIG192": 0.625
+  }
+ },
+ "counts": [
+  {
+   "a": "SLBIG192",
+   "b": "SL2M192",
+   "counts": {
+    "a_white_draw": 18,
+    "a_black_draw": 15,
+    "a_white_black_win": 12,
+    "a_black_black_win": 6,
+    "a_black_white_win": 9
+   }
+  }
+ ]
+}
