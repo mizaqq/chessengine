@@ -1,0 +1,19 @@
+{
+ "games": 40,
+ "results": {
+  "draw": 29,
+  "black_win": 7,
+  "white_win": 4
+ },
+ "draw_rate": 0.725,
+ "decisive_rate": 0.275,
+ "mate_in_one_opportunities": 115,
+ "mate_in_one_found": 11,
+ "mate_in_one_rate": 0.09565217391304348,
+ "mean_plies": 137.9,
+ "checkpoints": {
+  "model": "experiments/human-pretraining/slbig128/model_20260921112004_episodes_11136.pth"
+ },
+ "oriented": true,
+ "seed": 0
+}

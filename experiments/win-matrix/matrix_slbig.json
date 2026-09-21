@@ -1,0 +1,109 @@
+{
+ "names": [
+  "SL",
+  "SL192",
+  "SLBIG128",
+  "SLBIG192"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "SL192": "experiments/human-pretraining/sl192",
+  "SLBIG128": "experiments/human-pretraining/slbig128",
+  "SLBIG192": "experiments/human-pretraining/slbig192"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SL": {
+   "SL192": 0.48333333333333334,
+   "SLBIG128": 0.30833333333333335,
+   "SLBIG192": 0.39166666666666666
+  },
+  "SL192": {
+   "SL": 0.5166666666666666,
+   "SLBIG128": 0.325,
+   "SLBIG192": 0.2833333333333333
+  },
+  "SLBIG128": {
+   "SL": 0.6916666666666667,
+   "SL192": 0.675,
+   "SLBIG192": 0.48333333333333334
+  },
+  "SLBIG192": {
+   "SL": 0.6083333333333334,
+   "SL192": 0.7166666666666667,
+   "SLBIG128": 0.5166666666666666
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "SL192",
+   "counts": {
+    "a_white_draw": 23,
+    "a_black_draw": 22,
+    "a_white_black_win": 4,
+    "a_black_black_win": 3,
+    "a_black_unfinished": 1,
+    "a_black_white_win": 4,
+    "a_white_white_win": 3
+   }
+  },
+  {
+   "a": "SL",
+   "b": "SLBIG128",
+   "counts": {
+    "a_white_black_win": 11,
+    "a_black_white_win": 13,
+    "a_black_draw": 16,
+    "a_white_draw": 19,
+    "a_black_black_win": 1
+   }
+  },
+  {
+   "a": "SL",
+   "b": "SLBIG192",
+   "counts": {
+    "a_white_black_win": 8,
+    "a_black_draw": 18,
+    "a_white_draw": 19,
+    "a_black_white_win": 10,
+    "a_white_white_win": 3,
+    "a_black_black_win": 2
+   }
+  },
+  {
+   "a": "SL192",
+   "b": "SLBIG128",
+   "counts": {
+    "a_white_black_win": 9,
+    "a_black_draw": 17,
+    "a_white_draw": 20,
+    "a_black_white_win": 13,
+    "a_white_white_win": 1
+   }
+  },
+  {
+   "a": "SL192",
+   "b": "SLBIG192",
+   "counts": {
+    "a_white_black_win": 15,
+    "a_black_white_win": 11,
+    "a_white_draw": 15,
+    "a_black_draw": 19
+   }
+  },
+  {
+   "a": "SLBIG128",
+   "b": "SLBIG192",
+   "counts": {
+    "a_white_draw": 18,
+    "a_black_white_win": 7,
+    "a_white_white_win": 5,
+    "a_black_draw": 16,
+    "a_black_black_win": 7,
+    "a_white_black_win": 7
+   }
+  }
+ ]
+}

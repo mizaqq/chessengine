@@ -1,0 +1,119 @@
+{
+ "names": [
+  "SL",
+  "SL192",
+  "CTRL128",
+  "RL192"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "SL192": "experiments/human-pretraining/sl192",
+  "CTRL128": "experiments/width/CTRL128",
+  "RL192": "experiments/width/RL192"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SL": {
+   "SL192": 0.48333333333333334,
+   "CTRL128": 0.5416666666666666,
+   "RL192": 0.5416666666666666
+  },
+  "SL192": {
+   "SL": 0.5166666666666666,
+   "CTRL128": 0.5416666666666666,
+   "RL192": 0.5083333333333333
+  },
+  "CTRL128": {
+   "SL": 0.45833333333333337,
+   "SL192": 0.45833333333333337,
+   "RL192": 0.48333333333333334
+  },
+  "RL192": {
+   "SL": 0.45833333333333337,
+   "SL192": 0.4916666666666667,
+   "CTRL128": 0.5166666666666666
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "SL192",
+   "counts": {
+    "a_white_draw": 23,
+    "a_black_draw": 22,
+    "a_white_black_win": 4,
+    "a_black_black_win": 3,
+    "a_black_unfinished": 1,
+    "a_black_white_win": 4,
+    "a_white_white_win": 3
+   }
+  },
+  {
+   "a": "SL",
+   "b": "CTRL128",
+   "counts": {
+    "a_white_black_win": 4,
+    "a_black_draw": 18,
+    "a_white_draw": 21,
+    "a_black_black_win": 8,
+    "a_white_white_win": 4,
+    "a_black_white_win": 3,
+    "a_black_unfinished": 1,
+    "a_white_unfinished": 1
+   }
+  },
+  {
+   "a": "SL",
+   "b": "RL192",
+   "counts": {
+    "a_white_draw": 23,
+    "a_black_draw": 19,
+    "a_white_black_win": 3,
+    "a_black_unfinished": 1,
+    "a_black_black_win": 7,
+    "a_white_white_win": 4,
+    "a_black_white_win": 3
+   }
+  },
+  {
+   "a": "SL192",
+   "b": "CTRL128",
+   "counts": {
+    "a_white_white_win": 6,
+    "a_black_draw": 21,
+    "a_black_white_win": 3,
+    "a_white_draw": 21,
+    "a_white_black_win": 3,
+    "a_black_black_win": 5,
+    "a_black_unfinished": 1
+   }
+  },
+  {
+   "a": "SL192",
+   "b": "RL192",
+   "counts": {
+    "a_white_draw": 24,
+    "a_black_draw": 25,
+    "a_white_black_win": 2,
+    "a_black_black_win": 2,
+    "a_white_white_win": 4,
+    "a_black_white_win": 3
+   }
+  },
+  {
+   "a": "CTRL128",
+   "b": "RL192",
+   "counts": {
+    "a_white_black_win": 8,
+    "a_black_draw": 17,
+    "a_white_draw": 11,
+    "a_black_unfinished": 1,
+    "a_white_white_win": 8,
+    "a_black_black_win": 5,
+    "a_black_white_win": 7,
+    "a_white_unfinished": 3
+   }
+  }
+ ]
+}

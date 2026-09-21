@@ -1,0 +1,10 @@
+{
+ "puzzle_top1": 0.1445,
+ "puzzle_mate_prob": 0.10147951303856448,
+ "puzzle_count": 2000,
+ "checkpoints": {
+  "model": "experiments/human-pretraining/sl192/model_20260921100453_episodes_3504.pth"
+ },
+ "oriented": true,
+ "eval_file": "data/puzzles/mate_in_2_eval.csv"
+}

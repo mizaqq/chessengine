@@ -1,0 +1,35 @@
+{
+ "names": [
+  "SL",
+  "SL192"
+ ],
+ "dirs": {
+  "SL": "experiments/human-pretraining/sl",
+  "SL192": "experiments/human-pretraining/sl192"
+ },
+ "games_per_colour": 30,
+ "seed": 5,
+ "table": {
+  "SL": {
+   "SL192": 0.48333333333333334
+  },
+  "SL192": {
+   "SL": 0.5166666666666666
+  }
+ },
+ "counts": [
+  {
+   "a": "SL",
+   "b": "SL192",
+   "counts": {
+    "a_white_draw": 23,
+    "a_black_draw": 22,
+    "a_white_black_win": 4,
+    "a_black_black_win": 3,
+    "a_black_unfinished": 1,
+    "a_black_white_win": 4,
+    "a_white_white_win": 3
+   }
+  }
+ ]
+}

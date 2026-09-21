@@ -1,0 +1,27 @@
+{
+ "config": {
+  "train": "data/games/human_big_train.npz",
+  "eval": "data/games/human_big_eval.npz",
+  "out": "experiments/human-pretraining/slbig192",
+  "epochs": 2,
+  "batch": 256,
+  "lr": 0.001,
+  "value_weight": 0.01,
+  "eval_every": 500,
+  "eval_limit": 2048,
+  "max_batches": null,
+  "seed": 0,
+  "num_filters": 192,
+  "num_blocks": 10,
+  "device": "auto"
+ },
+ "final": {
+  "eval_ce": 1.9746401889020095,
+  "eval_value_mse": 0.8976366081166242,
+  "eval_top1": 0.4036709539696079,
+  "eval_n": 74640
+ },
+ "steps": 11136,
+ "elapsed_s": 795.2783780097961,
+ "checkpoint": "experiments/human-pretraining/slbig192/model_20260921113350_episodes_11136.pth"
+}
