@@ -628,6 +628,8 @@ def run_chess_training(
     num_envs = envs.num_envs
     num_puzzle_envs = getattr(envs, "num_puzzle_envs", 0)
     puzzle_env_mask = torch.arange(num_envs) < num_puzzle_envs
+    import time as _time0
+    run_started = _time0.time()
     logs = []
     losses = []
     env_step = envs.reset()
@@ -784,7 +786,7 @@ def run_chess_training(
         if progress_path is not None and (episode % log_interval == 0 or eval_metrics or episode == episodes):
             # Live view for scripts/dashboard.py: the logs so far plus where the run is.
             import json, time as _time
-            Path(progress_path).write_text(json.dumps({"episode": episode, "episodes": episodes,
+            Path(progress_path).write_text(json.dumps({"episode": episode, "episodes": episodes, "started": run_started,
                                                        "updated": _time.time(), "logs": logs}))
 
     if hasattr(envs, "close"):

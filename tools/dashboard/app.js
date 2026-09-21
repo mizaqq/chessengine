@@ -6,7 +6,7 @@ const when = ts => { const d = new Date(ts * 1000); return `${String(d.getMonth(
 const PALETTE = ["#2f5d8a", "#c7522e", "#2e7d32", "#7b3fa0", "#b7791f", "#0f8b8d", "#8a2f5d", "#555"];
 const color = i => PALETTE[i % PALETTE.length];
 
-const S = { state: null, sort: { key: "mtime", dir: -1 }, selected: new Set(), runCache: {}, charts: {}, matrixFile: null, outFile: null,
+const S = { seen: {}, state: null, sort: { key: "mtime", dir: -1 }, selected: new Set(), runCache: {}, charts: {}, matrixFile: null, outFile: null,
             games: {}, gi: null, mi: 0, timer: null, metrics: new Set(["lichess_top1"]) };
 const DASHES = [[], [6, 3], [2, 2], [8, 3, 2, 3], [1, 3], [10, 4], [4, 2, 1, 2], [12, 3, 3, 3]];
 
@@ -57,6 +57,25 @@ function lineChart(id, opts = {}) {
 function setData(chart, datasets) { chart.data.datasets = datasets; chart.update("none"); }
 const series = (logs, key) => logs.filter(e => e[key] != null).map(e => ({ x: e.episode, y: e[key] }));
 
+/* ---------------- ETA: from the run's own start time when the progress file carries it,
+   otherwise from the rate observed since this page first saw the run */
+function etaFor(arm, done, total, started, updated, now) {
+  const seen = S.seen[arm] || (S.seen[arm] = { t: updated, n: done });
+  let rate = null;                                   // units per second
+  if (started && done > 0) rate = done / Math.max(updated - started, 1);
+  else if (done > seen.n && updated > seen.t) rate = (done - seen.n) / (updated - seen.t);
+  if (!rate) return { text: "", rate: "" };
+  const perMin = rate * 60;
+  const out = { rate: `${perMin >= 10 ? perMin.toFixed(0) : perMin.toFixed(1)} / min` };
+  if (total && done < total) {
+    const left = (total - done) / rate;
+    const end = new Date((now + left) * 1000);
+    out.text = `≈ ${age(left)} left · ends ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
+  }
+  if (started) out.rate += ` · running ${age(updated - started)}`;
+  return out;
+}
+
 /* ---------------- running */
 function renderRunning(st) {
   const box = $("running"); const cards = [];
@@ -64,16 +83,18 @@ function renderRunning(st) {
   for (const r of st.running) cards.push(`<div class="card run"><b>${r.task}</b><span class="tag">${r.driver}</span> <span class="sub small">started ${r.started}</span><div class="sub small">${r.last_line || ""}</div></div>`);
   for (const p of st.progress) {
     const pct = (p.episode || 0) / Math.max(p.episodes || 1, 1) * 100;
+    const eta = etaFor(p.arm, p.episode, p.episodes, p.started, p.updated, st.now);
     const dials = Object.entries(p.dials).filter(([k, v]) => v != null).map(([k, v]) => `<span>${k} <b>${fmt(v)}</b></span>`).join("");
     const id = "prog_" + p.arm.replace(/[^\w]/g, "_");
-    cards.push(`<div class="card run ${stale(p.updated) ? "stale" : ""}"><b>${p.arm}</b><span class="tag">update ${p.episode} / ${p.episodes}</span>
-      <span class="sub small">last write ${age(st.now - p.updated)} ago${stale(p.updated) ? " · stale?" : ""}</span>
+    cards.push(`<div class="card run ${stale(p.updated) ? "stale" : ""}"><b>${p.arm}</b><span class="tag">update ${p.episode} / ${p.episodes}</span>${eta.text ? `<span class="tag">${eta.text}</span>` : ""}
+      <span class="sub small">last write ${age(st.now - p.updated)} ago${stale(p.updated) ? " · stale?" : ""}${eta.rate ? ` · ${eta.rate}` : ""}</span>
       <div class="bar"><div style="width:${pct.toFixed(0)}%"></div></div><div class="dials">${dials}</div>
       <div class="mini">${["lichess_top1", "mean_entropy_normalized_game", "finish_success_rate"].map(k => `<div><div class="sub small">${k}</div><canvas id="${id}_${k}"></canvas></div>`).join("")}</div></div>`);
   }
   for (const p of st.running_pretraining) {
     const id = "pre_" + p.arm.replace(/[^\w]/g, "_");
-    cards.push(`<div class="card run ${stale(p.updated) ? "stale" : ""}"><b>${p.arm}</b><span class="tag">step ${p.steps}</span> <span class="sub small">last write ${age(st.now - p.updated)} ago</span>
+    const eta = etaFor(p.arm, p.steps, null, null, p.updated, st.now);
+    cards.push(`<div class="card run ${stale(p.updated) ? "stale" : ""}"><b>${p.arm}</b><span class="tag">step ${p.steps}</span> <span class="sub small">last write ${age(st.now - p.updated)} ago${eta.rate ? ` · ${eta.rate}` : ""}</span>
       <div class="dials"><span>held-out top-1 <b>${fmt(p.last.eval_top1)}</b></span><span>train top-1 <b>${fmt(p.last.train_top1)}</b></span><span>eval CE <b>${fmt(p.last.eval_ce)}</b></span></div>
       <div class="mini" style="grid-template-columns:1fr"><canvas id="${id}" style="height:90px!important"></canvas></div></div>`);
   }
