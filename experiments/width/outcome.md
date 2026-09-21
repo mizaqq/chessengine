@@ -171,3 +171,38 @@ skill dial pays for it and LONG256 beats the arm 29-18. The guard rule in the dr
 (entropy +0.03 and m1 not down > 0.01) rejected it; LONG256B runs without an entropy guard,
 with prior_score as the alarm. Lesson: in this loss the entropy term becomes visible around
 0.1 in normalised units, and at that size it costs more skill than the sharpness costs strength.
+
+## LONG256B (2026-09-21): LONG256 + 600 updates, no guard — COLLAPSED
+
+| dial | LONG256 | LONG256B |
+|---|---|---|
+| mate-in-1 / 2 / 3 / 4 / endgame | 0.802 / 0.728 / 0.666 / 0.573 / 0.753 | **0.542 / 0.494 / 0.458 / 0.403 / 0.502** |
+| own-game mate-in-one | 0.408 | 0.135 |
+| finishing d2 / d10 / d20 | 0.53 / 0.34 / 0.20 | 0.21 / 0.14 / 0.09 |
+| technique Q / R / RR / QR | 0.28 / 0.14 / 0.32 / 0.56 | 0.02 / 0.00 / 0.06 / 0.06 |
+| gifts per 100 / own punish | 8.6 / 0.47 | 11.9 / 0.18 |
+| game entropy / KL / clip | 0.198 / 0.040 / 0.18 | 0.426 / 0.058 / 0.26 |
+| prior_score | 0.64 | 0.23 |
+| vs LONG256, decisive | - | **3-48** |
+
+Trajectory (LONG256B logs): held-out m1 0.79 flat to update 250, then 0.75 (350), 0.67 (450),
+0.62 (550). prior_score 0.47 / 0.56 / 0.35 / 0.38 / 0.19 / 0.23 at 50..550 — the alarm we
+named (below par twice) tripped at 350 but nothing stopped the run. Under the hood the drift
+is slow and monotone from ~update 170: approx KL 0.04 -> 0.06, clip fraction 0.16 -> 0.26,
+policy loss from -0.01 to +0.02, training puzzle rate 0.70 -> 0.45, entropy 0.15 -> 0.51,
+draw rate 0.3 -> 0.8, SIL positive share 0.43 -> 0.28. Value loss did not explode.
+
+Reading: not a blow-up but PPO drifting out of its trust band. LONG256 spent 600 updates at
+lr 1e-4 with KL 0.03-0.04 and clip 0.15-0.18 (healthy); the continuation kept the same lr
+(lr_decay_interval 1000 = no decay in a 600-update run, floor 1e-4) and the sharp 256 policy
+started moving too far per update; once it unlearned, the noisier games fed it noisier
+targets and the slide compounded (the mirror image of the entropy collapse we feared: the
+policy flattened while forgetting). The LR5 arm from the same start had KL 0.019 and clip
+0.105 with puzzles held — the healthy band Schulman et al. 2017 and the baselines' target-KL
+early stop aim for.
+
+Verdict: LONG256B is discarded; LONG256 remains the best checkpoint (unchanged). Fixes on the
+table: (1) lr 5e-5 for continuations of the 256 line (LR5 evidence); (2) target-KL early
+stopping inside the PPO update (stop the epoch loop when approx KL > ~0.03; standard in the
+reference implementations); (3) a training stop when prior_score is below par at two
+consecutive evaluations, so an alarm actually halts the run.
