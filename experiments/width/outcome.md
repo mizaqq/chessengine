@@ -229,3 +229,21 @@ at 1.5x target; our check is per minibatch, whose KL varies far more than the me
 Proposed fixes (owner decides): (1) KL check on the running mean of the current epoch, trip
 at 1.5x target (faithful to the reference); (2) the alarm uses 40 prior games (noise band
 +-0.15 instead of +-0.2), patience 2; (3) rerun LONG256C.
+
+## LONG256D (2026-09-21): guards v2 (whole-batch KL, target 0.02; alarm on 40 games) — alarm at 100 again
+
+- KL guard now fires on 40% of updates, 10.4 of 16 steps taken; KL 0.016, clip 0.08 (in band).
+- Held-out puzzles at update 100: 0.810 / 0.732 / 0.669 / 0.579 / 0.751 — **above** LONG256.
+- prior_score 0.46 (16-23 of 80 decisive) at update 50, 0.38 (16-35) at 100 -> alarm, weights
+  restored to LONG256. LONG256's own evaluations at 450-600 were 19-6, 19-8, 16-11, 19-8 of 40;
+  a fresh 200-game match LONG256 vs slhi256 from the opening: **78-43** (score 0.59). So the
+  continuation really does lose to the prior within 50-100 updates while every puzzle set
+  rises — the dials-vs-strength split, now inside one run.
+- On the training pool boards (mid-game starts) the continued learner still scores 0.5-0.6
+  against the same prior. The evaluation plays from the opening. Hypothesis: the continuation
+  degrades opening play specifically. Both continuations (C and D, different guards) show it,
+  LONG192 -> LONG192B did not; what a restart resets: Adam moments (not saved in checkpoints),
+  the opponent pool (prior only for the first 50 updates), the SIL buffer.
+
+Probe queued (PROBE256): LONG256 + 100 updates, lr 5e-5, guards on but alarm off, checkpoint
+kept; then 200-game matches vs slhi256 from the opening and from mid-game starts.
