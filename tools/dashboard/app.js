@@ -135,9 +135,13 @@ async function renderCurves() {
     }
   }
   setData(chart, ds);
-  $("curvesHint").innerHTML = mets.map(m => `<b>${m}</b>: ${INFO[m] || ""}`).join(" · ") + ` · ${arms.length} arm(s)`;
+  $("curvesHint").textContent = `${arms.length} arm(s) × ${mets.length} metric(s)`;
+}
+function renderMetricInfo() {
+  $("metricInfo").innerHTML = [...S.metrics].map((m, j) => `<div><span class="pill" style="background:#555;border-radius:0;height:2px;width:22px;${DASHES[j % DASHES.length].length ? "background:repeating-linear-gradient(90deg,#555 0 4px,transparent 4px 7px)" : ""}"></span><b>${m}</b> — ${INFO[m] || ""}</div>`).join("");
 }
 function renderMetricChips() {
+  renderMetricInfo();
   $("metrics").innerHTML = METRICS.map(m => `<label class="${S.metrics.has(m) ? "on" : ""}" title="${(INFO[m] || "").replace(/"/g, "'")}"><input type="checkbox" data-m="${m}" ${S.metrics.has(m) ? "checked" : ""}>${m}</label>`).join("");
   $("metrics").querySelectorAll("input[data-m]").forEach(cb => cb.onchange = () => { cb.checked ? S.metrics.add(cb.dataset.m) : S.metrics.delete(cb.dataset.m); renderMetricChips(); renderCurves(); });
 }
