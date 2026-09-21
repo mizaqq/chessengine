@@ -8,7 +8,7 @@ set -e
 cd "$(dirname "$0")/../.."
 PY=.venv/bin/python
 COMMON="max_updates=600 guide_epsilon=0.25 technique_curriculum=levels finish_source=mixed finish_depth_start=20 finish_depth_max=20 min_lr=0.0001"
-for ARM in ${ARMS:-LONG128 LONG192}; do
+for ARM in ${=${ARMS:-LONG128 LONG192}}; do
   if [[ $ARM == LONG128 ]]; then PRIOR=experiments/human-pretraining/slbig128; else PRIOR=experiments/human-pretraining/slbig192; fi
   OUT=experiments/width/$ARM; mkdir -p $OUT
   echo "=== $ARM start $(date +%H:%M:%S) from $PRIOR"

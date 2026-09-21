@@ -10,7 +10,7 @@ cd "$(dirname "$0")/../.."
 PY=.venv/bin/python
 until grep -q "all done" experiments/human-pretraining/run_sl192.log && grep -q "all done" experiments/punish-gifts/run_pool_ref.log; do sleep 60; done
 COMMON="max_updates=120 guide_epsilon=0.25 technique_curriculum=levels finish_source=mixed finish_depth_start=20 finish_depth_max=20 min_lr=0.0001"
-for ARM in ${ARMS:-CTRL128 RL192}; do
+for ARM in ${=${ARMS:-CTRL128 RL192}}; do
   if [[ $ARM == CTRL128 ]]; then PRIOR=experiments/human-pretraining/sl; else PRIOR=experiments/human-pretraining/sl192; fi
   OUT=experiments/width/$ARM; mkdir -p $OUT
   echo "=== $ARM start $(date +%H:%M:%S) from $PRIOR"
