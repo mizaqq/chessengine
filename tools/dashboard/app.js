@@ -15,6 +15,33 @@ const COLS = [
   ["own_m1", "own m1"], ["decisive", "decisive"], ["fin0", "fin d2"], ["fin1", "d10"], ["fin2", "d20"], ["init_from", "from", "l"]];
 const val = (r, k) => k in r ? r[k] : (k in r.dials ? r.dials[k] : k.startsWith("fin") ? r.finish[+k[3]] : null);
 
+
+/* ---------------- legend: what each metric means (plain words) */
+const INFO = {
+  name: "experiment folder / arm", when: "when run.json was written", updates: "training updates in this run (each = one rollout of 16 boards x 64 plies + PPO)",
+  elapsed_min: "wall-clock minutes of training", filters: "network width (filters); ·gpu = trained on the Apple GPU", init_from: "checkpoint this run continued from",
+  m1: "held-out Lichess mate-in-1 puzzles: share where the network's top move mates (2,000 positions)",
+  m2: "held-out mate-in-2: top move is the verified forcing first move", m3: "held-out mate-in-3, same rule", m4: "held-out mate-in-4, same rule",
+  end: "held-out Lichess endgame puzzles that end in mate: top move matches the solution", prior: "score vs the supervised prior in 20 sampled games at the end (0.5 = par)",
+  entropy: "policy entropy on game boards, normalised by log(legal moves); 1 = uniform, 0 = deterministic", own_m1: "own games (40): share of mate-in-1 chances the network actually took",
+  decisive: "own games: share that ended in a win rather than a draw / move cap", fin0: "held-out finishing: rewound 2 plies before a human mate, network converts (100 games)",
+  fin1: "same at 10 plies before the mate", fin2: "same at 20 plies before the mate",
+  lichess_top1: "= m1 (held-out mate-in-1 top-1)", lichess_m2_top1: "= m2", lichess_m3_top1: "= m3", lichess_m4_top1: "= m4", lichess_end_top1: "= end (endgame mates)",
+  prior_score: "score vs the supervised prior, 20 games per eval", puzzle_solved_rate: "training puzzle boards solved this update (all depths)", puzzle_solved_rate_m1: "training mate-in-1 boards solved",
+  finish_success_rate: "training finishing boards converted (human starts, all depths)", finish_depth: "current depth of the finishing curriculum (max plies before the mate a board may start)",
+  technique_success_rate_Q: "training queen-vs-king boards won, including wins made by the rules demonstrator", technique_clean_success_rate_Q: "same, only episodes where the demonstrator never acted (drives the curriculum)",
+  technique_rate_Q: "held-out queen-vs-king at the hardest level: network alone, 50 games", mean_entropy_normalized_game: "= entropy (game boards)", mean_entropy_normalized_puzzle: "entropy on puzzle boards",
+  mean_value_loss: "value-head MSE against the return targets (PPO)", mean_policy_loss: "PPO clipped surrogate (negative = pushing good moves up)", mean_approx_kl: "mean(old_logp - new_logp): how far one update moved the policy; ~0.03-0.05 healthy",
+  mean_clip_fraction: "share of samples whose ratio left the [0.8, 1.2] band; ~0.2 healthy, 0.5 = trust band is a fiction", draw_rate: "training games drawn (incl. the 120-ply cap)",
+  mean_terminal_return: "mean terminal reward of finished training games (win +2, loss -2, draw -0.5)", sil_positive_share: "self-imitation buffer: share of plies whose past return still beats the value head (what is left to learn)",
+  pool_score: "learner's score vs the frozen pool opponents on the 5 pool boards", punish_moves: "learner plies where a punishing move (mate / free piece) existed on punish boards", guide_demo_share: "guided moves that were the demonstrator's pick"
+};
+function renderLegend() {
+  const cols = COLS.map(([k, lbl]) => `<tr><td class="l"><b>${lbl}</b></td><td class="l">${INFO[k] || ""}</td></tr>`).join("");
+  const mets = METRICS.filter(m => !COLS.some(([k]) => INFO[m] && INFO[m].startsWith("= "))).map(m => `<tr><td class="l"><b>${m}</b></td><td class="l">${INFO[m] || ""}</td></tr>`).join("");
+  $("legend").innerHTML = `<table><tr><th class="l">results column</th><th class="l">meaning</th></tr>${cols}</table><br><table><tr><th class="l">curve metric</th><th class="l">meaning</th></tr>${mets}</table>`;
+}
+
 /* ---------------- charts */
 function lineChart(id, opts = {}) {
   if (S.charts[id]) return S.charts[id];
@@ -76,7 +103,7 @@ function renderResults(st) {
   const { key, dir } = S.sort;
   rows.sort((a, b) => { const x = val(a, key), y = val(b, key); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
     return (typeof x === "number" ? x - y : String(x).localeCompare(String(y))) * dir; });
-  const head = `<tr><th></th>${COLS.map(([k, lbl, cls]) => `<th class="${cls || ""} ${key === k ? "sorted" : ""}" data-k="${k}">${lbl}${key === k ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr>`;
+  const head = `<tr><th></th>${COLS.map(([k, lbl, cls]) => `<th class="${cls || ""} ${key === k ? "sorted" : ""}" data-k="${k}" title="${(INFO[k] || "").replace(/"/g, "'")}">${lbl}${key === k ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr>`;
   const body = rows.map(r => `<tr><td><input type="checkbox" data-arm="${r.name}" ${S.selected.has(r.name) ? "checked" : ""}></td>${COLS.map(([k, , cls]) => {
     let v = val(r, k);
     if (k === "mtime") v = when(v); else if (k === "elapsed_min") v = v.toFixed(0); else if (k === "init_from") v = v ? v.split("/").pop() : "";
@@ -102,7 +129,7 @@ async function renderCurves() {
     if (align && pts.length) { const x0 = pts[0].x; pts = pts.map(p => ({ x: p.x - x0, y: p.y })); }
     ds.push({ label: arm, data: pts, borderColor: color(i), borderWidth: 1.6, pointRadius: pts.length < 30 ? 2 : 0 });
   }
-  setData(chart, ds); $("curvesHint").textContent = `${S.metric} for ${arms.length} arm(s)`;
+  setData(chart, ds); $("curvesHint").textContent = `${S.metric}: ${INFO[S.metric] || ""} · ${arms.length} arm(s)`;
 }
 
 /* ---------------- matrices */
@@ -179,6 +206,7 @@ $("playMore").onclick = async () => { const g = S.games[S.gi]; if (!g) return; c
 /* ---------------- wiring */
 $("metric").innerHTML = METRICS.map(m => `<option>${m}</option>`).join(""); $("metric").value = S.metric;
 $("metric").onchange = () => { S.metric = $("metric").value; renderCurves(); };
+renderLegend();
 $("alignX").onchange = renderCurves;
 $("filter").oninput = () => renderResults(S.state); $("onlyModels").onchange = () => renderResults(S.state);
 $("clearSel").onclick = () => { S.selected.clear(); renderResults(S.state); renderCurves(); };
