@@ -73,3 +73,14 @@ def test_encode_round_trip_matches_engine_view():
         assert torch.equal(mask[i], env.get_legal_actions())
         assert mask[i, int(arrays["action"][i])] == 1.0           # the human move is legal
         assert env.actions_for_uci([s.move_uci]) == {int(arrays["action"][i])}
+
+
+def test_iter_games_filtered_skips_sub_floor_games_without_parsing():
+    import io
+    from scripts.prepare_games import iter_games_filtered
+    pgn = ('[Event "a"]\n[WhiteElo "2100"]\n[BlackElo "2050"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 1-0\n\n'
+           '[Event "b"]\n[WhiteElo "1500"]\n[BlackElo "2300"]\n[Result "0-1"]\n\n1. d4 d5 0-1\n\n'
+           '[Event "c"]\n[WhiteElo "2400"]\n[BlackElo "2000"]\n[Result "1/2-1/2"]\n\n1. c4 c5 2. Nc3 Nc6 1/2-1/2\n')
+    games = list(iter_games_filtered(io.StringIO(pgn), 2000))
+    assert [g.headers["Event"] for g in games] == ["a", "c"]
+    assert games[1].end().board().fullmove_number == 3

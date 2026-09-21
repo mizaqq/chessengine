@@ -21,6 +21,7 @@ import argparse
 import csv
 import io
 import random
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,6 +75,47 @@ def iter_games(handle):
 def open_pgn(path: Path):
     reader = zstandard.ZstdDecompressor().stream_reader(open(path, "rb"))
     return io.TextIOWrapper(reader, encoding="utf-8", errors="replace")
+
+
+def open_pgn_stream(month: str):
+    """Stream a Lichess month straight from the server (curl | zstd), so a 30 GB dump is read
+    only as far as the position quota needs. Returns (text handle, curl process)."""
+    proc = subprocess.Popen(["curl", "-sL", "--fail", "--retry", "3", URL.format(month=month)], stdout=subprocess.PIPE)
+    reader = zstandard.ZstdDecompressor().stream_reader(proc.stdout)
+    return io.TextIOWrapper(reader, encoding="utf-8", errors="replace"), proc
+
+
+_ELO = re.compile(r'^\[(White|Black)Elo "(\d+)"')
+
+
+def iter_games_filtered(handle, min_elo: int):
+    """Yield parsed games whose two Elo headers are both >= min_elo, skipping the movetext
+    of every other game without parsing it (python-chess parsing is the bottleneck; on a
+    recent month most games are below a 2000 floor)."""
+    headers, elos, in_moves, moves = [], {}, False, []
+    for line in handle:
+        if line.startswith("["):
+            if in_moves:               # new game starts: flush the previous one
+                if len(elos) == 2 and min(elos.values()) >= min_elo:
+                    g = chess.pgn.read_game(io.StringIO("".join(headers) + "\n" + "".join(moves)))
+                    if g is not None:
+                        yield g
+                headers, elos, in_moves, moves = [], {}, False, []
+            headers.append(line)
+            m = _ELO.match(line)
+            if m:
+                elos[m.group(1)] = int(m.group(2))
+        elif line.strip():
+            in_moves = True
+            if len(elos) == 2 and min(elos.values()) >= min_elo:
+                moves.append(line)
+        else:
+            if headers and not in_moves:
+                in_moves = True        # blank line after the headers
+    if headers and len(elos) == 2 and min(elos.values()) >= min_elo:
+        g = chess.pgn.read_game(io.StringIO("".join(headers) + "\n" + "".join(moves)))
+        if g is not None:
+            yield g
 
 
 def game_passes(game, min_elo: int, min_plies: int = 12) -> bool:
@@ -153,11 +195,12 @@ def unpack_mask(mask_bits: np.ndarray) -> torch.Tensor:
     return torch.tensor(np.unpackbits(mask_bits, axis=1)[:, :4674], dtype=torch.float32)
 
 
-def collect(handle, min_elo, positions, per_game, eval_frac, midgame, seed, log_every=20_000):
+def collect(handle, min_elo, positions, per_game, eval_frac, midgame, seed, log_every=20_000, prefilter=False):
     rng = random.Random(seed)
     train, ev, mid_fens = [], [], []
     seen = kept_games = 0
-    for game in iter_games(handle):
+    games = iter_games_filtered(handle, min_elo) if prefilter else iter_games(handle)
+    for game in games:
         seen += 1
         if seen % log_every == 0:
             print(f"  games {seen}, kept {kept_games}, positions {len(train) + len(ev)}", flush=True)
@@ -187,11 +230,18 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--prefix", default="human", help="output files <prefix>_train.npz / <prefix>_eval.npz")
     ap.add_argument("--midgame-out", default="midgame_starts.csv")
+    ap.add_argument("--stream", action="store_true", help="read the month from the server without saving it; skips sub-floor games before parsing")
     args = ap.parse_args()
 
-    dump = download(args.month, RAW_DIR / f"lichess_db_standard_rated_{args.month}.pgn.zst")
-    train, ev, mid_fens = collect(open_pgn(dump), args.min_elo, args.positions, args.per_game,
-                                  args.eval_frac, args.midgame, args.seed)
+    if args.stream:
+        handle, proc = open_pgn_stream(args.month)
+        train, ev, mid_fens = collect(handle, args.min_elo, args.positions, args.per_game,
+                                      args.eval_frac, args.midgame, args.seed, prefilter=True)
+        proc.kill()
+    else:
+        dump = download(args.month, RAW_DIR / f"lichess_db_standard_rated_{args.month}.pgn.zst")
+        train, ev, mid_fens = collect(open_pgn(dump), args.min_elo, args.positions, args.per_game,
+                                      args.eval_frac, args.midgame, args.seed)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     with open(OUT_DIR / args.midgame_out, "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(["fen"]); w.writerows([[f] for f in mid_fens])
