@@ -7,6 +7,7 @@ import json
 import time
 from pathlib import Path
 
+import torch
 import yaml
 
 from src.entrypoints.train import run_training_from_config
@@ -41,6 +42,8 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     if result["shared"]:
         paths = [save_model(result["model"], args.out, config["max_updates"])]
+        if result.get("optimizer") is not None:
+            torch.save(result["optimizer"].state_dict(), args.out / "optimizer.pth")   # Adam moments for continuations
     else:
         paths = save_models(result["white_model"], result["black_model"], args.out, config["max_updates"])
     if result.get("curriculum_state"):

@@ -546,6 +546,18 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
             member.to(device)
     print("device", device)
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
+    # Continuations (change ppo-guards follow-up): restore the Adam moments when the start
+    # checkpoint carries them and `resume_optimizer` is not false; a fresh Adam takes its
+    # largest-possible per-parameter steps first, which a sharp policy may not survive.
+    opt_path = Path(str(init_from)) / "optimizer.pth" if init_from else None
+    if opt_path is not None and opt_path.exists() and config.get("resume_optimizer", True) and shared:
+        try:
+            optimizer_white.load_state_dict(torch.load(opt_path, map_location="cpu"))
+            for group in optimizer_white.param_groups:
+                group["lr"] = lr
+            print("optimizer state restored from", opt_path)
+        except Exception as ex:                       # architecture or param-count mismatch
+            print("optimizer state not restored:", ex)
     # Shared: one network for both colours, observations oriented to the mover.
     optimizer_black = None if shared else torch.optim.Adam(black_model.parameters(), lr=lr)
     if eval_fn is not None:
@@ -587,6 +599,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "black_model": black_model,
         "shared": shared,
         "model": white_model if shared else None,
+        "optimizer": optimizer_white if shared else None,
         "curriculum_state": sampler_state,
     }
 

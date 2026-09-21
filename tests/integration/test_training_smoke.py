@@ -72,3 +72,24 @@ def test_training_smoke_a2c_has_null_clip_fraction():
     result = run_training_from_config({"num_envs": 2, "max_updates": 1, "steps_per_update": 2, "log_interval": 1})
     assert result["logs"][-1]["mean_clip_fraction"] is None
     assert isinstance(result["logs"][-1]["mean_approx_kl"], float)
+
+
+def test_continuation_restores_optimizer_state_when_present(tmp_path, capsys):
+    from src.model.chess_model import ChessPolicyProbs
+    from src.model.checkpoints import save_model
+    m = ChessPolicyProbs(num_filters=8, num_blocks=1)
+    opt = torch.optim.Adam(m.parameters(), lr=1e-4)
+    (sum(p.sum() for p in m.parameters())).backward(); opt.step()          # one real Adam step
+    save_model(m, tmp_path, updates=1)
+    torch.save(opt.state_dict(), tmp_path / "optimizer.pth")
+    config = {"num_envs": 2, "max_updates": 1, "steps_per_update": 2, "seed": 3, "env_type": "sync",
+              "init_from": str(tmp_path), "device": "cpu",
+              "terminal_rewards": {"win": 2.0, "loss": -2.0, "draw": -0.5}}
+    result = run_training_from_config(config)
+    assert "optimizer state restored" in capsys.readouterr().out
+    steps = [st["step"] for st in result["optimizer"].state_dict()["state"].values()]
+    assert steps and min(float(s) for s in steps) >= 2          # the saved step (1) plus this run's
+    config["resume_optimizer"] = False
+    result2 = run_training_from_config(config)
+    steps2 = [float(st["step"]) for st in result2["optimizer"].state_dict()["state"].values()]
+    assert max(steps2) == 1
