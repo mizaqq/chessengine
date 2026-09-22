@@ -64,12 +64,14 @@ def collect_results():
         cfg = d.get("config", {})
         g = _load(arm / "games.json") or {}
         f = _load(arm / "finishes.json") or {}
+        el = _load(arm / "elo.json") or {}
         rows.append({
             "name": f"{arm.parent.name}/{arm.name}", "mtime": rj.stat().st_mtime,
             "updates": cfg.get("max_updates"), "init_from": cfg.get("init_from") or "",
             "elapsed_min": (d.get("elapsed_s") or 0) / 60,
             "dials": {short: last.get(k) for k, short in DIALS},
             "own_m1": g.get("mate_in_one_rate"), "decisive": g.get("decisive_rate"),
+            "elo": el.get("elo"), "elo_ci": el.get("ci95"), "elo_bound": el.get("bound"),
             "finish": [f.get(f"finish_rate_d{k}") for k in (2, 10, 20)],
             "device": cfg.get("device", "cpu"), "filters": cfg.get("num_filters", 128),
             "has_model": bool(list(arm.glob("model_*.pth"))),

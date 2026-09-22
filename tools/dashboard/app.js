@@ -13,7 +13,7 @@ const DASHES = [[], [6, 3], [2, 2], [8, 3, 2, 3], [1, 3], [10, 4], [4, 2, 1, 2],
 const COLS = [
   ["name", "arm", "l"], ["mtime", "when"], ["updates", "upd"], ["elapsed_min", "min"], ["filters", "net"],
   ["m1", "m1"], ["m2", "m2"], ["m3", "m3"], ["m4", "m4"], ["end", "end"], ["prior", "prior"], ["entropy", "entropy"],
-  ["own_m1", "own m1"], ["decisive", "decisive"], ["fin0", "fin d2"], ["fin1", "d10"], ["fin2", "d20"], ["init_from", "from", "l"]];
+  ["own_m1", "own m1"], ["decisive", "decisive"], ["elo", "elo"], ["fin0", "fin d2"], ["fin1", "d10"], ["fin2", "d20"], ["init_from", "from", "l"]];
 const val = (r, k) => k in r ? r[k] : (k in r.dials ? r.dials[k] : k.startsWith("fin") ? r.finish[+k[3]] : null);
 
 
@@ -25,7 +25,8 @@ const INFO = {
   m2: "held-out mate-in-2: top move is the verified forcing first move", m3: "held-out mate-in-3, same rule", m4: "held-out mate-in-4, same rule",
   end: "held-out Lichess endgame puzzles that end in mate: top move matches the solution", prior: "score vs the supervised prior in 20 sampled games at the end (0.5 = par)",
   entropy: "policy entropy on game boards, normalised by log(legal moves); 1 = uniform, 0 = deterministic", own_m1: "own games (40): share of mate-in-1 chances the network actually took",
-  decisive: "own games: share that ended in a win rather than a draw / move cap", fin0: "held-out finishing: rewound 2 plies before a human mate, network converts (100 games)",
+  decisive: "own games: share that ended in a win rather than a draw / move cap",
+  elo: "Stockfish UCI_Elo ladder fit (CCRL blitz scale, floor 1320): logistic MLE with half the 95% bootstrap width; * = bound / extrapolation, see elo.json", fin0: "held-out finishing: rewound 2 plies before a human mate, network converts (100 games)",
   fin1: "same at 10 plies before the mate", fin2: "same at 20 plies before the mate",
   lichess_top1: "= m1 (held-out mate-in-1 top-1)", lichess_m2_top1: "= m2", lichess_m3_top1: "= m3", lichess_m4_top1: "= m4", lichess_end_top1: "= end (endgame mates)",
   prior_score: "score vs the supervised prior, 20 games per eval", puzzle_solved_rate: "training puzzle boards solved this update (all depths)", puzzle_solved_rate_m1: "training mate-in-1 boards solved",
@@ -129,7 +130,8 @@ function renderResults(st) {
   const body = rows.map(r => `<tr><td><input type="checkbox" data-arm="${r.name}" ${S.selected.has(r.name) ? "checked" : ""}></td>${COLS.map(([k, , cls]) => {
     let v = val(r, k);
     if (k === "mtime") v = when(v); else if (k === "elapsed_min") v = v.toFixed(0); else if (k === "init_from") v = v ? v.split("/").pop() : "";
-    else if (k === "filters") v = `${r.filters}${r.device && r.device !== "cpu" ? "·gpu" : ""}`; else if (k === "decisive" || k.startsWith("fin")) v = fmt(v, 2); else if (typeof v === "number") v = fmt(v);
+    else if (k === "filters") v = `${r.filters}${r.device && r.device !== "cpu" ? "·gpu" : ""}`;
+    else if (k === "elo") v = v == null ? "–" : `${v}${r.elo_bound ? "*" : ""}<span class="sub"> ±${r.elo_ci ? Math.round((r.elo_ci[1] - r.elo_ci[0]) / 2) : "?"}</span>`; else if (k === "decisive" || k.startsWith("fin")) v = fmt(v, 2); else if (typeof v === "number") v = fmt(v);
     const sel = S.selected.has(r.name) ? `style="border-left:3px solid ${color([...S.selected].indexOf(r.name))}"` : "";
     return `<td class="${cls || ""}" ${k === "name" ? sel : ""}>${v ?? "–"}</td>`; }).join("")}</tr>`).join("");
   $("results").innerHTML = head + body;
