@@ -72,16 +72,16 @@ def expected(elo_opp, rating):
 
 
 def fit_elo(results, lo=400, hi=3400):
-    """results: list of (elo_opp, score) per game, score in {0, 0.5, 1}. Grid MLE of R."""
-    best, best_ll = None, -math.inf
-    for r in range(lo, hi + 1):
-        ll = 0.0
-        for e, s in results:
-            p = min(max(expected(e, r), 1e-9), 1 - 1e-9)
-            ll += s * math.log(p) + (1 - s) * math.log(1 - p)
-        if ll > best_ll:
-            best, best_ll = r, ll
-    return best
+    """results: list of (elo_opp, score) per game, score in {0, 0.5, 1}. Grid MLE of R
+    (vectorised: log-likelihood of every integer rating in [lo, hi] at once)."""
+    import numpy as np
+    e = np.array([r[0] for r in results], dtype=np.float64)
+    s = np.array([r[1] for r in results], dtype=np.float64)
+    grid = np.arange(lo, hi + 1, dtype=np.float64)
+    p = 1.0 / (1.0 + 10 ** ((e[None, :] - grid[:, None]) / 400.0))
+    p = np.clip(p, 1e-9, 1 - 1e-9)
+    ll = (s[None, :] * np.log(p) + (1 - s[None, :]) * np.log(1 - p)).sum(axis=1)
+    return int(grid[int(ll.argmax())])
 
 
 def bootstrap(results, n=200, seed=0):
