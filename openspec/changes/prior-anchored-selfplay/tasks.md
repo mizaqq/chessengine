@@ -10,4 +10,4 @@
 - [ ] 3.1 Driver `experiments/anchor/run_anchor_arms.sh`: KLPRIOR (prior_kl_coef 0.1) and PFSP (pfsp, opponent_pool_size 12) from slhi2_256, 600 updates, guards as LONG256X; games, finishes, audit, ladder, 200-game matrix vs SLHI2_256 / LONG256X (and DECAY / NOPOOL if finished). Record `experiments/anchor/outcome.md` with the owner's prediction.
 
 ## 4. Comprehension
-- [ ] 4.1 Comprehension check with owner (CLAUDE.md "Trace by hand"): given a 3-move position with the policy and prior probabilities from the spec scenario, compute the prior-KL term and say which move's probability the step raises; then given three pool win rates, compute the PFSP draw probabilities. Check both against the tests.
+- [x] 4.1 Comprehension check with owner (CLAUDE.md "Trace by hand"): given a 3-move position with the policy and prior probabilities from the spec scenario, compute the prior-KL term and say which move's probability the step raises; then given three pool win rates, compute the PFSP draw probabilities. Check both against the tests.

@@ -320,3 +320,14 @@ LR floor 1e-4) produced the first RL checkpoint at par with the supervised prior
 win matrix (8-7) while beating every earlier RL checkpoint by a wide margin (36-4 over
 M34), and the best value on all puzzle sets. Finishing conversion from 10-20 plies in
 human middlegames did not move; that dial has now resisted fourteen arms.
+
+## Anchoring to a reference policy — 2026-09-22
+
+A KL term to a frozen reference (`prior_kl_coef * KL(pi || prior)`, AlphaStar / Ziegler) bounds
+drift from the *prior* over a whole run; the target-KL guard only bounds one update's step from
+the *previous* policy, so it cannot stop slow drift (Andrychowicz 2021 found KL-to-behaviour
+redundant with the trust region for that reason). The cost is a ceiling: a constant coefficient
+plateaus (Kickstarting), so the term is a bet that drift costs more than the cap. Owner's
+formulation: "we dont need those to agree, but the learner should be better than prior."
+PFSP (weight (1 - w)^2 + floor per pool member) anchors through opponents instead, no ceiling.
+Record 0016.
