@@ -39,7 +39,7 @@ canvas.big{width:100%!important;height:320px!important}
 </style>
 </head>
 <body>
-<div class="top"><h1>chessengine <span class="sub">live</span></h1><span id="status" class="sub small">connecting…</span><span class="sub small">ui v8</span></div>
+<div class="top"><h1>chessengine <span class="sub">live</span></h1><span id="status" class="sub small">connecting…</span><span class="sub small">ui v9</span></div>
 
 <div class="card"><h2>Running</h2><div id="running" class="cards"></div></div>
 
@@ -59,6 +59,8 @@ canvas.big{width:100%!important;height:320px!important}
     <canvas id="curves" class="big"></canvas><div id="curvesHint" class="sub small">select arms in the results table</div></div>
 </div>
 
+<div class="card"><h2>Elo <span class="sub small">Stockfish UCI_Elo ladder, CCRL blitz scale, floor 1320 · bar = 95% interval · * = extrapolated below the floor</span></h2><div id="elo"></div></div>
+
 <div class="row">
   <div class="card"><h2>Win matrices</h2><div class="tools"><select id="matrixSel"></select><span class="sub small">row score vs column · wins–losses</span></div><div class="wrap" id="matrix"></div></div>
   <div class="card"><h2>Pretraining</h2><canvas id="pre" class="big"></canvas><div id="preTable"></div></div>
@@ -76,6 +78,6 @@ canvas.big{width:100%!important;height:320px!important}
 
 <div class="card"><h2>Outcome notes</h2><div class="tools"><select id="outSel"></select></div><pre id="outText"></pre></div>
 
-<script src="/app.js?v=8"></script>
+<script src="/app.js?v=9"></script>
 </body>
 </html>

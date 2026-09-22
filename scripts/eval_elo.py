@@ -117,7 +117,7 @@ def main():
     ap.add_argument("ckpt_dir", type=Path)
     ap.add_argument("--elos", type=int, nargs="*", default=[1320, 1400, 1500, 1700, 1900])
     ap.add_argument("--games", type=int, default=20, help="games per colour per level")
-    ap.add_argument("--movetime", type=float, default=0.05)
+    ap.add_argument("--movetime", type=float, default=0.02)
     ap.add_argument("--greedy", action="store_true")
     ap.add_argument("--engine", default="stockfish")
     ap.add_argument("--seed", type=int, default=0)
@@ -128,14 +128,29 @@ def main():
     torch.manual_seed(args.seed)
     per_level = {}
     t0 = time.time()
+    out_path = args.out or (args.ckpt_dir / "elo.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    progress_path = out_path.with_name("elo_progress.json")
+
+    def write_progress(current_elo, current):
+        done = {str(k): v for k, v in per_level.items()}
+        partial = summarise(per_level) if per_level and any(sum(c.values()) for c in per_level.values()) else None
+        progress_path.write_text(json.dumps({"checkpoint": str(args.ckpt_dir), "started": t0, "updated": time.time(),
+                                             "levels": args.elos, "games_per_level": 2 * args.games, "done": done,
+                                             "current": {"elo": current_elo, **current}, "partial": partial}))
+
     with chess.engine.SimpleEngine.popen_uci(args.engine) as engine:
         for elo in args.elos:
             engine.configure({"UCI_LimitStrength": True, "UCI_Elo": int(max(FLOOR, min(CEIL, elo)))})
             c = {"win": 0, "draw": 0, "loss": 0}
+            write_progress(elo, c)
             for g in range(args.games):
                 c[play_vs_engine(model, oriented, engine, True, args.movetime, args.greedy)] += 1
                 c[play_vs_engine(model, oriented, engine, False, args.movetime, args.greedy)] += 1
+                if g % 5 == 4:
+                    write_progress(elo, c)
             per_level[elo] = c
+            write_progress(elo, c)
             print(f"  UCI_Elo {elo}: +{c['win']} ={c['draw']} -{c['loss']}  score {(c['win'] + 0.5 * c['draw']) / (2 * args.games):.2f}  ({time.time() - t0:.0f}s)", flush=True)
     summary = summarise(per_level)
     print(f"Elo estimate {summary['elo']} (95% {summary['ci95'][0]}-{summary['ci95'][1]}, {summary['games']} games)"
@@ -143,9 +158,9 @@ def main():
     out = {"checkpoint": paths, "engine": args.engine, "movetime": args.movetime, "greedy": args.greedy, "seed": args.seed,
            "per_level": {str(k): v for k, v in per_level.items()}, **summary,
            "scale": "CCRL blitz (Stockfish UCI_Elo anchoring, src/search.h)"}
-    out_path = args.out or (args.ckpt_dir / "elo.json")
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out, indent=1))
+    if progress_path.exists():
+        progress_path.unlink()
     print("wrote", out_path)
 
 

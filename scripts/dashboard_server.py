@@ -51,6 +51,23 @@ def collect_pretraining():
     return out
 
 
+def collect_elo():
+    """Finished ladders (elo.json per arm) and ladders in progress (elo_progress.json)."""
+    rated, running = [], []
+    for ej in EXP.glob("*/*/elo.json"):
+        d = _load(ej)
+        if d:
+            rated.append({"arm": f"{ej.parent.parent.name}/{ej.parent.name}", "elo": d["elo"], "ci95": d["ci95"], "bound": d.get("bound"),
+                          "scores": d.get("scores"), "games": d.get("games"), "greedy": d.get("greedy"), "mtime": ej.stat().st_mtime})
+    for pj in EXP.glob("*/*/elo_progress.json"):
+        if time.time() - pj.stat().st_mtime < 3 * 3600:
+            d = _load(pj)
+            if d:
+                running.append({"arm": f"{pj.parent.parent.name}/{pj.parent.name}", **d})
+    rated.sort(key=lambda r: -(r["elo"] or 0))
+    return rated, running
+
+
 def state():
     results = collect_results()
     running, progress = collect_running()
@@ -64,7 +81,9 @@ def state():
     matrices = collect_matrices(limit=8)
     for m in matrices:      # tuple keys -> the exact string JSON.stringify([a, b]) produces in the browser
         m["wins"] = {json.dumps([a, b], separators=(",", ":")): v for (a, b), v in m["wins"].items()}
+    rated, running_elo = collect_elo()
     return {"now": time.time(), "results": results, "running": running, "progress": progress, "pretraining": pre,
+            "elo": rated, "running_elo": running_elo,
             "running_pretraining": running_pre, "matrices": matrices, "outcomes": collect_outcomes(limit=8, tail=60),
             "games": games, "curves": CURVES}
 

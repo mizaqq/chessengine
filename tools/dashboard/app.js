@@ -99,6 +99,14 @@ function renderRunning(st) {
       <div class="dials"><span>held-out top-1 <b>${fmt(p.last.eval_top1)}</b></span><span>train top-1 <b>${fmt(p.last.train_top1)}</b></span><span>eval CE <b>${fmt(p.last.eval_ce)}</b></span></div>
       <div class="mini" style="grid-template-columns:1fr"><canvas id="${id}" style="height:90px!important"></canvas></div></div>`);
   }
+  for (const e of st.running_elo || []) {
+    const rows = Object.entries(e.done || {}).map(([lv, c]) => `<span>${lv}: <b>+${c.win} =${c.draw} -${c.loss}</b></span>`).join("");
+    const cur = e.current ? `<span>${e.current.elo} (running): <b>+${e.current.win} =${e.current.draw} -${e.current.loss}</b> of ${e.games_per_level}</span>` : "";
+    const part = e.partial && e.partial.elo ? `partial estimate <b>${e.partial.elo}</b> (${e.partial.ci95[0]}-${e.partial.ci95[1]})` : "";
+    cards.push(`<div class="card run"><b>Elo ladder · ${e.arm}</b><span class="tag">${Object.keys(e.done || {}).length} / ${(e.levels || []).length} levels</span>
+      <span class="sub small">running ${age(st.now - e.started)} · last write ${age(st.now - e.updated)} ago</span>
+      <div class="dials">${rows}${cur}</div><div class="small">${part}</div></div>`);
+  }
   if (!cards.length) cards.push(`<div class="sub">nothing running</div>`);
   box.innerHTML = cards.join("");
   // charts must be created after the canvases exist; chart objects are per canvas so drop old ones
@@ -167,6 +175,24 @@ function renderMetricChips() {
   renderMetricInfo();
   $("metrics").innerHTML = METRICS.map(m => `<label class="${S.metrics.has(m) ? "on" : ""}" title="${(INFO[m] || "").replace(/"/g, "'")}"><input type="checkbox" data-m="${m}" ${S.metrics.has(m) ? "checked" : ""}>${m}</label>`).join("");
   $("metrics").querySelectorAll("input[data-m]").forEach(cb => cb.onchange = () => { cb.checked ? S.metrics.add(cb.dataset.m) : S.metrics.delete(cb.dataset.m); renderMetricChips(); renderCurves(); });
+}
+
+/* ---------------- elo panel */
+function renderElo(st) {
+  const rows = st.elo || [];
+  if (!rows.length) { $("elo").innerHTML = `<div class="sub small">no ladders finished yet</div>`; return; }
+  const lo = Math.min(...rows.map(r => r.ci95[0])) - 50, hi = Math.max(...rows.map(r => r.ci95[1])) + 50;
+  const x = v => ((v - lo) / (hi - lo) * 100).toFixed(1);
+  $("elo").innerHTML = `<div style="position:relative">` + rows.map((r, i) => `
+    <div style="display:flex;align-items:center;gap:10px;margin:4px 0">
+      <div style="width:230px;text-align:right" class="small"><b>${r.arm.split("/").pop()}</b> <span class="sub">${r.arm.split("/")[0]}</span></div>
+      <div style="flex:1;position:relative;height:18px;background:#f1efe8;border-radius:4px">
+        <div style="position:absolute;left:${x(r.ci95[0])}%;width:${(x(r.ci95[1]) - x(r.ci95[0])).toFixed(1)}%;top:4px;height:10px;background:${color(i)};opacity:.35;border-radius:3px"></div>
+        <div style="position:absolute;left:${x(r.elo)}%;top:0;width:2px;height:18px;background:${color(i)}"></div>
+        ${lo < 1320 && hi > 1320 ? `<div style="position:absolute;left:${x(1320)}%;top:0;width:1px;height:18px;border-left:1px dashed #999"></div>` : ""}
+      </div>
+      <div style="width:200px" class="small"><b>${r.elo}${r.bound ? "*" : ""}</b> <span class="sub">${r.ci95[0]}–${r.ci95[1]} · ${r.games} games${r.greedy ? " · greedy" : ""}</span></div>
+    </div>`).join("") + `</div><div class="sub small" style="margin-top:6px">scores per level: ${rows.map(r => `${r.arm.split("/").pop()} ${Object.entries(r.scores || {}).map(([k, v]) => `${k}:${(+v).toFixed(2)}`).join(" ")}`).join(" · ")}</div>`;
 }
 
 /* ---------------- matrices */
@@ -254,9 +280,9 @@ async function poll() {
     const st = await (await fetch("/api/state")).json();
     for (const m of st.matrices) m.wins_json = Object.fromEntries(Object.entries(m.wins).map(([k, v]) => [k, v]));
     S.state = st;
-    const nRun = st.running.length + st.progress.length + st.running_pretraining.length;
+    const nRun = st.running.length + st.progress.length + st.running_pretraining.length + (st.running_elo || []).length;
     $("status").textContent = `updated ${new Date().toLocaleTimeString()} · ${nRun} running · ${st.results.length} arms`;
-    renderRunning(st); renderResults(st); renderMatrix(st); renderPre(st); await renderOutcomes(st); await refreshGames(st);
+    renderRunning(st); renderResults(st); renderElo(st); renderMatrix(st); renderPre(st); await renderOutcomes(st); await refreshGames(st);
     // arms in progress get fresh logs each poll
     for (const p of st.progress) delete S.runCache[p.arm];
     if ([...S.selected].some(a => st.progress.find(p => p.arm === a))) renderCurves();
