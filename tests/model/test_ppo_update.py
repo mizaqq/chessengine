@@ -234,3 +234,55 @@ def test_target_kl_stops_further_steps_and_reports_it():
     assert opt2.steps == 16 and out2["kl_stop"] == 0.0
     out3 = update_model(model2, opt2, batch2, epochs=1, minibatches=1, clip_epsilon=0.2, target_kl=None)
     assert out3["kl_stop"] == 0.0 and out3["optimizer_steps"] == 1
+
+
+# --- prior-KL penalty (openspec/changes/prior-anchored-selfplay/specs/policy-update/spec.md) ---
+
+class FixedPolicy(torch.nn.Module):
+    """Three legal moves (actions 0, 1, 2); probabilities come from a learnable logit vector."""
+
+    def __init__(self, probs):
+        super().__init__()
+        self.logits = torch.nn.Parameter(torch.log(torch.tensor(probs, dtype=torch.float32)))
+
+    def forward(self, obs, mask):
+        full = torch.full((obs.shape[0], mask.shape[1]), -1e9)
+        full[:, :3] = self.logits
+        probs = torch.softmax(full, dim=1) * mask
+        probs = probs / probs.sum(dim=1, keepdim=True)
+        return probs, torch.zeros(obs.shape[0], 1) + 0.0 * self.logits.sum()
+
+
+def _three_move_batch(n=4):
+    mask = torch.zeros(n, 4674)
+    mask[:, :3] = 1.0
+    return {
+        "obs": torch.zeros(n, 20, 8, 8), "legal_mask": mask, "action": torch.zeros(n, dtype=torch.long),
+        "old_log_prob": torch.full((n,), float(torch.log(torch.tensor(0.7)))), "adv": torch.zeros(n),
+        "target": torch.zeros(n), "num_legal": torch.full((n,), 3.0), "noisy": torch.zeros(n, dtype=torch.bool),
+    }
+
+
+def test_prior_kl_value_matches_hand_computation_and_pulls_toward_prior():
+    policy, prior = FixedPolicy([0.7, 0.2, 0.1]), FixedPolicy([0.2, 0.7, 0.1]).eval()
+    opt = torch.optim.SGD(policy.parameters(), lr=0.5)
+    out = update_model(policy, opt, _three_move_batch(), epochs=1, minibatches=1, clip_epsilon=0.2,
+                       entropy_coef=0.0, value_coef=0.0, prior_model=prior, prior_kl_coef=0.1)
+    assert abs(out["prior_kl"] - 0.6264) < 1e-3          # 0.7 ln(0.7/0.2) + 0.2 ln(0.2/0.7) + 0
+    assert abs(out["total_loss"] - 0.06264) < 1e-3        # advantages 0, entropy/value off: only the penalty
+    with torch.no_grad():
+        p, _ = policy(torch.zeros(1, 20, 8, 8), _three_move_batch(1)["legal_mask"])
+    assert p[0, 1] > 0.2 and p[0, 0] < 0.7
+
+
+def test_prior_kl_coef_zero_reports_but_does_not_change_loss():
+    prior = FixedPolicy([0.2, 0.7, 0.1]).eval()
+    a, b = FixedPolicy([0.7, 0.2, 0.1]), FixedPolicy([0.7, 0.2, 0.1])
+    out_a = update_model(a, torch.optim.SGD(a.parameters(), lr=0.1), _three_move_batch(), epochs=1, minibatches=1,
+                         clip_epsilon=0.2, prior_model=prior, prior_kl_coef=0.0)
+    out_b = update_model(b, torch.optim.SGD(b.parameters(), lr=0.1), _three_move_batch(), epochs=1, minibatches=1,
+                         clip_epsilon=0.2)
+    assert abs(out_a["prior_kl"] - 0.6264) < 1e-3
+    assert abs(out_a["total_loss"] - out_b["total_loss"]) < 1e-7
+    assert out_b["prior_kl"] is None
+    assert torch.equal(a.logits, b.logits)

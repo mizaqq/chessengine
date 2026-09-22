@@ -270,6 +270,12 @@ def test_opponent_pool_resolver(tmp_path):
     assert pool.board_ids == [6, 7, 8, 9, 10]                        # first game boards after 4 puzzle + 2 finishing
     assert [n for n, _ in pool.pool.members] == ["prior"]
     assert pool.learner_mask(torch.ones(16, dtype=torch.long)).shape == (16,)
+    pf = resolve_opponent_pool({"num_envs": 16, "opponent_pool_boards": 5, "opponent_prior": str(tmp_path),
+                                "opponent_pool_sampling": "pfsp", "pfsp_power": 1, "pfsp_min_weight": 0.0}, 6)
+    assert pf.pool.sampling == "pfsp" and pf.pool.power == 1.0 and pf.pool.min_weight == 0.0
+    with pytest.raises(ValueError):
+        resolve_opponent_pool({"num_envs": 16, "opponent_pool_boards": 5, "opponent_prior": str(tmp_path),
+                               "opponent_pool_sampling": "hardest"}, 6)
     assert resolve_prior_match({"opponent_prior": str(tmp_path), "prior_eval_games": 0}) is None
     assert resolve_prior_match({"opponent_prior": str(tmp_path), "prior_eval_games": 1}) is not None
 
@@ -344,3 +350,19 @@ def test_guards_resolver():
         resolve_guards({"target_kl": 0})
     with pytest.raises(ValueError):
         resolve_guards({"prior_eval_games": 20, "stop_below_prior": 1.5})
+
+
+def test_prior_kl_resolver(tmp_path):
+    from src.entrypoints.train import resolve_prior_kl
+    from src.model.chess_model import ChessPolicyProbs
+    from src.model.checkpoints import save_model
+    save_model(ChessPolicyProbs().eval(), tmp_path, updates=1)
+    assert resolve_prior_kl({}) is None                                     # no prior: nothing to measure
+    with pytest.raises(ValueError):                                         # a coefficient needs a prior
+        resolve_prior_kl({"prior_kl_coef": 0.1})
+    with pytest.raises(ValueError):
+        resolve_prior_kl({"opponent_prior": str(tmp_path), "prior_kl_coef": -1})
+    measured = resolve_prior_kl({"opponent_prior": str(tmp_path)})
+    assert measured["prior_kl_coef"] == 0.0 and not measured["prior_model"].training
+    assert all(not p.requires_grad for p in measured["prior_model"].parameters())
+    assert resolve_prior_kl({"opponent_prior": str(tmp_path), "prior_kl_coef": 0.1})["prior_kl_coef"] == 0.1

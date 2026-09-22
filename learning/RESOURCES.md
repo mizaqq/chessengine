@@ -255,6 +255,120 @@ reach for it. Prune anything that turns out shallow or wrong.
   evaluation (`scripts/eval_elo.py`): the scale is CCRL blitz, the floor is 1320, and a network
   below the floor is rated by a logistic fit against several levels; change `elo-eval`.
 
+- [Paper: "Amortized Planning with Large-Scale Transformers: A Case Study on Chess" (a.k.a. "Grandmaster-Level Chess Without Search") — Ruoss et al. (DeepMind, 2024)](https://arxiv.org/abs/2402.04494)
+  Read 2026-09-22 (HTML v2). 10M Lichess games, 530M boards, Stockfish 16 at 50 ms per
+  board/state-action, 15.3B action-values; win% = 100/(1+exp(-0.00368208*cp)) binned into K=128
+  with HL-Gauss; 9M/136M/270M transformers; 270M: tournament Elo 2299, Lichess 2299 vs bots,
+  2895 vs humans, 95.4% puzzles; Leela policy net 1 node 2292 / 88.6%, AlphaZero policy net 1777
+  / 56.1%. Target ablation: action-value 63.0% > state-value 58.5% > behavioural cloning 56.7%.
+  Use for: engine-value targets for the value head, the "no search" Elo ceiling, data-vs-model
+  scaling; `learning/research/2026-09-22-improving-the-model.md` §1-2.
+
+- [Paper: "Aligning Superhuman AI with Human Behavior: Chess as a Model System" (Maia) — McIlroy-Young, Sen, Kleinberg, Anderson (KDD 2020)](https://arxiv.org/abs/2006.01855)
+  Read 2026-09-22 (PDF). Nine 6x64 residual nets, one per rating bin 1100-1900, "12 million games"
+  each; first 10 ply and <30 s moves dropped; top-1 "over 52%" vs Leela max 46%, Stockfish 33-41%.
+  Use for: the human-move top-1 ceiling and why accuracy is not strength; research §1.2.
+
+- [Paper: "Maia-2: A Unified Model for Human-AI Alignment in Chess" — Tang, McIlroy-Young, Anderson (NeurIPS 2024)](https://arxiv.org/abs/2409.20553)
+  Read 2026-09-22 (PDF/HTML). 169M games, 9.1B positions, 23.3M params; rating embeddings injected
+  into attention queries (skill-aware attention); macro top-1 53.25%, Masters 53.87%, vs Maia-1
+  51.39%, Leela 44.53%, Stockfish 15 40.43%. Use for: rating-conditioned training on all Lichess
+  data, the ~53% imitation plateau; research §1.3, §7.
+
+- [Blog: "Transformer Progress" — Daniel Monroe, Leela Chess Zero (2024-02-28)](https://lczero.org/blog/2024/02/transformer-progress/)
+  Read 2026-09-22. Raw-policy Elo relative to T78 (194.5M params, 12.45 GFLOPs): BT1 +13, BT2
+  +123, BT3 +179, BT4 +270 (191.3M, 7.6 GFLOPs, 15 layers, 1024 emb, 32 heads); 64 square
+  tokens, 8 one-hot piece planes for current + 7 past plies, trainable 64x64xh attention bias
+  ("play as if 50% larger"), smolgen. Companion post "How well do Lc0 networks compare to the
+  greatest transformer network from DeepMind" (2024-02) gives the 1-node test protocol and the
+  caveat that value-based puzzle tests run ~150 Elo above policy tests. Use for: architecture
+  options once data stops being the constraint; research §1.4, §6.
+
+- [Blog: "Win-Draw-Loss evaluation" (2020-04) and "Lc0 v0.25 has been released" (2020-05) — Leela Chess Zero](https://lczero.org/blog/2020/04/wdl-head/)
+  Read 2026-09-22. WDL head since July 2019 because a scalar score "doesn't account for draws";
+  moves-left head (v0.25) predicts remaining game length, used to "take the shorter route towards
+  winning". No Elo numbers given for either head. Use for: 3-way value head; research §6.
+
+- [Paper: "Stop Regressing: Training Value Functions via Classification for Scalable Deep RL" — Farebrother et al. (2024)](https://arxiv.org/abs/2403.03950)
+  Read 2026-09-22 (PDF). HL-Gauss: Gaussian target projected onto histogram bins, "we set
+  sigma/bin = 0.75 ... approximately 6 locations"; two-hot ignores ordinal structure; on Ruoss's
+  chess setup HL-Gauss "closes the performance gap with ... AlphaZero with 400 MCTS simulations"
+  (70% of the gap); MSE plateaus with width, HL-Gauss keeps scaling. Use for: replacing the
+  scalar MSE value head; research §2.1.
+
+- [Paper: "Fine-Tuning Language Models from Human Preferences" — Ziegler et al. (OpenAI, 2019)](https://arxiv.org/abs/1909.08593)
+  Read 2026-09-22 (PDF). R(x,y) = r(x,y) - beta log(pi(y|x)/rho(y|x)); "prevents the policy
+  from moving too far from the range where r is valid"; beta constant or a log-space proportional
+  controller to a target KL(pi, rho); without it the policy degenerates (appendix samples). Use
+  for: KL-to-prior in PPO as a reward term; research §3.1.
+
+- [Paper: "Grandmaster level in StarCraft II using multi-agent reinforcement learning" — Vinyals et al. (Nature 2019), unformatted manuscript](https://storage.googleapis.com/deepmind-media/research/alphastar/AlphaStar_unformatted.pdf)
+  Read 2026-09-22 (Methods + Fig. 3). "continually minimise the KL divergence between the
+  supervised and current policy"; z = first 20 buildings/units, pseudo-rewards by edit/Hamming
+  distance, each active with probability 25%; ablation Elo: no human data 149, supervised 936,
+  human init 1020, + supervised KL 1400, + statistics 1540. League: main agents 35% self-play,
+  50% PFSP over all past players, 15% forgotten players/past exploiters; PFSP weight f_hard(x) =
+  (1-x)^p; FSP 1143 < pFSP 1273 < SP 1519 < pFSP+SP 1540; + main exploiters 1693, + league
+  exploiters 1824; "Naive self-play has high Elo, but is more forgetful." Use for: prior-KL term,
+  PFSP pool weighting, the forgotten-players slot; research §3.2, §4.1.
+
+- [Paper: "Kickstarting Deep Reinforcement Learning" — Schmitt et al. (DeepMind, 2018)](https://arxiv.org/abs/1803.03835)
+  Read 2026-09-22 (PDF). l_kick = l_RL + lambda_k H(pi_T || pi_S), lambda_k -> 0 after T0;
+  constant lambda "ultimately plateaus" (41.2), linear 1->0 over 1-2B frames 59-61, PBT
+  competitive; "almost 10x fewer steps ... surpassing its final performance by 42%". Use for:
+  annealing schedule of a prior-distillation term; research §3.3.
+
+- [Paper: "Implementation Matters in Deep Policy Gradients" — Engstrom et al. (ICLR 2020)](https://arxiv.org/abs/2005.12729)
+  Read 2026-09-22 (PDF). Value clipping, reward scaling, orthogonal init, Adam LR annealing:
+  "reward normalization, Adam annealing, and network initialization each significantly impact the
+  rewards landscape"; PPO-NoClip matches PPO (Humanoid 831 vs 806); the clipped objective's trust
+  region depends on the optimiser and "we can end up moving arbitrarily far". Use for: why the
+  clip/KL guard bounds one step but not drift; research §5.1.
+
+- [Paper: "What Matters for On-Policy Deep Actor-Critic Methods? A Large-Scale Study" — Andrychowicz et al. (ICLR 2021)](https://arxiv.org/abs/2006.05990)
+  Read 2026-09-22 (PDF; 250k agents, MuJoCo). LR decay "may slightly improve performance but is
+  of secondary importance" (4/5 tasks, +15% only on Ant); per-minibatch advantage normalisation
+  "seems not to affect the performance too much"; value-loss clipping "hurts"; entropy/KL
+  regularisers not helpful there, conjectured redundant with the PPO trust region; clip 0.25,
+  GAE 0.9. Use for: expectations for the LR-decay arm; research §5.2.
+
+- [Paper: "Phasic Policy Gradient" — Cobbe, Hilton, Klimov, Schulman (ICML 2021)](https://arxiv.org/abs/2009.04416)
+  Read 2026-09-22 (PDF). Policy phase (PPO) then auxiliary phase L_joint = L_aux + beta_clone
+  KL(pi_old || pi_theta) on an auxiliary value head; value tolerates more sample reuse than
+  policy; "relatively infrequent auxiliary phases are critical". Use for: separating value and
+  policy training if value interference is diagnosed; research §5.3.
+
+- [Paper: "The Primacy Bias in Deep Reinforcement Learning" — Nikishin et al. (ICML 2022)](https://arxiv.org/abs/2205.07802)
+  Read 2026-09-22 (PDF). "a tendency to overfit initial experiences"; heavy priming (1e5 updates
+  on 100 transitions) is unrecoverable; remedy "periodically re-initialize the parameters of its
+  last few layers while preserving the replay buffer"; SPR+resets IQM 0.478 on Atari-100k; the
+  on-policy analogue is ITER (full reset + distillation from the previous generation). Use for:
+  reading the rise-then-decay pattern as overfitting to early self-play; research §5.4.
+
+- [Paper: "Loss of plasticity in deep continual learning" — Dohare et al. (Nature 632, 2024)](https://www.nature.com/articles/s41586-024-07711-7)
+  Read 2026-09-22 (PDF). PPO on an ant with friction changing every 2M steps "fails
+  catastrophically"; tuned Adam helps, "adding continual backpropagation or L2 regularization is
+  necessary to perform well indefinitely"; even stationary ant PPO "increased for about 3 million
+  steps but then collapsed"; "Adam, Dropout and normalization actually increased loss of
+  plasticity"; L2 and Shrink-and-Perturb reduce it. Use for: L2 (to zero or to the prior) as a
+  stabiliser with the matching failure story; research §5.5.
+
+- [Paper: "Understanding Plasticity in Neural Networks" — Lyle et al. (ICML 2023)](https://proceedings.mlr.press/v202/lyle23b/lyle23b.pdf)
+  Read 2026-09-22 (PDF). Plasticity loss "deeply connected to changes in the curvature of the
+  loss landscape ... often occurs in the absence of saturated units"; layer normalisation is the
+  best-performing intervention (DQN on ALE). Use for: LayerNorm as a cheap check; research §5.5.
+
+- [Paper: "A Unified Game-Theoretic Approach to Multiagent Reinforcement Learning" (PSRO) — Lanctot et al. (NeurIPS 2017)](https://arxiv.org/abs/1711.00832)
+  Abstract read 2026-09-22: "approximate best responses to mixtures of policies" with
+  "empirical game-theoretic analysis to compute meta-strategies"; generalises iterated best
+  response, double oracle and fictitious play; independent RL "overfit[s] to the other agents'
+  policies". Use for: vocabulary behind the pool (meta-strategy = sampling weights); research §4.2.
+
+- [Paper: "Fictitious Self-Play in Extensive-Form Games" — Heinrich, Lanctot, Silver (ICML 2015)](http://proceedings.mlr.press/v37/heinrich15.pdf)
+  Read 2026-09-22 (intro). Best response to "opponents' average strategies"; the average
+  converges to Nash in two-player zero-sum; FSP is the sample-based version. Use for: what a
+  uniform pool over all past snapshots is, and why AlphaStar weighted it instead; research §4.2.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->

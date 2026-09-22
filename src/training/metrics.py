@@ -44,7 +44,7 @@ class MetricsAggregator:
         self._pool_by_name = {}      # opponent name -> [games, points]
         self._technique_by_label = {}  # material label -> [attempts, successes]
         self._sil_sums = {}; self._sil_count = 0; self.sil_buffer_size = None
-        self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0, "kl_stop": 0.0, "optimizer_steps": 0.0}
+        self._update_sums = {"policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0, "kl_stop": 0.0, "optimizer_steps": 0.0, "prior_kl": 0.0}
         self._update_counts = {k: 0 for k in self._update_sums}
 
     def add_step(self, empty_masks: int = 0, illegal_samples: int = 0):
@@ -158,13 +158,13 @@ class MetricsAggregator:
             self._entropy_puzzle_count += 1
 
     def add_update_stats(self, policy_loss=None, value_loss=None, clip_fraction=None, approx_kl=None,
-                         kl_stop=None, optimizer_steps=None):
+                         kl_stop=None, optimizer_steps=None, prior_kl=None):
         """Per-update losses and PPO diagnostics; None values are skipped (a2c has no
         clip fraction) and report as null. `kl_stop`: 1 if the target-KL guard cut the
         update short; `optimizer_steps`: steps actually taken (change ppo-guards)."""
         for key, val in (("policy_loss", policy_loss), ("value_loss", value_loss),
                          ("clip_fraction", clip_fraction), ("approx_kl", approx_kl),
-                         ("kl_stop", kl_stop), ("optimizer_steps", optimizer_steps)):
+                         ("kl_stop", kl_stop), ("optimizer_steps", optimizer_steps), ("prior_kl", prior_kl)):
             if val is not None:
                 self._update_sums[key] += val
                 self._update_counts[key] += 1

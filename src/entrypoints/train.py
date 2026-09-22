@@ -219,7 +219,11 @@ def resolve_opponent_pool(config: Dict[str, Any], num_curriculum_envs: int):
     if not oriented:
         raise ValueError("opponent_prior must be a shared-network checkpoint")
     seed = int(config.get("seed", 42))
-    pool = OpponentPool(prior, size=size, snapshot_every=every, seed=seed + 4000)
+    # Sampling rule (change prior-anchored-selfplay): uniform (default) or pfsp with
+    # weight (1 - win_rate)^pfsp_power + pfsp_min_weight per member.
+    pool = OpponentPool(prior, size=size, snapshot_every=every, seed=seed + 4000,
+                        sampling=str(config.get("opponent_pool_sampling", "uniform")),
+                        power=float(config.get("pfsp_power", 2.0)), min_weight=float(config.get("pfsp_min_weight", 0.05)))
     return PoolBoards(range(num_curriculum_envs, num_curriculum_envs + n), pool, seed=seed + 4001)
 
 
@@ -394,6 +398,26 @@ def resolve_referee(config: Dict[str, Any]):
     return {"threshold": threshold}
 
 
+def resolve_prior_kl(config: Dict[str, Any]):
+    """Prior-KL term (change prior-anchored-selfplay): `prior_kl_coef` >= 0 (default 0)
+    weights `KL(pi_theta || pi_prior)` in every minibatch, the prior being the frozen
+    checkpoint in `opponent_prior`. With a prior and coefficient 0 the KL is only measured
+    (`mean_prior_kl`), so baseline runs show their drift; without a prior nothing is
+    measured. A positive coefficient without a prior is an error."""
+    coef = float(config.get("prior_kl_coef", 0.0) or 0.0)
+    if coef < 0:
+        raise ValueError(f"prior_kl_coef must be >= 0, got {coef}")
+    path = config.get("opponent_prior")
+    if not path:
+        if coef > 0:
+            raise ValueError("prior_kl_coef > 0 requires opponent_prior (the network the KL is measured against)")
+        return None
+    prior, _, oriented, _ = load_models(path)
+    if not oriented:
+        raise ValueError("opponent_prior must be a shared-network checkpoint")
+    return {"prior_model": freeze(prior), "prior_kl_coef": coef}
+
+
 def resolve_guards(config: Dict[str, Any]):
     """PPO guards (change ppo-guards): `target_kl` positive or null (default 0.02);
     `stop_below_prior` in (0, 1) or null (default 0.5, only with prior_eval_games > 0);
@@ -509,6 +533,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     punish = resolve_punish(config)
     referee = resolve_referee(config)
     guards = resolve_guards(config)
+    prior_kl = resolve_prior_kl(config)
     pool = resolve_opponent_pool(config, num_puzzle_envs + num_finish_envs)
     sil = resolve_sil(config)
     if any(e["finish_boards"] > 0 for e in layout_schedule) and finish_sampler is None:
@@ -544,6 +569,8 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     if pool is not None:
         for _, member in pool.pool.members:
             member.to(device)
+    if prior_kl is not None:
+        prior_kl["prior_model"].to(device)
     print("device", device)
     optimizer_white = torch.optim.Adam(white_model.parameters(), lr=lr)
     # Continuations (change ppo-guards follow-up): restore the Adam moments when the start
@@ -587,6 +614,7 @@ def run_training_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         sil=sil,
         punish=punish,
         referee=referee,
+        prior_kl=prior_kl,
         progress_path=config.get("progress_file"),
         **guards,
     )

@@ -266,10 +266,28 @@ log_interval: 10
 opponent_pool_boards: 5
 opponent_pool_size: 4
 opponent_snapshot_every: 50
+# Which member a pool board draws (change prior-anchored-selfplay, 2026-09-22). uniform =
+# every member equally (fictitious self-play over the last snapshots; AlphaStar's weakest
+# line). pfsp = AlphaStar's prioritised FSP with f_hard: weight (1 - w)^pfsp_power +
+# pfsp_min_weight, w the learner's smoothed win rate against that member (EMA 0.1 from
+# 0.5), so games go to the members the learner currently loses to. Power 0 = uniform;
+# floor 0 = a beaten member is never re-probed. Log: pool_weight_<name>. Arm PFSP: pfsp,
+# opponent_pool_size 12 (every snapshot of a 600-update run kept; beaten ones cost nothing).
+opponent_pool_sampling: uniform
+pfsp_power: 2
+pfsp_min_weight: 0.05
 opponent_prior: experiments/human-pretraining/sl
 # prior_score in the periodic evaluation: games per colour vs opponent_prior, both
 # sampling (0 = off). Success for the pool change: >= 0.5 at the end of the run.
 prior_eval_games: 20
+# Prior-KL term (change prior-anchored-selfplay, 2026-09-22; AlphaStar's "continually
+# minimise the KL divergence between the supervised and current policy", Ziegler et al.
+# 2019's beta log(pi/rho)). Every minibatch adds prior_kl_coef * KL(pi_theta || pi_prior)
+# over legal moves against the frozen opponent_prior. target_kl bounds one update's step
+# from the previous policy; this bounds drift from the prior over the whole run. 0 = off,
+# but the drift is still logged as mean_prior_kl whenever opponent_prior is set. Arm
+# KLPRIOR uses 0.1 (at 0.3 nats of drift the term is 0.03, the size of the policy loss).
+prior_kl_coef: 0
 
 # Self-imitation (Oh, Guo, Singh & Lee, ICML 2018; owner 2026-09-18: "lets continue with
 # self imitation"). The learner's own plies are stored when their episode ends with the

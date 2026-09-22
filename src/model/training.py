@@ -260,6 +260,7 @@ def _collect_rollout(
                         score = 0.5 if result not in ("white_win", "black_win") else float(
                             (result == "white_win") == (colour == WHITE))
                         metrics.add_pool_result(pool.opponent_name(env_idx), score)
+                        pool.pool.record(pool.opponent_name(env_idx), score)   # PFSP win-rate estimate
                         pool_done.append(env_idx)
                         continue
                     if finish_boards.get(env_idx, False):
@@ -379,7 +380,8 @@ _EMPTY_STATS = {
 }
 
 _EMPTY_UPDATE = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0,
-                 "clip_fraction": None, "approx_kl": None, "optimizer_steps": 0, "sample_count": 0, "kl_stop": 0.0}
+                 "clip_fraction": None, "approx_kl": None, "optimizer_steps": 0, "sample_count": 0, "kl_stop": 0.0,
+                 "prior_kl": None}
 
 
 def _gather_side(steps_data, advantages, targets, model_id, puzzle_env_mask=None):
@@ -460,12 +462,32 @@ def ppo_policy_loss(new_log_prob, old_log_prob, advantages, clip_epsilon):
     return -torch.min(ratio * advantages, clipped * advantages).mean(), ratio
 
 
+def prior_kl_to(probs, prior_model, obs, legal_mask):
+    """Mean exact KL(pi_theta || pi_prior) over the minibatch, both masked to legal moves.
+    The prior gets no gradient; zero-probability moves contribute nothing."""
+    with torch.no_grad():
+        prior_probs, _ = prior_model(obs, legal_mask)
+    legal = legal_mask > 0
+    p = probs.clamp_min(1e-12)
+    q = prior_probs.clamp_min(1e-12)
+    terms = torch.where(legal, probs * (torch.log(p) - torch.log(q)), torch.zeros_like(probs))
+    return terms.sum(dim=1).mean()
+
+
 def update_model(
     model, optimizer, batch, *, epochs=1, minibatches=1, clip_epsilon=None,
     normalize_advantage=False, value_coef=1.0, entropy_coef=0.01, grad_clip=1.0,
-    generator=None, target_kl=None,
+    generator=None, target_kl=None, prior_model=None, prior_kl_coef=0.0,
 ):
     """Turn one gathered batch into `epochs * minibatches` optimizer steps.
+
+    `prior_model` / `prior_kl_coef` (change prior-anchored-selfplay): with a frozen prior,
+    every minibatch adds `prior_kl_coef * mean KL(pi_theta || pi_prior)` over legal moves
+    (AlphaStar: "continually minimise the KL divergence between the supervised and current
+    policy"; Ziegler et al. 2019's `beta log(pi/rho)`). Unlike `target_kl`, which bounds the
+    step from the policy that collected the batch, this bounds drift from the prior over the
+    whole run. The unweighted KL is returned as `prior_kl` whenever a prior is given (None
+    otherwise), so a coefficient of 0 still measures the drift.
 
     `target_kl` (change ppo-guards): before each pass after the first, the whole-batch
     approx KL (clean samples) of the current policy from the data-collecting one is
@@ -484,7 +506,8 @@ def update_model(
     if batch is None or batch["obs"].shape[0] == 0:
         return dict(_EMPTY_UPDATE)
     n = batch["obs"].shape[0]
-    sums = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0}
+    sums = {"total_loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "clip_fraction": 0.0, "approx_kl": 0.0,
+            "prior_kl": 0.0}
     steps = 0
     kl_stop = 0.0
     clean_all = ~batch["noisy"] if "noisy" in batch else torch.ones(n, dtype=torch.bool)
@@ -516,14 +539,22 @@ def update_model(
                 policy_loss=policy_loss, value_loss=value_loss, entropy_bonus=norm_ent.mean(),
                 entropy_coef=entropy_coef, value_coef=value_coef,
             )
+            total = composed["total_loss"]
+            prior_kl = None
+            if prior_model is not None:
+                prior_kl = prior_kl_to(probs, prior_model, batch["obs"][idx], batch["legal_mask"][idx])
+                if prior_kl_coef > 0:
+                    total = total + prior_kl_coef * prior_kl
             optimizer.zero_grad()
-            composed["total_loss"].backward()
+            total.backward()
             torch.nn.utils.clip_grad_norm_(list(model.parameters()), max_norm=grad_clip)
             optimizer.step()
             steps += 1
             with torch.no_grad():
-                sums["total_loss"] += composed["total_loss"].item()
+                sums["total_loss"] += total.item()
                 sums["policy_loss"] += policy_loss.item()
+                if prior_kl is not None:
+                    sums["prior_kl"] += prior_kl.item()
                 sums["value_loss"] += value_loss.item()
                 # Diagnostics over clean samples only: on noisy boards the stored
                 # log-prob is the behaviour mixture's, so ratio and KL there measure
@@ -539,6 +570,8 @@ def update_model(
         out["clip_fraction"] = None if clip_epsilon is None else out["clip_fraction"]
     if steps == 0:
         out["approx_kl"] = None
+    if prior_model is None or steps == 0:
+        out["prior_kl"] = None
     out["optimizer_steps"] = steps
     out["sample_count"] = n
     out["kl_stop"] = kl_stop
@@ -600,8 +633,13 @@ def run_chess_training(
     target_kl=None,
     stop_below_prior=None,
     stop_patience=2,
+    prior_kl=None,
 ):
     """Run A2C or PPO self-play.
+
+    `prior_kl`: None or dict(prior_model, prior_kl_coef) (change prior-anchored-selfplay):
+    the frozen prior the update measures `KL(pi_theta || pi_prior)` against and the loss
+    weight of that term (0 = measure only); summary `mean_prior_kl`. Shared network only.
 
     `target_kl`: PPO early stop per update (see `update_model`). `stop_below_prior` /
     `stop_patience` (change ppo-guards): when the evaluation's `prior_score` is below the
@@ -643,6 +681,8 @@ def run_chess_training(
     algo = {**A2C_PRESET, **(algorithm or {})}
     lam = algo.pop("gae_lambda")
     shared = black_model is None
+    if prior_kl is not None and not shared:
+        raise ValueError("prior_kl needs the shared network")
     if shared:
         black_model = white_model
         optimizer_black = None
@@ -752,6 +792,8 @@ def run_chess_training(
         g_w = _gather_side(steps_data, adv_w, tgt_w, WHITE, puzzle_env_mask)
         g_b = _gather_side(steps_data, adv_b, tgt_b, BLACK, puzzle_env_mask)
         update_kwargs = dict(algo, entropy_coef=entropy_coef, grad_clip=grad_clip, target_kl=target_kl)
+        if prior_kl is not None:
+            update_kwargs.update(prior_model=prior_kl["prior_model"], prior_kl_coef=prior_kl["prior_kl_coef"])
 
         if shared:
             # One batch of both colours' own steps, one optimizer.
@@ -799,6 +841,7 @@ def run_chess_training(
             clip_fraction=_sample_weighted(updates, "clip_fraction"),
             approx_kl=_sample_weighted(updates, "approx_kl"),
             kl_stop=(max(u.get("kl_stop", 0.0) for u in updates) if updates else None),
+            prior_kl=_sample_weighted(updates, "prior_kl"),
             optimizer_steps=(sum(u.get("optimizer_steps", 0) for u in updates) if updates else None),
         )
 
@@ -832,6 +875,8 @@ def run_chess_training(
 
         if episode % log_interval == 0:
             summary = metrics.episode_summary()
+            if pool is not None:
+                summary.update({f"pool_weight_{n}": w for n, w in pool.pool.weights().items()})
             logs.append({"episode": episode, "loss": total_loss, **summary, **eval_metrics})
         elif eval_metrics:
             logs.append({"episode": episode, "loss": total_loss, **eval_metrics})
