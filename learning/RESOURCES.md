@@ -245,6 +245,16 @@ reach for it. Prune anything that turns out shallow or wrong.
   `update_model` after LONG256B drifted (KL 0.04 -> 0.06, clip 0.16 -> 0.26); our healthy band
   has been 0.02-0.04, so the threshold is set at 0.03; change `ppo-guards`.
 
+- [Source: Stockfish `src/search.h`, struct Skill (master, read 2026-09-22)](https://github.com/official-stockfish/Stockfish/blob/master/src/search.h)
+  "Skill structure is used to implement strength limit. If we have a UCI_Elo, we convert it
+  to an appropriate skill level, anchored to the Stash engine. This method is based on a fit
+  of the Elo results for games played between Stockfish at various skill levels and various
+  versions of the Stash engine. Skill 0 .. 19 now covers CCRL Blitz Elo from 1320 to 3190,
+  approximately." `UCI_Elo` range 1320-3190 (`LowestElo`/`HighestElo`); at level L the engine
+  picks from a MultiPV search when depth == 1 + L (`time_to_pick`). Use for: the Elo ladder
+  evaluation (`scripts/eval_elo.py`): the scale is CCRL blitz, the floor is 1320, and a network
+  below the floor is rated by a logistic fit against several levels; change `elo-eval`.
+
 ## Wisdom (Communities)
 
 <!-- Places to test understanding against practitioners. Optional. -->
@@ -253,5 +263,5 @@ reach for it. Prune anything that turns out shallow or wrong.
 
 Sources still needed, ordered by roadmap priority:
 
-- Engine-based evaluation of learned policies (roadmap/06_evaluation.md §1)
+- ~~Engine-based evaluation of learned policies~~ — Stockfish UCI_Elo ladder, 2026-09-22 (see Stockfish `search.h` above)
 - Reward decay / shaping schedule in sparse two-player games (roadmap/04_rewards_curriculum.md §1)
